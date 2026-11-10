@@ -10,6 +10,7 @@ Read the relevant documentation before changing code:
 
 - Work on one scoped Issue/PR at a time; a milestone may have multiple PRs.
 - Start from `main` on a short-lived branch. Keep `main` buildable.
+- Follow [ADR 0002](docs/decisions/0002-delivery-strategy.md) when naming branches: `feature/<name>` for features, `fix/<name>` for fixes, `chore/<name>` for maintenance, and `docs/<name>` for documentation. Use these prefixes instead of agent defaults such as `codex/`.
 - Explain the change and acceptance checks before implementation.
 - Prefer straightforward, maintainable code; justify dependencies and cloud costs.
 - Review existing APIs and versions; never invent dependencies, results, or completed tests.
