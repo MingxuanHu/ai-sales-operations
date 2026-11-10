@@ -6,6 +6,31 @@
 
 A milestone spans several PRs. Keep PRs small and `main` buildable. No agent may merge its own changes or deploy without approval. Link real issue and PR evidence when available.
 
+## Milestone kickoff and GitHub Issues
+
+1. At kickoff, agree the milestone's scope and acceptance outcomes, create its specification from the [milestone template](../milestones/TEMPLATE.md), and link it from the [roadmap](../planning/roadmap.md).
+2. Split the milestone into independently reviewable changes, each suitable for one scoped Issue/PR. About 2–5 PRs may be useful, but this is not a quota; each merge must leave `main` buildable.
+3. Check existing GitHub Issues to avoid duplicates. Draft each Issue with a clear title, goal, in/out of scope, acceptance criteria, relevant documentation, dependencies and validation commands or manual checks. The developer reviews the proposed breakdown before implementation.
+4. Create the agreed Issues in GitHub and assign them to the matching GitHub milestone. Record their actual links in the milestone specification; do not create speculative Issues for all future milestones.
+5. Select one ready Issue, start a short-lived branch from current `main`, and explain the change and acceptance checks before coding. Link the PR to the Issue with `Closes #<actual-issue-number>` and record the PR in the specification.
+6. After developer review, passing required checks and merge, verify the acceptance evidence. Close the milestone only when its agreed outcomes are met, rather than merely when its PRs are merged.
+
+## Validation checks and rollout
+
+The repository currently runs only `docs-check` (`node scripts/check-docs.mjs`), which verifies required documentation files exist and are nonempty. It does not validate application code or Markdown links. Application checks below are **planned**, not implemented or passing yet.
+
+| Planned check | Purpose |
+| --- | --- |
+| `lint` | Enforce agreed code quality rules. |
+| `typecheck` | Check TypeScript types across the web/API workspace. |
+| `unit-tests` | Verify isolated functions, services and components. |
+| `integration-tests` | Verify API/module and database interactions using temporary PostgreSQL; include authentication and tenant isolation as those features arrive. |
+| `build` | Compile/package the web and API for their target runtimes. |
+
+During M1, add real package scripts and GitHub Actions jobs as the relevant code and test setup become available. Use these check names consistently, and make `pnpm check` run all five. CI must fail on a failing check; a placeholder or a command with no tests is not acceptance evidence. CI tests use synthetic data and mocked external identity/AI boundaries, without demo credentials.
+
+Use `docs-check` as the initial required status check. Add application checks to branch protection after their jobs exist and have run successfully; do not require nonexistent checks. M4 completes the protected delivery and AI review pipeline. Report actual commands and results in every PR, including failures and checks not run with reasons.
+
 ## Environments and releases
 
 | Event | Action |

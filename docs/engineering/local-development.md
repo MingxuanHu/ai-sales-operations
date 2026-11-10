@@ -8,11 +8,13 @@
 cp .env.example .env
 pnpm install
 pnpm dev:up     # Docker PostgreSQL + NestJS + Vite
-pnpm check      # lint, typecheck, tests, build
+pnpm check      # all five validation checks below
 pnpm dev:down
 ```
 
 These are target commands, **not working commands in this planning-only package**.
+
+Planned individual checks are `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm integration-tests` and `pnpm build`. M1 will provide the scripts and test database setup. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for their purpose and CI requirements. Until then, run the existing documentation check with `node scripts/check-docs.mjs`.
 
 ## Environments
 
