@@ -1,0 +1,18 @@
+# Bootstrap check only. App checks are added as the code is scaffolded in M1.
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate documentation scaffold
+        run: node scripts/check-docs.mjs
