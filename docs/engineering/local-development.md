@@ -2,19 +2,67 @@
 
 **Goal:** one command to start React, NestJS and local PostgreSQL. AWS compute services and Neon are **not** needed for normal development.
 
-## Planned commands (implemented in M1)
+## Set up Node.js and pnpm on macOS
+
+Open Terminal in the repository root, the folder containing `package.json`. Run `node --version`. If it shows `v26.13.0`, skip to **Install pnpm**.
+
+### Use Homebrew
+
+If you manage Node.js with Homebrew, install the Node 26 formula and select it for this terminal:
+
+```bash
+brew install node@26
+export PATH="$(brew --prefix node@26)/bin:$PATH"
+node --version
+```
+
+The project pins `v26.13.0`. Homebrew can update the patch version it supplies. If the version still differs, use nvm below to install the exact version. If you need the Homebrew selection in a new terminal, run the `export PATH` line there too.
+
+### Use nvm for the exact Node.js version
+
+If `command -v nvm` prints nothing, follow the [official nvm installation instructions](https://github.com/nvm-sh/nvm#installing-and-updating). Open a new Terminal window and return to the repository root. Then install and activate the version recorded in `.nvmrc`.
+
+```bash
+nvm install
+nvm use
+node --version
+```
+
+### Install pnpm
+
+Node.js includes npm. Use it to install the pnpm version pinned in `package.json`.
+
+```bash
+npm install --global pnpm@11.25.0
+pnpm --version
+```
+
+The version should be `11.25.0`. If a new terminal reports `command not found: pnpm`, select the same Node.js installation again using the Homebrew `export PATH` line or `nvm use`.
+
+## Run the web and API health shell
+
+Run these commands from the repository root. The health shell runs with Node.js and pnpm alone. Docker, a `.env` file and cloud credentials are unnecessary for this step.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+The command runs the web and API scripts in parallel and streams both logs to the same terminal. Once both servers are ready, open [the local web app](http://127.0.0.1:5173). The page should show **API status · Operational**. In the browser's Network panel, reload and inspect `GET /api/health`. It should use the page origin and return HTTP 200 with `{"status":"ok"}`. Press Ctrl+C to stop both servers. After changing API source, restart `pnpm dev` to rebuild it.
+
+Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for local validation.
+
+## Planned full-stack commands
 
 ```bash
 cp .env.example .env
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev:up     # Docker PostgreSQL + NestJS + Vite
 pnpm check      # all five validation checks below
 pnpm dev:down
 ```
 
-These are target commands, **not working commands in this planning-only package**.
-
-Planned individual checks are `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm integration-tests` and `pnpm build`. M1 will provide the scripts and test database setup. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for their purpose and CI requirements. Until then, run the existing documentation check with `node scripts/check-docs.mjs`.
+The remaining M1 issues add `pnpm dev:up`, `pnpm dev:down`, `pnpm integration-tests` and `pnpm check`. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
 
 ## Environments
 

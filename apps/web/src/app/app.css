@@ -1,0 +1,31 @@
+/* :root selects the HTML element so its font and text color can cascade to the page. */
+:root {
+  font-family: system-ui, sans-serif;
+  color: #172c28;
+  background: #f5f7f4;
+}
+
+body {
+  /* clamp lets the vertical padding scale with the viewport between fixed limits. */
+  margin: 0;
+  padding: clamp(1rem, 8vw, 6rem) 1rem;
+}
+
+main {
+  /* Auto side margins center the panel once it reaches its maximum width. */
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid #d7e3dc;
+  border-radius: 1rem;
+  background: white;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+}
+
+p {
+  margin: 0;
+}

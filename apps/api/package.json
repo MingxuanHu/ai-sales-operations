@@ -1,0 +1,21 @@
+{
+  "name": "@ai-sales-operations/api",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "pnpm run build && node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "unit-tests": "pnpm run build && node --test",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
+    "@nestjs/platform-express": "12.4.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6"
+  }
+}

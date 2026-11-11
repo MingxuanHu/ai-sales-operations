@@ -20,7 +20,7 @@ Track delivery in the [M1 Bootstrap GitHub milestone](https://github.com/Mingxua
 
 ### 1. Scaffold the pnpm workspace and web/API health shell
 
-[Issue #4](https://github.com/MingxuanHu/ai-sales-operations/issues/4)
+[Issue #4](https://github.com/MingxuanHu/ai-sales-operations/issues/4) · [PR #8](https://github.com/MingxuanHu/ai-sales-operations/pull/8)
 
 - **Goal.** Provide a clean-installable workspace with a React page that displays the NestJS API's health status.
 - **In scope.** Verify supported versions and compatibility against the [technical baseline](../decisions/0001-technical-baseline.md), record the chosen versions, pin Node and pnpm, commit the lockfile, scaffold both apps, proxy `/api` through Vite, and add app-level `AGENTS.md` guidance. Add lint, typecheck, build and unit-test scripts with tests for the health behavior.
