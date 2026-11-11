@@ -2,19 +2,31 @@
 
 **Goal:** one command to start React, NestJS and local PostgreSQL. AWS compute services and Neon are **not** needed for normal development.
 
-## Planned commands (implemented in M1)
+## Run the web and API health shell
+
+Use the Node.js version pinned in `.nvmrc` (`nvm install` and `nvm use` if using nvm) and pnpm 11.25.0, as pinned in `package.json`.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @ai-sales-operations/api dev  # Terminal 1
+pnpm --filter @ai-sales-operations/web dev  # Terminal 2
+```
+
+Open [the local web app](http://127.0.0.1:5173). The page should show **API status · Operational**. In the browser's Network panel, reload and inspect `GET /api/health`. It should use the page origin and return HTTP 200 with `{"status":"ok"}`. Stop each process with Ctrl+C. Restart the API after changing its source.
+
+Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for local validation.
+
+## Planned full-stack commands
 
 ```bash
 cp .env.example .env
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev:up     # Docker PostgreSQL + NestJS + Vite
 pnpm check      # all five validation checks below
 pnpm dev:down
 ```
 
-These are target commands, **not working commands in this planning-only package**.
-
-Planned individual checks are `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm integration-tests` and `pnpm build`. M1 will provide the scripts and test database setup. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for their purpose and CI requirements. Until then, run the existing documentation check with `node scripts/check-docs.mjs`.
+The remaining M1 issues add `pnpm dev:up`, `pnpm dev:down`, `pnpm integration-tests` and `pnpm check`. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
 
 ## Environments
 

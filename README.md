@@ -2,7 +2,7 @@
 
 A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
-> **Status:** Planning. Application code and public demo have not been built yet.
+> **Status:** M1 bootstrap. The React and NestJS health shell runs locally.
 
 ## Product
 
@@ -18,13 +18,13 @@ React · TypeScript · Vite · NestJS · PostgreSQL · Prisma · Amazon Cognito 
 
 ## AI-assisted software delivery
 
-Coding agents propose implementation and tests in small PRs. A separate AI reviewer comments on the diff; the developer checks every change and decides whether to merge. Required CI checks run on each PR. From M4, merging into protected `main` deploys the public demo automatically.
+Coding agents present local changes and check results for developer review before opening a PR. A separate AI reviewer comments on the PR diff, and the developer decides whether to merge. Required CI checks run on each PR. From M4, merging into protected `main` deploys the public demo automatically.
 
 Development rules: [AGENTS.md](AGENTS.md) · [Delivery workflow](docs/engineering/delivery.md)
 
 ## Getting started
 
-The application is not scaffolded yet. Planned local startup, including the separate development Cognito configuration required from M2, is described in [Local development](docs/engineering/local-development.md).
+See [Local development](docs/engineering/local-development.md) to start the web and API health shell and run the workspace checks.
 
 [Documentation index](docs/README.md) · [Roadmap](docs/planning/roadmap.md) · [Architecture](docs/architecture/system.md)
 

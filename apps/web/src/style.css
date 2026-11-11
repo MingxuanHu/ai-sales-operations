@@ -1,0 +1,28 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #172c28;
+  background: #f5f7f4;
+}
+
+body {
+  margin: 0;
+  padding: clamp(1rem, 8vw, 6rem) 1rem;
+}
+
+main {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid #d7e3dc;
+  border-radius: 1rem;
+  background: white;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+}
+
+p {
+  margin: 0;
+}

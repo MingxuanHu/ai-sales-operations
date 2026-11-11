@@ -12,6 +12,7 @@ Read the relevant documentation before changing code:
 - Start from `main` on a short-lived branch. Keep `main` buildable.
 - Follow [ADR 0002](docs/decisions/0002-delivery-strategy.md) when naming branches: `feature/<name>` for features, `fix/<name>` for fixes, `chore/<name>` for maintenance, and `docs/<name>` for documentation. Use these prefixes instead of agent defaults such as `codex/`.
 - Explain the change and acceptance checks before implementation.
+- After implementation and validation, present the local changes and check results for developer review. Create the pull request only after the developer reviews the changes and explicitly tells you to proceed.
 - Prefer straightforward, maintainable code; justify dependencies and cloud costs.
 - Review existing APIs and versions; never invent dependencies, results, or completed tests.
 - Add relevant tests. Never silently skip, weaken, or delete tests to pass CI.

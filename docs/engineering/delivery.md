@@ -2,7 +2,7 @@
 
 ## PR cycle
 
-**Issue → short-lived branch → coding agent + developer review → PR → CI + independent AI comments → developer decision → squash merge.**
+**Issue → short-lived branch → implementation and validation → developer review and confirmation → PR → CI + independent AI comments → developer decision → squash merge.**
 
 A milestone spans several PRs. Keep PRs small and `main` buildable. No agent may merge its own changes or deploy without approval. Link real issue and PR evidence when available.
 
@@ -15,14 +15,15 @@ A milestone spans several PRs. Keep PRs small and `main` buildable. No agent may
 
 ## Issue implementation
 
-1. Wait for a separate developer request to implement an Issue. Work on one ready Issue at a time. Start a short-lived branch from current `main` and explain the change and acceptance checks before coding. Link the PR to the Issue with `Closes #<actual-issue-number>` and record the PR in the specification.
-2. After developer review, passing required checks and merge, verify the acceptance evidence. Close the milestone when its agreed outcomes are met.
+1. Wait for a separate developer request to implement an Issue. Work on one ready Issue at a time. Start a short-lived branch from current `main` and explain the change and acceptance checks before coding.
+2. After implementation and validation, present the local changes and check results for developer review. The coding agent may open the PR only after the developer has reviewed the changes and explicitly confirmed to proceed. Link the PR to the Issue with `Closes #<actual-issue-number>` and record the PR in the specification.
+3. After PR review, passing required checks and merge, verify the acceptance evidence. Close the milestone when its agreed outcomes are met.
 
 ## Validation checks and rollout
 
-The repository currently runs only `docs-check` (`node scripts/check-docs.mjs`), which verifies required documentation files exist and are nonempty. It does not validate application code or Markdown links. Application checks below are **planned**, not implemented or passing yet.
+GitHub Actions currently runs `docs-check` (`node scripts/check-docs.mjs`), which verifies that required documentation files exist and are nonempty. The workspace provides local lint, typecheck, unit-test and build commands. Database integration tests and application CI are scheduled for the remaining M1 issues.
 
-| Planned check | Purpose |
+| Check | Purpose |
 | --- | --- |
 | `lint` | Enforce agreed code quality rules. |
 | `typecheck` | Check TypeScript types across the web/API workspace. |
