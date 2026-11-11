@@ -20,8 +20,6 @@ React · TypeScript · Vite · NestJS · PostgreSQL · Prisma · Amazon Cognito 
 
 Coding agents propose implementation and tests in small PRs. A separate AI reviewer comments on the diff; the developer checks every change and decides whether to merge. Required CI checks run on each PR. From M4, merging into protected `main` deploys the public demo automatically.
 
-Milestone kickoff ends when the approved GitHub Issues are linked in the milestone specification. Issue implementation begins on a separate developer request.
-
 Development rules: [AGENTS.md](AGENTS.md) · [Delivery workflow](docs/engineering/delivery.md)
 
 ## Getting started
