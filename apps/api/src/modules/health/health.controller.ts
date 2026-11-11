@@ -1,11 +1,20 @@
-import { Controller, Get } from '@nestjs/common'
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common'
+import { HealthService } from './health.service'
 
-// A decorator is an @-prefixed instruction. @Controller adds "health" to this class's route path.
+// The controller path and global prefix give this route its /api/health URL.
 @Controller('health')
 export class HealthController {
-  // @Get handles HTTP GET requests at the controller's path. Nest converts the returned object to JSON.
+  constructor(private readonly health: HealthService) {}
+
+  // Nest serializes the return value to JSON and uses the exception's status for failures.
   @Get()
-  getHealth() {
-    return { status: 'ok' }
+  async getHealth() {
+    try {
+      await this.health.checkDatabase()
+      return { status: 'ok' }
+    } catch {
+      // Keep database connection errors out of the HTTP response.
+      throw new ServiceUnavailableException({ status: 'unavailable' })
+    }
   }
 }

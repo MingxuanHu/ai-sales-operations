@@ -1,0 +1,10 @@
+// Generate TypeScript that matches the API's CommonJS build.
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -4,7 +4,7 @@ import { checkApiHealth } from './check-api-health'
 // Restore the browser globals after every test so a fake fetch cannot leak into another test.
 afterEach(() => vi.unstubAllGlobals())
 
-it('requests liveness from the page origin and recognises a healthy API', async () => {
+it('requests health from the page origin and recognises a healthy API', async () => {
   // A mock stands in for fetch, returns a canned response and records how it was called.
   const fetchMock = vi.fn().mockResolvedValue(Response.json({ status: 'ok' }))
   vi.stubGlobal('fetch', fetchMock)

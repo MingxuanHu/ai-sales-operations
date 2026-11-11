@@ -1,2 +1,6 @@
 packages:
   - apps/*
+allowBuilds:
+  # The adapter and explicit client generation do not use install-time engine downloads.
+  '@prisma/engines': false
+  prisma: false
