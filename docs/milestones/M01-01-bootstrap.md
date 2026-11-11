@@ -30,7 +30,7 @@ Track delivery in the [M1 Bootstrap GitHub milestone](https://github.com/Mingxua
 
 ### 2. Connect local PostgreSQL and add startup commands
 
-[Issue #5](https://github.com/MingxuanHu/ai-sales-operations/issues/5)
+[Issue #5](https://github.com/MingxuanHu/ai-sales-operations/issues/5) · [PR #9](https://github.com/MingxuanHu/ai-sales-operations/pull/9)
 
 - **Goal.** Run the full local stack with a single startup command and verify API-to-database connectivity.
 - **In scope.** Reuse the Compose service and local environment example. Verify a stable Prisma version compatible with the workspace and PostgreSQL 18. Make `GET /api/health` check PostgreSQL and cover it with API/database integration tests. Make `pnpm dev:up` wait for PostgreSQL before invoking the existing `pnpm dev` command from Issue #4. Make `pnpm dev:down` stop PostgreSQL and preserve its named volume. Document both development commands.
