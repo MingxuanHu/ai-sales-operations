@@ -6,7 +6,7 @@ Public source does not imply public credentials. Never commit `.env`, database U
 | --- | --- | --- | --- |
 | PostgreSQL | Local Docker-only credentials | Temporary test DB | Neon URL in AWS SSM SecureString |
 | Migration connection | Local direct URL | Test DB | Protected deploy-only secret, direct Neon URL |
-| AI provider key | Local `.env` or mock (from M8) | Mock | AWS SSM SecureString |
+| AI provider key | Local `.env` or mock (from M9) | Mock | AWS SSM SecureString |
 | AWS deployment access | Personal authenticated CLI | None | Short-lived GitHub OIDC role |
 
 Cognito **public app client ID, domain and User Pool ID are identifiers**, not credentials; browser apps must never contain a Cognito app client secret. React sends access tokens to NestJS; the backend validates issuer, signature, expiry, intended token use and client/audience as appropriate. Token storage/refresh is an M2 security decision.
