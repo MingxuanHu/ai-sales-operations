@@ -21,7 +21,7 @@ A milestone spans several PRs. Keep PRs small and `main` buildable. No agent may
 
 ## Validation checks and rollout
 
-GitHub Actions currently runs `docs-check` (`node scripts/check-docs.mjs`), which verifies that required documentation files exist and are nonempty. The workspace provides local lint, typecheck, unit-test and build commands. Database integration tests and application CI are scheduled for the remaining M1 issues.
+GitHub Actions runs `docs-check` (`node scripts/check-docs.mjs`) and the five application jobs below on PRs targeting `main` and pushes to `main`. Each application job installs the pinned workspace tools and runs the corresponding package script. The integration test uses Docker Compose to start and remove its own temporary PostgreSQL service on the runner.
 
 | Check | Purpose |
 | --- | --- |
@@ -31,7 +31,7 @@ GitHub Actions currently runs `docs-check` (`node scripts/check-docs.mjs`), whic
 | `integration-tests` | Verify API/module and database interactions using temporary PostgreSQL; include authentication and tenant isolation as those features arrive. |
 | `build` | Compile/package the web and API for their target runtimes. |
 
-During M1, add real package scripts and GitHub Actions jobs as the relevant code and test setup become available. Use these check names consistently, and make `pnpm check` run all five. CI must fail on a failing check; a placeholder or a command with no tests is not acceptance evidence. CI tests use synthetic data and mocked external identity/AI boundaries, without demo credentials.
+Run `pnpm check` with Docker running to execute all five application checks locally. It stops at the first failure. GitHub Actions runs the jobs independently so each result is visible on the PR. CI tests use synthetic data and mocked external identity/AI boundaries as those features arrive, without demo credentials.
 
 Use `docs-check` as the initial required status check. Add application checks to branch protection after their jobs exist and have run successfully; do not require nonexistent checks. M4 completes the protected delivery and AI review pipeline. Report actual commands and results in every PR, including failures and checks not run with reasons.
 
