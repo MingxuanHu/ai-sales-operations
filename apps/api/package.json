@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm run build && node dist/main.js",
     "typecheck": "tsc --noEmit",
-    "unit-tests": "pnpm run build && node --test test/*.test.mjs",
+    "unit-tests": "pnpm run build && node --test",
     "build": "tsc"
   },
   "dependencies": {

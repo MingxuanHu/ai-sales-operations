@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { checkApiHealth } from './health'
+import { checkApiHealth } from './check-api-health'
 
 // Restore the browser globals after every test so a fake fetch cannot leak into another test.
 afterEach(() => vi.unstubAllGlobals())

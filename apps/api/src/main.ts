@@ -12,7 +12,8 @@ async function bootstrap() {
   await app.listen(3000, '127.0.0.1')
 }
 
-// An async function returns a Promise. catch handles startup failure, and void marks the result as unused.
+// catch handles a rejected startup Promise and returns a new Promise.
+// void evaluates the entire chain, then returns undefined instead of the Promise.
 void bootstrap().catch((error: unknown) => {
   console.error(error)
   // A nonzero exit code tells the shell that startup failed.

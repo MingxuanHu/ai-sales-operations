@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common'
-import { HealthController } from './health.controller'
+import { HealthModule } from './modules/health/health.module'
 
-// A NestJS module groups related code. @Module registers this controller so Nest can route requests to it.
+// The root module assembles feature modules so Nest can load their routes at startup.
 @Module({
-  controllers: [HealthController],
+  imports: [HealthModule],
 })
 export class AppModule {}
