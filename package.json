@@ -6,8 +6,7 @@
     "node": "26.13.0"
   },
   "scripts": {
-    "dev": "pnpm --filter './apps/*' --parallel run dev",
-    "dev:up": "docker compose up --wait salesOpDb && pnpm dev",
+    "dev:up": "docker compose up --wait salesOpDb && pnpm --filter './apps/*' --parallel run dev",
     "dev:down": "docker compose stop salesOpDb",
     "lint": "eslint .",
     "typecheck": "pnpm -r run typecheck",

@@ -49,7 +49,7 @@ pnpm install --frozen-lockfile
 pnpm dev:up
 ```
 
-`pnpm dev:up` waits for PostgreSQL to accept connections, then runs `pnpm dev` to start React and NestJS together. The API loads the root `.env` if present. Open [the local web app](http://127.0.0.1:5173) and check health through the Vite proxy:
+`pnpm dev:up` waits for PostgreSQL to accept connections, then starts React and NestJS in parallel. The API loads the root `.env` if present. Open [the local web app](http://127.0.0.1:5173) and check health through the Vite proxy:
 
 ```bash
 curl -i http://127.0.0.1:5173/api/health
@@ -65,7 +65,7 @@ pnpm dev:down
 
 The `salesOpDb` service listens on host port `15433` and stores its data in the Docker volume `sales_operations_postgres_data` between sessions. If you already have a local `.env`, update the port in both `DATABASE_URL` and `DIRECT_URL`. With Docker running, use `pnpm integration-tests` to check API health with PostgreSQL online and offline. Each run starts a separate Compose project with its own temporary database and automatically assigned port. The test removes that project when it finishes.
 
-Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for the other local checks. Restart `pnpm dev` after changing API source.
+Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for the other local checks. After changing API source, stop the app processes with `Ctrl+C` and rerun `pnpm dev:up`.
 
 Issue #6 adds `pnpm check` and application CI. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
 
