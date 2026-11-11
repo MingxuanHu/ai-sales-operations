@@ -2,9 +2,33 @@
 
 **Goal:** one command to start React, NestJS and local PostgreSQL. AWS compute services and Neon are **not** needed for normal development.
 
+## Set up Node.js and pnpm on macOS
+
+Open Terminal in the repository root, the folder containing `package.json`. If you already have Node.js 26.13.0 active in that terminal, go straight to installing pnpm.
+
+1. If `command -v nvm` prints nothing, install the Node Version Manager using the [official nvm instructions](https://github.com/nvm-sh/nvm#installing-and-updating). Open a new Terminal window and return to the repository root.
+2. Install and activate the Node.js version recorded in `.nvmrc`. Node.js includes npm.
+
+   ```bash
+   nvm install
+   nvm use
+   node --version
+   ```
+
+   The version should be `v26.13.0`.
+
+3. Use npm to install the pnpm version pinned in `package.json`. This makes the `pnpm` command available with the active Node.js installation.
+
+   ```bash
+   npm install --global pnpm@11.25.0
+   pnpm --version
+   ```
+
+   The version should be `11.25.0`. If a new terminal reports `command not found: pnpm` and you use nvm, run `nvm use` from the repository root to select the project's Node.js version again.
+
 ## Run the web and API health shell
 
-Use the Node.js version pinned in `.nvmrc` (`nvm install` and `nvm use` if using nvm) and pnpm 11.25.0, as pinned in `package.json`.
+Run these commands from the repository root. The health shell runs with Node.js and pnpm alone. Docker, a `.env` file and cloud credentials are unnecessary for this step.
 
 ```bash
 pnpm install --frozen-lockfile
