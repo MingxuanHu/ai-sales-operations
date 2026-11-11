@@ -40,7 +40,7 @@ Track delivery in the [M1 Bootstrap GitHub milestone](https://github.com/Mingxua
 
 ### 3. Run baseline workspace validation in GitHub Actions
 
-[Issue #6](https://github.com/MingxuanHu/ai-sales-operations/issues/6)
+[Issue #6](https://github.com/MingxuanHu/ai-sales-operations/issues/6) · [PR #11](https://github.com/MingxuanHu/ai-sales-operations/pull/11)
 
 - **Goal.** Exercise the same five application checks locally and on PRs.
 - **In scope.** Add `pnpm check` and GitHub Actions jobs named `lint`, `typecheck`, `unit-tests`, `integration-tests` and `build`. Use a temporary PostgreSQL service for integration tests and retain `docs-check`.
