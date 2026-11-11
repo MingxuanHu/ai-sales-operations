@@ -12,7 +12,8 @@
     "typecheck": "pnpm -r run typecheck",
     "unit-tests": "pnpm -r run unit-tests",
     "integration-tests": "pnpm --filter @ai-sales-operations/api run integration-tests",
-    "build": "pnpm -r run build"
+    "build": "pnpm -r run build",
+    "check": "pnpm lint && pnpm typecheck && pnpm unit-tests && pnpm integration-tests && pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

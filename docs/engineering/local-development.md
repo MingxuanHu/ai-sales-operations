@@ -65,9 +65,9 @@ pnpm dev:down
 
 The `salesOpDb` service listens on host port `15433` and stores its data in the Docker volume `sales_operations_postgres_data` between sessions. If you already have a local `.env`, update the port in both `DATABASE_URL` and `DIRECT_URL`. With Docker running, use `pnpm integration-tests` to check API health with PostgreSQL online and offline. Each run starts a separate Compose project with its own temporary database and automatically assigned port. The test removes that project when it finishes.
 
-Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for the other local checks. After changing API source, stop the app processes with `Ctrl+C` and rerun `pnpm dev:up`.
+With Docker running, `pnpm check` runs lint, type checking, unit tests, integration tests and the build. Run `node scripts/check-docs.mjs` to validate the documentation scaffold. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
 
-Issue #6 adds `pnpm check` and application CI. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
+After changing API source, stop the app processes with `Ctrl+C` and rerun `pnpm dev:up`.
 
 ## Environments
 
