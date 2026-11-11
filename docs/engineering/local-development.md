@@ -8,11 +8,10 @@ Use the Node.js version pinned in `.nvmrc` (`nvm install` and `nvm use` if using
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm --filter @ai-sales-operations/api dev  # Terminal 1
-pnpm --filter @ai-sales-operations/web dev  # Terminal 2
+pnpm dev
 ```
 
-Open [the local web app](http://127.0.0.1:5173). The page should show **API status · Operational**. In the browser's Network panel, reload and inspect `GET /api/health`. It should use the page origin and return HTTP 200 with `{"status":"ok"}`. Stop each process with Ctrl+C. Restart the API after changing its source.
+The command runs the web and API scripts in parallel and streams both logs to the same terminal. Once both servers are ready, open [the local web app](http://127.0.0.1:5173). The page should show **API status · Operational**. In the browser's Network panel, reload and inspect `GET /api/health`. It should use the page origin and return HTTP 200 with `{"status":"ok"}`. Press Ctrl+C to stop both servers. After changing API source, restart `pnpm dev` to rebuild it.
 
 Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for local validation.
 

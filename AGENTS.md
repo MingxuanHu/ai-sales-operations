@@ -14,6 +14,7 @@ Read the relevant documentation before changing code:
 - Explain the change and acceptance checks before implementation.
 - After implementation and validation, present the local changes and check results for developer review. Create the pull request only after the developer reviews the changes and explicitly tells you to proceed.
 - Prefer straightforward, maintainable code; justify dependencies and cloud costs.
+- Write concise teaching comments throughout new or changed code for a reader new to JavaScript, TypeScript, React and NestJS. Introduce unfamiliar syntax and framework concepts where they appear, and explain what they do in that file. Keep each comment focused on one idea and update it when the code changes.
 - Review existing APIs and versions; never invent dependencies, results, or completed tests.
 - Add relevant tests. Never silently skip, weaken, or delete tests to pass CI.
 - Treat authentication, tenant isolation, data modifications, and AI tool calls as security boundaries.
