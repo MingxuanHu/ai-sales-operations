@@ -12,8 +12,8 @@ flowchart TB
     S3["Private S3 · React assets"]
     APIGW["API Gateway · HTTP API"]
     Lambda["AWS Lambda · NestJS API"]
-    DB[("Neon PostgreSQL<br/>pgvector from M9")]
-    Model["LLM API · from M8"]
+    DB[("Neon PostgreSQL<br/>pgvector from M10")]
+    Model["LLM API · from M9"]
 
     Browser <-->|"Sign in / redirect"| Cognito
     Browser -->|"App and /api requests"| CF

@@ -6,7 +6,7 @@ Documents are organised by purpose. Keep the root [README](../README.md) focused
 - [`product/vision.md`](product/vision.md) — B2B wholesale scenario, scope, workflows.
 
 ## Planning
-- [`planning/roadmap.md`](planning/roadmap.md) — 12 milestones and acceptance outcomes.
+- [`planning/roadmap.md`](planning/roadmap.md) — 13 milestones and acceptance outcomes.
 - [`milestones/TEMPLATE.md`](milestones/TEMPLATE.md) — format for milestone-specific plans. Individual plans are added **when kicked off**, not in advance.
 
 ## Architecture
