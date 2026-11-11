@@ -4,7 +4,7 @@
 
 | Phase | Milestone | Deliverable |
 | --- | --- | --- |
-| 1 · Foundation | M1 — Bootstrap | React/NestJS workspace, local PostgreSQL, AGENTS.md, baseline CI |
+| 1 · Foundation | [M1 — Bootstrap](../milestones/M01-01-bootstrap.md) | React/NestJS workspace, local PostgreSQL, AGENTS.md, baseline CI |
 | 1 · Foundation | M2 — Identity | Cognito login/register, protected React shell, organisation membership and tenant checks |
 | 2 · Delivery | M3 — First cloud deploy | CloudFront/S3, API Gateway/Lambda, Neon, Cognito demo configuration, public HTTPS |
 | 2 · Delivery | M4 — CI/CD & AI review | Protected `main`, OIDC deployment, AI PR comments, automated demo release |
@@ -27,4 +27,4 @@
 
 **Order:** M1 → M2 → M3 → M4, then feature milestones. After M4, every merged PR exercises the deployed delivery pipeline.
 
-**Milestone specifications:** create one focused `docs/milestones/Mxx-xx-<name>.md` at kickoff, then link its title in this table. No empty or speculative M1 plan is included in this pack. Use the [milestone template](../milestones/TEMPLATE.md).
+**Milestone specifications:** create one focused `docs/milestones/Mxx-xx-<name>.md` at kickoff, then link its title in this table. Use the [milestone template](../milestones/TEMPLATE.md).

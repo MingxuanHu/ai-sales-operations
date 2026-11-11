@@ -10,10 +10,13 @@ A milestone spans several PRs. Keep PRs small and `main` buildable. No agent may
 
 1. At kickoff, agree the milestone's scope and acceptance outcomes, create its specification from the [milestone template](../milestones/TEMPLATE.md), and link it from the [roadmap](../planning/roadmap.md).
 2. Split the milestone into independently reviewable changes, each suitable for one scoped Issue/PR. About 2–5 PRs may be useful, but this is not a quota; each merge must leave `main` buildable.
-3. Check existing GitHub Issues to avoid duplicates. Draft each Issue with a clear title, goal, in/out of scope, acceptance criteria, relevant documentation, dependencies and validation commands or manual checks. The developer reviews the proposed breakdown before implementation.
-4. Create the agreed Issues in GitHub and assign them to the matching GitHub milestone. Record their actual links in the milestone specification; do not create speculative Issues for all future milestones.
-5. Select one ready Issue, start a short-lived branch from current `main`, and explain the change and acceptance checks before coding. Link the PR to the Issue with `Closes #<actual-issue-number>` and record the PR in the specification.
-6. After developer review, passing required checks and merge, verify the acceptance evidence. Close the milestone only when its agreed outcomes are met, rather than merely when its PRs are merged.
+3. Check existing GitHub Issues to avoid duplicates. Draft each Issue with a clear title, goal, in/out of scope, acceptance criteria, relevant documentation, dependencies and validation commands or manual checks. Present the specification and issue breakdown for developer confirmation.
+4. After the developer confirms the breakdown, create the approved Issues in GitHub, assign them to the matching GitHub milestone, and record their links in the specification. Kickoff ends when the links are recorded. Confirmation of the breakdown authorizes this step.
+
+## Issue implementation
+
+1. Wait for a separate developer request to implement an Issue. Work on one ready Issue at a time. Start a short-lived branch from current `main` and explain the change and acceptance checks before coding. Link the PR to the Issue with `Closes #<actual-issue-number>` and record the PR in the specification.
+2. After developer review, passing required checks and merge, verify the acceptance evidence. Close the milestone when its agreed outcomes are met.
 
 ## Validation checks and rollout
 
