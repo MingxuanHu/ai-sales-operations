@@ -8,6 +8,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   // The global prefix turns the controller's /health path into /api/health.
   app.setGlobalPrefix('api')
+  // Listen for shutdown signals so Nest can close the database pool.
+  app.enableShutdownHooks()
   // The loopback address makes the server reachable only from this machine.
   await app.listen(3000, '127.0.0.1')
 }

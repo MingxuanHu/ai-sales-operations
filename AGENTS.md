@@ -12,6 +12,7 @@ Read the relevant documentation before changing code:
 - Start from `main` on a short-lived branch. Keep `main` buildable.
 - Follow [ADR 0002](docs/decisions/0002-delivery-strategy.md) when naming branches: `feature/<name>` for features, `fix/<name>` for fixes, `chore/<name>` for maintenance, and `docs/<name>` for documentation. Use these prefixes instead of agent defaults such as `codex/`.
 - Explain the change and acceptance checks before implementation.
+- Wait for explicit developer confirmation before committing any changes.
 - After implementation and validation, present the local changes and check results for developer review. Create the pull request only after the developer reviews the changes and explicitly tells you to proceed.
 - Prefer straightforward, maintainable code; justify dependencies and cloud costs.
 - Write concise teaching comments throughout new or changed code for a reader new to JavaScript, TypeScript, React and NestJS. Introduce unfamiliar syntax and framework concepts where they appear, and explain what they do in that file. Keep each comment focused on one idea and update it when the code changes.

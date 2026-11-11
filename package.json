@@ -7,9 +7,12 @@
   },
   "scripts": {
     "dev": "pnpm --filter './apps/*' --parallel run dev",
+    "dev:up": "docker compose up --wait salesOpDb && pnpm dev",
+    "dev:down": "docker compose stop salesOpDb",
     "lint": "eslint .",
     "typecheck": "pnpm -r run typecheck",
     "unit-tests": "pnpm -r run unit-tests",
+    "integration-tests": "pnpm --filter @ai-sales-operations/api run integration-tests",
     "build": "pnpm -r run build"
   },
   "devDependencies": {

@@ -39,30 +39,35 @@ pnpm --version
 
 The version should be `11.25.0`. If a new terminal reports `command not found: pnpm`, select the same Node.js installation again using the Homebrew `export PATH` line or `nvm use`.
 
-## Run the web and API health shell
+## Run the full stack
 
-Run these commands from the repository root. The health shell runs with Node.js and pnpm alone. Docker, a `.env` file and cloud credentials are unnecessary for this step.
-
-```bash
-pnpm install --frozen-lockfile
-pnpm dev
-```
-
-The command runs the web and API scripts in parallel and streams both logs to the same terminal. Once both servers are ready, open [the local web app](http://127.0.0.1:5173). The page should show **API status · Operational**. In the browser's Network panel, reload and inspect `GET /api/health`. It should use the page origin and return HTTP 200 with `{"status":"ok"}`. Press Ctrl+C to stop both servers. After changing API source, restart `pnpm dev` to rebuild it.
-
-Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for local validation.
-
-## Planned full-stack commands
+Start Docker with the Compose plugin available. From the repository root, copy the example environment file once, install the dependencies, and start the stack.
 
 ```bash
 cp .env.example .env
 pnpm install --frozen-lockfile
-pnpm dev:up     # Docker PostgreSQL + NestJS + Vite
-pnpm check      # all five validation checks below
+pnpm dev:up
+```
+
+`pnpm dev:up` waits for PostgreSQL to accept connections, then runs `pnpm dev` to start React and NestJS together. The API loads the root `.env` if present. Open [the local web app](http://127.0.0.1:5173) and check health through the Vite proxy:
+
+```bash
+curl -i http://127.0.0.1:5173/api/health
+```
+
+The page should show **API status · Operational**. Expect HTTP 200 with `{"status":"ok"}`. With the web and API processes still running, run `pnpm dev:down` in another terminal and repeat the request. `/api/health` returns HTTP 503 with `{"status":"unavailable"}` when PostgreSQL is unreachable or `DATABASE_URL` is missing.
+
+To end a development session, press Ctrl+C in the startup terminal and stop PostgreSQL:
+
+```bash
 pnpm dev:down
 ```
 
-The remaining M1 issues add `pnpm dev:up`, `pnpm dev:down`, `pnpm integration-tests` and `pnpm check`. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
+The `salesOpDb` service listens on host port `15433` and stores its data in the Docker volume `sales_operations_postgres_data` between sessions. If you already have a local `.env`, update the port in both `DATABASE_URL` and `DIRECT_URL`. With Docker running, use `pnpm integration-tests` to check API health with PostgreSQL online and offline. Each run starts a separate Compose project with its own temporary database and automatically assigned port. The test removes that project when it finishes.
+
+Run `pnpm lint`, `pnpm typecheck`, `pnpm unit-tests`, `pnpm build` and `node scripts/check-docs.mjs` for the other local checks. Restart `pnpm dev` after changing API source.
+
+Issue #6 adds `pnpm check` and application CI. See [validation checks and rollout](delivery.md#validation-checks-and-rollout) for CI requirements.
 
 ## Environments
 

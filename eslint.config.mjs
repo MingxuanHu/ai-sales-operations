@@ -3,11 +3,16 @@ import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  // Ignore generated JavaScript. The rules below check the handwritten app code.
-  { ignores: ['**/dist/**'] },
+  // Check handwritten code and skip compiler output and the generated Prisma client.
+  { ignores: ['**/dist/**', 'apps/api/src/generated/prisma/**'] },
   {
     files: ['apps/**/*.mjs'],
     extends: [js.configs.recommended],
+  },
+  {
+    files: ['apps/api/integration/**/*.mjs'],
+    // Node provides fetch for HTTP requests from integration tests.
+    languageOptions: { globals: { fetch: 'readonly' } },
   },
   {
     files: ['apps/**/*.{ts,tsx}'],

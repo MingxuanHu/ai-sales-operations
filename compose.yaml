@@ -1,6 +1,6 @@
-# M1 local database; API/web startup is added during scaffolding.
+# Compose runs PostgreSQL while pnpm runs the web and API on the host.
 services:
-  db:
+  salesOpDb:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
@@ -8,14 +8,17 @@ services:
       POSTGRES_PASSWORD: local-demo-only
       POSTGRES_DB: sales_operations
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:15433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - sales_operations_postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U demo -d sales_operations"]
+      # Wait for TCP so the temporary initialization server cannot pass this check.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "demo", "-d", "sales_operations"]
       interval: 5s
       timeout: 5s
       retries: 12
 
 volumes:
-  postgres_data:
+  sales_operations_postgres_data:
+    # An explicit name keeps Compose from prefixing the volume with the project name.
+    name: sales_operations_postgres_data
