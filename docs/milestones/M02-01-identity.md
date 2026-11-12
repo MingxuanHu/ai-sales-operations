@@ -14,7 +14,7 @@ Track delivery in the [M2 Identity GitHub milestone](https://github.com/Mingxuan
 
 ### 1. Design Cognito identity and organisation access
 
-[Issue #12](https://github.com/MingxuanHu/ai-sales-operations/issues/12) · [Identity architecture, schema and diagrams](../architecture/identity.md)
+[Issue #12](https://github.com/MingxuanHu/ai-sales-operations/issues/12) · [Identity architecture, schema and diagrams](../architecture/identity.md) · [PR #17](https://github.com/MingxuanHu/ai-sales-operations/pull/17)
 
 - **Goal.** Publish a reviewed design that later features can use for identity, membership and authorisation.
 - **Database design.** Produce an ER diagram and a schema specification for application users, external identities, organisations, memberships and any records needed for onboarding. Specify columns, types, keys, foreign keys, uniqueness, indexes, role and status values, and lifecycle rules. Define the stable identity key from verified Cognito claims and the rules for linking identities across sign-in methods. Matching email addresses alone must never link accounts or grant membership.
