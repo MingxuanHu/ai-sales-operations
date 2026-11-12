@@ -11,6 +11,7 @@ Documents are organised by purpose. Keep the root [README](../README.md) focused
 
 ## Architecture
 - [`architecture/system.md`](architecture/system.md) — Mermaid diagrams and system boundaries.
+- [`architecture/identity.md`](architecture/identity.md) — sign-in, membership schema, tenant permissions and sequence diagrams.
 
 ## Decisions
 - [`decisions/0001-technical-baseline.md`](decisions/0001-technical-baseline.md) — stack.
