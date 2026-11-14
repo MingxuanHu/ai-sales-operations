@@ -10,6 +10,7 @@ export async function checkApiHealth(signal?: AbortSignal): Promise<boolean> {
 
     // TypeScript types do not validate server data. ?. handles null and === checks the actual status.
     const health: { status?: unknown } | null = await response.json()
+    // If health is null or undefined, health?.status evaluates to undefined instead of throwing an exception
     return health?.status === 'ok'
   } catch {
     // Network errors, cancellation and invalid JSON can all throw.
