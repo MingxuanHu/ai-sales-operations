@@ -14,9 +14,9 @@ Track delivery in the [M2 Identity GitHub milestone](https://github.com/Mingxuan
 
 ### 1. Design Cognito identity and organisation access
 
-[Issue #12](https://github.com/MingxuanHu/ai-sales-operations/issues/12) · [Identity architecture, schema and diagrams](../architecture/identity.md) · [PR #17](https://github.com/MingxuanHu/ai-sales-operations/pull/17)
+[Issue #12](https://github.com/MingxuanHu/ai-sales-operations/issues/12) · [PR #17](https://github.com/MingxuanHu/ai-sales-operations/pull/17)
 
-- **Goal.** Publish a reviewed design that later features can use for identity, membership and authorisation.
+- **Goal.** Publish a reviewed design that later features can use for identity, membership and authorisation. See the [Identity architecture, schema and diagrams](../architecture/identity.md).
 - **Database design.** Produce an ER diagram and a schema specification for application users, external identities, organisations, memberships and any records needed for onboarding. Specify columns, types, keys, foreign keys, uniqueness, indexes, role and status values, and lifecycle rules. Define the stable identity key from verified Cognito claims and the rules for linking identities across sign-in methods. Matching email addresses alone must never link accounts or grant membership.
 - **Onboarding design.** Decide who can create organisations and how the first administrator is assigned atomically. Decide how a signed-in user joins an existing organisation. Use administrator-issued invitations as the starting proposal. Specify who can invite, how the invite is bound to the intended recipient, how it expires or is revoked, and how acceptance handles retries. New sign-ins start without memberships unless an authorised onboarding flow grants access. Define organisation selection, role changes, and membership removal. Confirm that switching organisations loads the role for the selected membership.
 - **Sign-in design.** Include native Cognito registration and sign-in plus Google through Managed Login. Defer Facebook. Evaluate Microsoft sign-in for personal Outlook.com accounts and separately decide whether work or school accounts belong in scope. Evaluate LinkedIn and any other proposed providers against Cognito's federation requirements, provider access and review requirements, and costs. Record which providers are accepted for M2 and why. Specify token validation, storage, refresh, logout, and the protected API contract.
@@ -26,7 +26,7 @@ Track delivery in the [M2 Identity GitHub milestone](https://github.com/Mingxuan
 
 ### 2. Configure development AWS and Cognito
 
-[Issue #13](https://github.com/MingxuanHu/ai-sales-operations/issues/13)
+[Issue #13](https://github.com/MingxuanHu/ai-sales-operations/issues/13) · [PR #18](https://github.com/MingxuanHu/ai-sales-operations/pull/18)
 
 - **Goal.** Make Cognito Managed Login available for local development and record how to reproduce the configuration.
 - **In scope.** Write the detailed [AWS and Cognito setup and verification runbook](../engineering/aws-cognito-development.md) as part of this issue. Define the development User Pool, Managed Login domain, public app client, local callback and sign-out URLs, verification settings, OAuth scopes and approved identity providers in a CloudFormation stack, using CDK as specified in the [hosting ADR](../decisions/0003-hosting.md). Document provider-side app registration and secret handling in the runbook. Review a change set before applying it, especially any replacement of the User Pool. AWS charges no additional CloudFormation fee for native AWS resources. Check [Cognito pricing](https://aws.amazon.com/cognito/pricing/) and any secret storage costs before provisioning. See [CloudFormation pricing](https://aws.amazon.com/cloudformation/pricing/). Document the non-secret identifiers used by the web and API and the settings to carry into M3.
