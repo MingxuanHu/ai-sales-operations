@@ -21,5 +21,6 @@ Documents are organised by purpose. Keep the root [README](../README.md) focused
 
 ## Engineering
 - [`engineering/local-development.md`](engineering/local-development.md) — local setup and Cognito dependency.
+- [`engineering/aws-cognito-development.md`](engineering/aws-cognito-development.md) — AWS account, CLI access, CDK and Cognito setup and verification.
 - [`engineering/delivery.md`](engineering/delivery.md) — milestone kickoff, GitHub Issues/PRs, validation checks, AI review and CI/CD.
 - [`engineering/security.md`](engineering/security.md) — secrets and deployment trust boundaries.

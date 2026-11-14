@@ -69,6 +69,12 @@ With Docker running, `pnpm check` runs lint, type checking, unit tests, integrat
 
 After changing API source, stop the app processes with `Ctrl+C` and rerun `pnpm dev:up`.
 
+## Local environment files
+
+Use the repository-root `.env` for all local React and NestJS configuration. Add new application keys to the root `.env.example` template. Define each shared public setting once under its `VITE_` name. Map that value to the corresponding backend setting in local NestJS configuration. Reserve `VITE_` for values safe to expose in the browser. See the [hosting decision](../decisions/0003-hosting.md#application-configuration) for deployed configuration.
+
+Use `.env.aws` for infrastructure setup details such as the AWS account, SSO profile, stack name and Google secret reference. Git ignores both populated files and allows the two example templates to be committed. When implementing React sign-in, point Vite's `envDir` at the repository root so it loads the same `.env` as NestJS.
+
 ## Environments
 
 | | Local | CI | Public demo |
@@ -81,6 +87,6 @@ Vite proxies `/api` to NestJS. The demo routes `/api/*` through CloudFront to AP
 
 ## Cognito prerequisite (from M2)
 
-Create a development User Pool and public app client, enable Managed Login and Authorization Code + PKCE, and allow localhost redirect/logout URLs. Configure the **public** issuer/domain/client ID in local environment settings; do not put a client secret in React. Live login requires an internet connection. Local backend validates tokens and checks membership in local PostgreSQL.
+Follow the [AWS and Cognito development runbook](aws-cognito-development.md) to set up the development User Pool and public app client. Configure the **public** issuer/domain/client ID in local environment settings; do not put a client secret in React. Live login requires an internet connection. Local backend validates tokens and checks membership in local PostgreSQL.
 
 M1 stays runnable without Cognito; CI identity tests use controlled token fixtures. Never enable a test-auth bypass in a public deployment.
