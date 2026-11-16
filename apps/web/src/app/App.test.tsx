@@ -37,6 +37,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+// Render the real components with a fake session so these tests can exercise the UI without Cognito.
 describe('protected React shell', () => {
   it('starts Managed Login from the signed-out shell without requesting protected data', () => {
     window.history.replaceState(null, '', '/')
@@ -128,6 +129,7 @@ describe('protected React shell', () => {
     expect(screen.getByText('manager')).toBeTruthy()
     expect(window.location.pathname).toBe('/organisations/second')
     expect(previousSignal).toHaveProperty('aborted', true)
+    // act lets React process any updates from the late response before we check the screen.
     await act(async () => finishPrevious(Response.json(first)))
     expect(screen.queryByRole('heading', { name: first.name })).toBeNull()
 

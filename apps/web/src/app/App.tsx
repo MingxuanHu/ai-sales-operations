@@ -30,13 +30,17 @@ export function App({ session = defaultSession }: { session?: CognitoSession }) 
 }
 
 function SalesOperations({ session }: { session?: CognitoSession }) {
+  // React Router lets this component read the current URL and change screens without a full page reload.
   const navigate = useNavigate()
   const location = useLocation()
+  // useState remembers these values across renders. Calling a setter updates what the shell shows.
   const [status, setStatus] = useState(location.pathname === '/auth/callback' ? 'callback' : 'signed-out')
   const [error, setError] = useState('')
+  // A ref remembers whether the one-time callback started without triggering another render.
   const callbackStarted = useRef(false)
   const [requests, setRequests] = useState<AbortController>()
 
+  // An effect runs after React renders. This one exchanges the code when the browser returns from Cognito.
   useEffect(() => {
     if (status !== 'callback' || callbackStarted.current) return
     callbackStarted.current = true
@@ -59,7 +63,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
     })
   }, [navigate, session, status])
 
-  // Memoization keeps requests stable across renders while this session is active.
+  // useMemo reuses the API client until the session or its request controller changes.
   const api = useMemo(() => {
     if (!session || !requests) return
     function expire() {
@@ -92,6 +96,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
   }
 
   function signOut() {
+    // Cancel protected requests and remove the workspace before redirecting to Cognito.
     requests?.abort()
     setRequests(undefined)
     setStatus('signing-out')
@@ -113,6 +118,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
       </AppShell.Header>
       <AppShell.Main className="app-main">
         <Container size="lg" py={{ base: 'lg', sm: 'xl' }}>
+          {/* JSX conditions choose the workspace, a progress message, or the sign-in form. */}
           {status === 'signed-in' && api ? (
             <Suspense fallback={<Text role="status">Loading workspace…</Text>}>
               <OrganisationWorkspace api={api} />

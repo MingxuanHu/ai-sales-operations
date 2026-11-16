@@ -8,16 +8,20 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
   hasMemberships: boolean
   onJoined: (id: string) => void
 }) {
+  // An undefined inbox is still loading. An empty array means the API returned no invitations.
   const [invitations, setInvitations] = useState<Invitation[]>()
   const [inboxFailed, setInboxFailed] = useState(false)
   const [revision, setRevision] = useState(0)
   const [name, setName] = useState('')
+  // The active action identifies which button shows a spinner while the request is pending.
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState('')
+  // Refs remember the retry ID and whether the screen is mounted without updating the UI.
   const createAttempt = useRef<{ name: string; id: string } | undefined>(undefined)
   const active = useRef(false)
 
   useEffect(() => {
+    // Cleanup marks the view inactive so a late response cannot navigate after the user leaves.
     active.current = true
     return () => { active.current = false }
   }, [])
@@ -29,6 +33,7 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
     }).catch(() => {
       if (!request.signal.aborted) setInboxFailed(true)
     })
+    // Cancel the old inbox read when the user refreshes it or leaves this screen.
     return () => request.abort()
   }, [api, revision])
 
@@ -38,6 +43,7 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
     setError('')
     try {
       const result = await send()
+      // The parent supplied onJoined as a prop and uses it to open the organisation.
       if (active.current) onJoined(result.organisationId)
     } catch (failure) {
       if (!active.current) return
@@ -50,6 +56,7 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
   }
 
   function createOrganisation(event: SubmitEvent<HTMLFormElement>) {
+    // Handle the form in React so the browser does not reload the page on submit.
     event.preventDefault()
     const trimmed = name.trim()
     if (!trimmed || [...trimmed].length > 120) {
@@ -79,6 +86,7 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
           <Stack gap="sm">
             <Title order={2} size="h3">Create an organisation</Title>
             <Text c="dimmed" size="sm">You’ll become its first administrator.</Text>
+            {/* This is a controlled input. React state supplies the value and onChange updates it as the user types. */}
             <TextInput label="Organisation name" required value={name} onChange={(event) => setName(event.currentTarget.value)} />
             <Button type="submit" w="fit-content" loading={busy === 'create'} disabled={Boolean(busy)}>Create organisation</Button>
           </Stack>
@@ -93,6 +101,7 @@ export function Onboarding({ api, userId, hasMemberships, onJoined }: {
           <Text c="dimmed" size="sm">Share your user ID with an organisation administrator so they can invite you.</Text>
           <Group gap="xs">
             <Text size="sm" style={{ overflowWrap: 'anywhere' }}>{userId}</Text>
+            {/* Mantine calls this child function with the copy action and the state for the button label. */}
             <CopyButton value={userId}>
               {({ copied, copy }) => <Button variant="light" size="xs" onClick={copy}>{copied ? 'Copied' : 'Copy user ID'}</Button>}
             </CopyButton>

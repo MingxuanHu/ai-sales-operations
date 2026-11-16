@@ -4,10 +4,12 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } fr
 import { ApiError, type Membership, type OrganisationsApi, type Profile } from '../api/organisations'
 import { Onboarding } from './Onboarding'
 
+// Each status has its own shape, so TypeScript knows data is available only after a successful request.
 type Result<T> = { status: 'loading' } | { status: 'ready'; data: T } | { status: 'failed'; error: unknown }
 
 export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   const [profile, setProfile] = useState<Result<Profile>>({ status: 'loading' })
+  // Changing this counter asks the effect to fetch again, even when the API client is the same.
   const [revision, setRevision] = useState(0)
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -19,10 +21,12 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
     }).catch((error: unknown) => {
       if (!request.signal.aborted) setProfile({ status: 'failed', error })
     })
+    // React runs this cleanup before fetching again and when the workspace leaves the screen.
     return () => request.abort()
   }, [api, revision])
 
   function reloadProfile() {
+    // The updater function calculates the next counter from the previous state.
     setProfile({ status: 'loading' })
     setRevision((value) => value + 1)
   }
@@ -42,6 +46,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   return (
     <Stack gap="lg">
       <Group align="end" justify="space-between">
+        {/* The current route determines the selected option and choosing an option changes the route. */}
         <Select
           label="Organisation"
           placeholder={memberships.length ? 'Choose an organisation' : 'No organisations'}
@@ -54,6 +59,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
         />
         <Button component={Link} to="/onboarding" variant="default">Onboarding and invitations</Button>
       </Group>
+      {/* React Router renders the element whose route matches the URL. The index route handles the workspace home. */}
       <Routes>
         <Route index element={memberships.length === 1 ? (
           <Navigate replace to={`/organisations/${encodeURIComponent(memberships[0].organisationId)}`} />
@@ -79,16 +85,19 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
 }
 
 function SelectedOrganisation({ api, onDenied }: { api: OrganisationsApi; onDenied: () => void }) {
+  // useParams reads the organisation ID from the dynamic part of the URL.
   const { organisationId = '' } = useParams()
   // A new key resets view state immediately when the route changes to another organisation.
   return <OrganisationOverview key={organisationId} id={organisationId} api={api} onDenied={onDenied} />
 }
 
 function OrganisationOverview({ id, api, onDenied }: { id: string; api: OrganisationsApi; onDenied: () => void }) {
+  // Start with a loading screen while the API checks access to this specific organisation.
   const [result, setResult] = useState<Result<Membership>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     const request = new AbortController()
+    // Ignore a response after cleanup so a previous organisation cannot update this view.
     void api.overview(id, request.signal).then((data) => {
       if (!request.signal.aborted) setResult({ status: 'ready', data })
     }).catch((error: unknown) => {
@@ -127,6 +136,7 @@ function OrganisationOverview({ id, api, onDenied }: { id: string; api: Organisa
   )
 }
 
+// React passes the content between the Loading tags as the children prop.
 function Loading({ children }: { children: string }) {
   return <Group role="status" gap="sm"><Loader size="sm" />{children}</Group>
 }
