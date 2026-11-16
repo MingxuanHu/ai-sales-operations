@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CognitoSession } from '../features/auth/api/cognito-session'
+import { CognitoCallbackError, type CognitoSession } from '../features/auth/api/cognito-session'
 import { App } from './App'
 
 const first = { organisationId: 'first', name: 'Cedar Wholesale', role: 'salesperson' }
@@ -51,9 +51,9 @@ describe('protected React shell', () => {
 
   it('cleans up a rejected callback and returns to sign-in', async () => {
     const session = mockSession()
-    vi.mocked(session.completeSignIn).mockRejectedValueOnce(new Error('Invalid state'))
+    vi.mocked(session.completeSignIn).mockRejectedValueOnce(new CognitoCallbackError('attempt'))
     render(<App session={session} />)
-    expect(await screen.findByText('Sign-in could not be completed. Please try again.')).toBeTruthy()
+    expect(await screen.findByText(/could not be matched or has expired/)).toBeTruthy()
     expect(window.location.search).toBe('')
   })
 

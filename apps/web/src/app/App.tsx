@@ -2,7 +2,7 @@ import { AppShell, Button, Container, Group, Loader, MantineProvider, Text, crea
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router'
 import { readCognitoConfig } from '../features/auth/api/cognito-config'
-import { createCognitoSession, type CognitoSession } from '../features/auth/api/cognito-session'
+import { CognitoCallbackError, createCognitoSession, type CognitoSession } from '../features/auth/api/cognito-session'
 import { SignIn } from '../features/auth/components/SignIn'
 import { createOrganisationsApi } from '../features/organisations/api/organisations'
 import '@mantine/core/styles.css'
@@ -51,8 +51,10 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
       void navigate(returnTo, { replace: true })
       setRequests(new AbortController())
       setStatus('signed-in')
-    }).catch(() => {
-      setError('Sign-in could not be completed. Please try again.')
+    }).catch((failure: unknown) => {
+      setError(failure instanceof CognitoCallbackError
+        ? failure.message
+        : 'Sign-in could not be completed. Please try again.')
       setStatus('signed-out')
     })
   }, [navigate, session, status])

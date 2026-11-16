@@ -2,6 +2,7 @@
 
 import { generateKeyPairSync, sign } from 'node:crypto'
 import { JwtVerifier } from 'aws-jwt-verify'
+import { FetchError } from 'aws-jwt-verify/error'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCognitoSession } from './cognito-session'
 
@@ -60,18 +61,50 @@ describe('Cognito browser session', () => {
     const session = createCognitoSession(config)
     const unmatched = new URL(callback)
     unmatched.searchParams.set('state', 'wrong')
-    await expect(session.completeSignIn(unmatched)).rejects.toThrow('invalid or expired')
-    await expect(session.completeSignIn(callback)).rejects.toThrow('invalid or expired')
+    await expect(session.completeSignIn(unmatched)).rejects.toMatchObject({ stage: 'attempt' })
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({ stage: 'attempt' })
     setupAttempt(Date.now() - 11 * 60_000)
-    await expect(session.completeSignIn(callback)).rejects.toThrow('invalid or expired')
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({ stage: 'attempt' })
     expect(fetch).not.toHaveBeenCalled()
     expect(sessionStorage.length).toBe(0)
+  })
+
+  it('identifies a provider error without displaying the provider description', async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    const rejected = new URL(config.redirectUri + '?state=fixture-state&error=server_error&error_description=private-details')
+    const session = createCognitoSession(config)
+    await expect(session.completeSignIn(rejected)).rejects.toMatchObject({
+      stage: 'provider', message: 'Managed Login returned an error before issuing a sign-in code. Please try again.',
+    })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('identifies a rejected exchange and consumes the callback without retrying its code', async () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 400 }))
+    vi.stubGlobal('fetch', fetch)
+    const session = createCognitoSession(config)
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({ stage: 'exchange' })
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({ stage: 'attempt' })
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(session.hasSession()).toBe(false)
   })
 
   it('rejects a correctly signed ID token with the wrong nonce', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => tokenResponse('wrong')))
     const session = createCognitoSession(config)
-    await expect(session.completeSignIn(callback)).rejects.toThrow('could not be verified')
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({ stage: 'verification' })
+    expect(session.hasSession()).toBe(false)
+  })
+
+  it('identifies signing-key network failures without exposing their details', async () => {
+    const session = createCognitoSession(config)
+    const verifier = vi.mocked(JwtVerifier.create).mock.results[0].value
+    vi.spyOn(verifier, 'verify').mockRejectedValueOnce(new FetchError(config.issuer, 'private-details'))
+    vi.stubGlobal('fetch', vi.fn(async () => tokenResponse()))
+    await expect(session.completeSignIn(callback)).rejects.toMatchObject({
+      stage: 'keys', message: 'The app could not load Cognito’s public signing keys. Check your connection and try again.',
+    })
     expect(session.hasSession()).toBe(false)
   })
 

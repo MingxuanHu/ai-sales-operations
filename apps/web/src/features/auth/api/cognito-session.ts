@@ -1,4 +1,5 @@
 import { JwtVerifier } from 'aws-jwt-verify'
+import { FetchError } from 'aws-jwt-verify/error'
 
 export type CognitoConfig = {
   domain: string
@@ -15,6 +16,21 @@ type Tokens = { accessToken: string; refreshToken: string; expiresAt: number }
 const attemptKey = 'cognito-sign-in'
 const attemptLifetime = 10 * 60_000
 const refreshWindow = 30_000
+
+// Display fixed messages so provider descriptions, codes and tokens stay out of the UI.
+const callbackMessages = {
+  attempt: 'This sign-in attempt could not be matched or has expired. Start sign-in again in this tab.',
+  provider: 'Managed Login returned an error before issuing a sign-in code. Please try again.',
+  exchange: 'The app could not exchange the sign-in code with Cognito. Please try again.',
+  keys: 'The app could not load Cognito’s public signing keys. Check your connection and try again.',
+  verification: 'The app could not verify the sign-in response. Please try again.',
+}
+
+export class CognitoCallbackError extends Error {
+  constructor(readonly stage: keyof typeof callbackMessages) {
+    super(callbackMessages[stage])
+  }
+}
 
 // PKCE uses URL-safe base64 so the same values can travel in URLs and form bodies.
 function base64url(bytes: Uint8Array) {
@@ -60,12 +76,19 @@ export function createCognitoSession(config: CognitoConfig) {
   }
 
   async function exchange(fields: Record<string, string>, signal: AbortSignal, nonce?: string) {
-    const response = await post('/oauth2/token', fields, signal)
-    if (!response.ok) throw new Error('Cognito rejected the token request.')
-    const { access_token, refresh_token, id_token, expires_in } = await response.json()
+    const readTokens = async () => {
+      const response = await post('/oauth2/token', fields, signal)
+      if (!response.ok) throw new Error('Cognito rejected the token request.')
+      return response.json()
+    }
+    const { access_token, refresh_token, id_token, expires_in } = await readTokens().catch((error: unknown) => {
+      if (nonce !== undefined) throw new CognitoCallbackError('exchange')
+      throw error
+    }) ?? {}
     if (typeof access_token !== 'string' || !access_token ||
         typeof refresh_token !== 'string' || !refresh_token ||
         typeof expires_in !== 'number' || !Number.isFinite(expires_in) || expires_in <= 0) {
+      if (nonce !== undefined) throw new CognitoCallbackError('exchange')
       throw new Error('Cognito returned an incomplete session.')
     }
 
@@ -74,9 +97,11 @@ export function createCognitoSession(config: CognitoConfig) {
         customJwtCheck: ({ header }) => {
           if (header.alg !== 'RS256') throw new Error('Unexpected signing algorithm.')
         },
+      }).catch((error: unknown) => {
+        throw new CognitoCallbackError(error instanceof FetchError ? 'keys' : 'verification')
       })
       if (typeof claims.exp !== 'number' || claims.token_use !== 'id' || claims.nonce !== nonce) {
-        throw new Error('The sign-in response could not be verified.')
+        throw new CognitoCallbackError('verification')
       }
     }
 
@@ -109,11 +134,12 @@ export function createCognitoSession(config: CognitoConfig) {
       const attempt: Attempt | null = saved ? JSON.parse(saved) : null
       const code = url.searchParams.get('code')
       const age = attempt ? Date.now() - attempt.startedAt : Infinity
-      if (!attempt || !code || url.searchParams.has('error') || !attempt.state ||
+      if (!attempt || !attempt.state ||
           attempt.state !== url.searchParams.get('state') || !attempt.nonce || !attempt.verifier ||
           !Number.isFinite(age) || age < 0 || age > attemptLifetime) {
-        throw new Error('The sign-in attempt is missing, invalid or expired.')
+        throw new CognitoCallbackError('attempt')
       }
+      if (!code || url.searchParams.has('error')) throw new CognitoCallbackError('provider')
       await exchange({
         grant_type: 'authorization_code', code, redirect_uri: config.redirectUri,
         code_verifier: attempt.verifier,
