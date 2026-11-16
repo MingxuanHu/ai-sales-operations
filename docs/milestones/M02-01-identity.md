@@ -47,7 +47,7 @@ Track delivery in the [M2 Identity GitHub milestone](https://github.com/Mingxuan
 
 ### 4. Add the protected React shell and verify local sign-in
 
-[Issue #15](https://github.com/MingxuanHu/ai-sales-operations/issues/15)
+[Issue #15](https://github.com/MingxuanHu/ai-sales-operations/issues/15) · [PR #22](https://github.com/MingxuanHu/ai-sales-operations/pull/22)
 
 - **Goal.** Complete the browser-to-Cognito-to-API workflow on the local stack.
 - **In scope.** Connect the shell to Managed Login for registration and sign-in with the approved providers. Expose the onboarding steps available to users under the Issue 1 design. Handle the callback, session lifecycle and logout according to the design. Load available organisations from the API, allow selection where applicable, and show signed-out, no-membership and access-denied states.
