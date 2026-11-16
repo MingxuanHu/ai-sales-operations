@@ -75,9 +75,27 @@ describe('Cognito browser session', () => {
     const rejected = new URL(config.redirectUri + '?state=fixture-state&error=server_error&error_description=private-details')
     const session = createCognitoSession(config)
     await expect(session.completeSignIn(rejected)).rejects.toMatchObject({
-      stage: 'provider', message: 'Managed Login returned an error before issuing a sign-in code. Please try again.',
+      stage: 'provider', message: 'Managed Login could not complete sign-in. If you already have an account, try again using the same sign-in method and account you used before.',
     })
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['UsernameExistsException', 'fixture-private-identity'],
+    ['invalid_request', 'Already found an entry for username fixture-private-identity'],
+    ['server_error', 'AliasExistsException: fixture-private-identity'],
+  ])('explains a reported account conflict (%s) without showing identity details', async (error, description) => {
+    const url = new URL(config.redirectUri)
+    url.search = new URLSearchParams({ state: 'fixture-state', error, error_description: description }).toString()
+    await expect(createCognitoSession(config).completeSignIn(url)).rejects.toMatchObject({
+      stage: 'accountConflict',
+      message: 'An account already exists with these sign-in details. If you registered with Google, choose Sign in with Google and select the same Google account. If you registered with a username, sign in with that username.',
+    })
+  })
+
+  it('ignores an account conflict reported by an unmatched callback', async () => {
+    const url = new URL(config.redirectUri + '?state=wrong&error=UsernameExistsException')
+    await expect(createCognitoSession(config).completeSignIn(url)).rejects.toMatchObject({ stage: 'attempt' })
   })
 
   it('identifies a rejected exchange and consumes the callback without retrying its code', async () => {

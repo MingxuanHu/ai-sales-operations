@@ -20,7 +20,8 @@ const refreshWindow = 30_000
 // Display fixed messages so provider descriptions, codes and tokens stay out of the UI.
 const callbackMessages = {
   attempt: 'This sign-in attempt could not be matched or has expired. Start sign-in again in this tab.',
-  provider: 'Managed Login returned an error before issuing a sign-in code. Please try again.',
+  provider: 'Managed Login could not complete sign-in. If you already have an account, try again using the same sign-in method and account you used before.',
+  accountConflict: 'An account already exists with these sign-in details. If you registered with Google, choose Sign in with Google and select the same Google account. If you registered with a username, sign in with that username.',
   exchange: 'The app could not exchange the sign-in code with Cognito. Please try again.',
   keys: 'The app could not load Cognito’s public signing keys. Check your connection and try again.',
   verification: 'The app could not verify the sign-in response. Please try again.',
@@ -30,6 +31,16 @@ export class CognitoCallbackError extends Error {
   constructor(readonly stage: keyof typeof callbackMessages) {
     super(callbackMessages[stage])
   }
+}
+
+function providerFailure(params: URLSearchParams) {
+  const error = params.get('error')
+  const description = params.get('error_description')?.trim() ?? ''
+  // OAuth may wrap an account conflict in a general error. Match known markers without showing the raw text.
+  const conflictCode = /^(?:UsernameExistsException|AliasExistsException)$/i
+  const conflictDescription = /^(?:(?:UsernameExistsException|AliasExistsException)\b|Already found an entry for username\b)/i
+  const wrappedConflict = (error === 'invalid_request' || error === 'server_error') && conflictDescription.test(description)
+  return new CognitoCallbackError((error && conflictCode.test(error)) || wrappedConflict ? 'accountConflict' : 'provider')
 }
 
 // PKCE uses URL-safe base64 so the same values can travel in URLs and form bodies.
@@ -139,7 +150,7 @@ export function createCognitoSession(config: CognitoConfig) {
           !Number.isFinite(age) || age < 0 || age > attemptLifetime) {
         throw new CognitoCallbackError('attempt')
       }
-      if (!code || url.searchParams.has('error')) throw new CognitoCallbackError('provider')
+      if (!code || url.searchParams.has('error')) throw providerFailure(url.searchParams)
       await exchange({
         grant_type: 'authorization_code', code, redirect_uri: config.redirectUri,
         code_verifier: attempt.verifier,
