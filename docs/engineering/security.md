@@ -11,7 +11,7 @@ Public source does not imply public credentials. Never commit `.env`, database U
 
 ## PostgreSQL connection URLs
 
-NestJS reads `DATABASE_URL` for runtime queries and writes. `DIRECT_URL` is reserved for Prisma schema migrations and will be wired up when the first migration is added in M2. The name refers to a direct PostgreSQL endpoint that bypasses a connection pooler.
+NestJS reads `DATABASE_URL` for runtime queries and writes. `DIRECT_URL` is reserved for Prisma schema migrations. The name refers to a direct PostgreSQL endpoint that bypasses a connection pooler.
 
 Set both variables to the same direct URL and Docker credentials in local development. In the online demo, set `DATABASE_URL` to the pooled Neon URL with a role limited to application operations. Set `DIRECT_URL` to the direct URL for the same Neon database with a separate role that can change the schema. Provide the migration credential only to the deployment step that runs migrations.
 
@@ -28,3 +28,20 @@ Cognito **public app client ID, domain and User Pool ID are identifiers**, not c
 - Restrict AWS OIDC trust to the actual repository identity and trusted `demo` environment; restrict permissions to required resources.
 - Enforce authorisation at every tenant-scoped API, database query and AI tool call.
 - Demo uses synthetic data, rate limits, cost alerts and explicit human approval for writes suggested by AI.
+
+### M3 demo identity handoff
+
+Apply the committed migrations with
+`pnpm --filter @ai-sales-operations/api prisma:migrate` in the protected
+deployment step. Supply the demo database's direct migration credential as
+`DIRECT_URL` only to that step. Configure Lambda with the demo database runtime
+credential and the demo pool's `COGNITO_USER_POOL_ID`, `COGNITO_ISSUER`,
+`COGNITO_APP_CLIENT_ID`
+and `COGNITO_API_RESOURCE_URL` (the exact public API resource URL).
+
+After deployment, sign in through the separate demo pool with a synthetic
+identity and use the [protected API contract](../architecture/identity.md#protected-api-contract)
+to create a synthetic organisation. Organisation creation grants the caller
+the initial administrator role in the same transaction. Verify that a second
+synthetic identity has no access until it accepts an invitation. Keep the
+demo identities and data separate from local development.

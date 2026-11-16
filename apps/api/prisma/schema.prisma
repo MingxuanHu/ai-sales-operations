@@ -8,3 +8,111 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Each model describes a database table and gives Prisma the types for querying it.
+// @map names a column in SQL. @@map names the table. @db.Uuid picks the PostgreSQL column type.
+model ApplicationUser {
+  // @id marks the primary key. PostgreSQL generates a UUID when the row is inserted.
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  // [] means one user can have many related rows. Queries fetch them when asked via select or include.
+  identities    ExternalIdentity[]
+  organisations Organisation[]
+  memberships   Membership[]
+  invitations   Invitation[]
+
+  @@map("application_users")
+}
+
+// Maps a verified Cognito subject to the application user ID.
+model ExternalIdentity {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  subject   String          @unique
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  // @relation links user_id to the user primary key and blocks deleting a referenced user.
+  user      ApplicationUser @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // An index lets the database find identities by user ID without scanning the table.
+  @@index([userId])
+  @@map("external_identities")
+}
+
+model Organisation {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String          @db.VarChar(120)
+  createdByUserId   String          @map("created_by_user_id") @db.Uuid
+  creationRequestId String          @map("creation_request_id") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  creator           ApplicationUser @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  memberships       Membership[]
+  invitations       Invitation[]
+
+  // An organisation creation request ID is unique per creator, so retries can reuse the result.
+  @@unique([createdByUserId, creationRequestId])
+  @@map("organisations")
+}
+
+// A composite primary key gives each user one membership per organisation.
+model Membership {
+  organisationId    String           @map("organisation_id") @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  role              MembershipRole
+  status            MembershipStatus @default(active)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organisation      Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  user              ApplicationUser  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  issuedInvitations Invitation[]
+
+  @@id([organisationId, userId])
+  @@index([userId, status, organisationId])
+  @@index([organisationId, status, role])
+  @@map("memberships")
+}
+
+// Stores the offered role and lifecycle for an invitation to join an organisation.
+model Invitation {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organisationId  String           @map("organisation_id") @db.Uuid
+  issuedByUserId  String           @map("issued_by_user_id") @db.Uuid
+  recipientUserId String           @map("recipient_user_id") @db.Uuid
+  role            MembershipRole
+  status          InvitationStatus @default(pending)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz(6)
+  resolvedAt      DateTime?        @map("resolved_at") @db.Timestamptz(6)
+  organisation    Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  // Both columns identify the issuing membership and keep it scoped to the organisation.
+  issuer          Membership       @relation(fields: [organisationId, issuedByUserId], references: [organisationId, userId], onDelete: Restrict)
+  recipient       ApplicationUser  @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@index([recipientUserId, status, expiresAt])
+  @@index([organisationId, issuedByUserId, status])
+  @@map("invitations")
+}
+
+// Enums restrict fields to the listed values in PostgreSQL and the generated client.
+enum MembershipRole {
+  admin
+  salesperson
+  manager
+
+  @@map("membership_role")
+}
+
+enum MembershipStatus {
+  active
+  removed
+
+  @@map("membership_status")
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
+
+  @@map("invitation_status")
+}

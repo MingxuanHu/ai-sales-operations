@@ -38,6 +38,9 @@ importers:
       '@prisma/client':
         specifier: 7.10.1
         version: 7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(typescript@6.0.3))(typescript@6.0.3)
+      aws-jwt-verify:
+        specifier: 5.2.1
+        version: 5.2.1
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2
@@ -762,6 +765,10 @@ packages:
     resolution: {integrity: sha512-K3d02L17IwmAuiBWNuX1DzYhKUs9GrKYI7bZnGJfJ1bKz9ymXFxfudBOL3rUb8JAusDNSULiQU2fsJH7kyY2XA==}
     engines: {node: '>= 18.0.0'}
     hasBin: true
+
+  aws-jwt-verify@5.2.1:
+    resolution: {integrity: sha512-J+buA4M+qvQDk58WXFBLkDodkEX3DDL1ac5XFQPW3opxAsaLXYu5hYnlSHsaBRDBUXBAn695kE/cw/mdyJKwJg==}
+    engines: {node: '>=18.0.0'}
 
   aws-ssl-profiles@1.1.2:
     resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
@@ -2613,6 +2620,8 @@ snapshots:
       constructs: 10.8.1
 
   aws-cdk@2.1148.1: {}
+
+  aws-jwt-verify@5.2.1: {}
 
   aws-ssl-profiles@1.1.2: {}
 

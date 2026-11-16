@@ -6,9 +6,11 @@
     "dev": "pnpm run build && node --env-file-if-exists=../../.env dist/main.js",
     "typecheck": "pnpm run prisma:generate && tsc --noEmit",
     "unit-tests": "pnpm run build && node --test",
-    "integration-tests": "pnpm run build && node --test integration/health.mjs",
+    "integration-tests": "pnpm run build && node --test integration/api-suite.mjs",
     "build": "pnpm run prisma:generate && tsc",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:migrate:local": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate deploy"
   },
   "dependencies": {
     "@nestjs/common": "12.4.2",
@@ -16,6 +18,7 @@
     "@nestjs/platform-express": "12.4.2",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "aws-jwt-verify": "5.2.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
