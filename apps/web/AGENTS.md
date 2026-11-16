@@ -2,7 +2,11 @@
 
 Follow the root agent instructions. Use relative `/api/` URLs for backend requests so the same paths work through Vite and the deployed frontend. Keep secrets out of browser code and Vite client environment variables.
 
-Use short beginner comments to explain JSX, React state and effects, browser requests, and Vite configuration where they appear. Connect each concept to what the user sees or what the browser does.
+## Teaching comments
+
+- When adding or changing React code, write short comments for a developer learning React. Introduce unfamiliar concepts where they appear, such as JSX, props, state, event handlers, effects and their cleanup, and keys in lists.
+- Explain what the code does in that component and how it affects what the user sees or what the browser does. For example, explain why changing state updates the visible screen or why an effect cancels a request when the selected organisation changes.
+- Explain browser requests and Vite or TypeScript configuration where the setting affects the app. Keep each comment focused on one idea and update it when the code changes.
 
 ## Project structure
 

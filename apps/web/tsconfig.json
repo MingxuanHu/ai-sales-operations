@@ -1,12 +1,21 @@
 {
+  // TypeScript uses this file to check the React app and its Vite configuration.
   "compilerOptions": {
+    // Use ES2023 as the JavaScript output target for TypeScript.
     "target": "ES2023",
+    // Describe ES2025 and browser APIs to TypeScript, including iterable DOM collections.
     "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    // Preserve modern import and export syntax for the bundler.
     "module": "ESNext",
+    // Resolve import paths using rules suited to a bundler such as Vite.
     "moduleResolution": "Bundler",
+    // Turn JSX markup into calls to React's JSX runtime when TypeScript emits JavaScript.
     "jsx": "react-jsx",
+    // Enable checks that catch issues such as using a value that might be undefined.
     "strict": true,
+    // Load Vite's client types, such as import.meta.env, and Node.js types used by tooling.
     "types": ["vite/client", "node"]
   },
+  // Start with files under src and the Vite config when deciding what to check.
   "include": ["src", "vite.config.ts"]
 }
