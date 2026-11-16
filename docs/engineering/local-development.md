@@ -49,13 +49,13 @@ pnpm install --frozen-lockfile
 pnpm dev:up
 ```
 
-`pnpm dev:up` waits for PostgreSQL to accept connections, then starts React and NestJS in parallel. The API loads the root `.env` if present. Open [the local web app](http://127.0.0.1:5173) and check health through the Vite proxy:
+`pnpm dev:up` waits for PostgreSQL to accept connections, then starts React and NestJS in parallel. The API loads the root `.env` if present. Open [the local web app](http://localhost:5173) and check health through the Vite proxy:
 
 ```bash
 curl -i http://127.0.0.1:5173/api/health
 ```
 
-The page should show **API status · Operational**. Expect HTTP 200 with `{"status":"ok"}`. With the web and API processes still running, run `pnpm dev:down` in another terminal and repeat the request. `/api/health` returns HTTP 503 with `{"status":"unavailable"}` when PostgreSQL is unreachable or `DATABASE_URL` is missing.
+The web app should show its signed-out screen. For the health request, expect HTTP 200 with `{"status":"ok"}`. With the web and API processes still running, run `pnpm dev:down` in another terminal and repeat the request. `/api/health` returns HTTP 503 with `{"status":"unavailable"}` when PostgreSQL is unreachable or `DATABASE_URL` is missing.
 
 To end a development session, press Ctrl+C in the startup terminal and stop PostgreSQL:
 
@@ -73,7 +73,7 @@ After changing API source, stop the app processes with `Ctrl+C` and rerun `pnpm 
 
 Use the repository-root `.env` for all local React and NestJS configuration. Add new application keys to the root `.env.example` template. Define each shared public setting once under its `VITE_` name. Map that value to the corresponding backend setting in local NestJS configuration. Reserve `VITE_` for values safe to expose in the browser. See the [hosting decision](../decisions/0003-hosting.md#application-configuration) for deployed configuration.
 
-Use `.env.aws` for infrastructure setup details such as the AWS account, SSO profile, stack name and Google secret reference. Git ignores both populated files and allows the two example templates to be committed. When implementing React sign-in, point Vite's `envDir` at the repository root so it loads the same `.env` as NestJS.
+Use `.env.aws` for infrastructure setup details such as the AWS account, SSO profile, stack name and Google secret reference. Git ignores both populated files and allows the two example templates to be committed. Vite's `envDir` points at the repository root so it loads the same `.env` as NestJS.
 
 ## Environments
 
@@ -89,7 +89,7 @@ Vite proxies `/api` to NestJS. The demo routes `/api/*` through CloudFront to AP
 
 Follow the [AWS and Cognito development runbook](aws-cognito-development.md) to set up the development User Pool and public app client. Configure the **public** issuer/domain/client ID in local environment settings; do not put a client secret in React. Live login requires an internet connection. Local backend validates tokens and checks membership in local PostgreSQL.
 
-M1 stays runnable without Cognito; CI identity tests use controlled token fixtures. Never enable a test-auth bypass in a public deployment.
+Without Cognito settings the web app shows its signed-out screen with sign-in disabled. CI identity tests use controlled token fixtures.
 
 ## Identity schema
 
@@ -99,14 +99,29 @@ With the local PostgreSQL service running, apply the committed migrations using
 For protected routes, set `COGNITO_USER_POOL_ID`, `VITE_COGNITO_ISSUER`, `VITE_COGNITO_CLIENT_ID`
 and `VITE_COGNITO_API_RESOURCE_URL` in that same file.
 
-To create synthetic data for a smoke test, sign in as a synthetic user, call
-`GET /api/me`, and create an organisation through `POST /api/organisations`
-using a fresh request UUID. That request also creates the first administrator.
-A second synthetic user signs in and shares their application user ID with the
-administrator, who issues an invitation. See the
-[protected API contract](../architecture/identity.md#protected-api-contract)
-for request bodies and acceptance.
-
 Keep schema-generated SQL intact. When a database rule requires custom SQL,
 place it in its own later timestamped migration directory as `migration.sql`.
 Prisma applies both migrations in order through the same command.
+
+### Protected web shell smoke test
+
+1. Start the local stack with `pnpm dev:up` after applying the migrations. Open
+   `http://localhost:5173/` so the browser uses the origin registered in Cognito.
+2. Select **Continue to sign in**. In Managed Login, register a synthetic native
+   account using a test inbox you control, verify the email, and sign in.
+   Confirm the app lands on the no-organisation screen and exposes the user ID.
+   Create an organisation and verify that its overview shows the **admin** role.
+3. Open a separate browser session and sign in with the configured synthetic
+   Google test account. Copy its application user ID from **Invitations**.
+   Use the supported invitation-issuing API as an administrator with an
+   authorised local client. Then refresh the Google account's invitation inbox
+   and accept the invitation in the app. See the
+   [protected API contract](../architecture/identity.md#protected-api-contract).
+4. Give one synthetic account memberships in two organisations with different
+   roles. Open the organisation selector and switch between them with the
+   keyboard. Confirm that the route, organisation-scoped request path, and role
+   all change. Visit an inaccessible organisation route and check the access
+   denied message. Keep request headers and callback query strings out of
+   smoke-test evidence.
+5. Select **Sign out** and confirm that Managed Login returns to the signed-out
+   screen. Repeat for both sign-in methods.

@@ -10,3 +10,9 @@ Use short beginner comments to explain JSX, React state and effects, browser req
 - Use `src/app/` for app-wide composition, global styles, and routing or providers when introduced. Put capability-specific code under `src/features/<feature>/`.
 - Within a feature, put UI in `components/` and HTTP requests in `api/`. Add folders such as `hooks/` when the feature needs them. Name components in PascalCase and keep unit tests next to the code they exercise.
 - Keep code with its owning feature. Move it to `src/shared/` when multiple features genuinely reuse it. Shared code should have no dependency on individual features.
+
+## UI components
+
+- Use Mantine components directly for common controls and layouts. Compose them into app or feature components when they represent a workflow or reusable UI behaviour.
+- Put app-wide visual defaults in the Mantine theme. Keep styles specific to a feature with the component that uses them.
+- Check the [Mantine v9 component documentation](https://mantine.dev/llms.txt) for props and examples. Mantine also publishes [agent skills](https://mantine.dev/guides/llms/#skills) for forms, custom comboboxes, and custom components.
