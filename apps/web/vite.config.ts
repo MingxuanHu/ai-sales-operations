@@ -1,7 +1,10 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  // Resolve the single local .env relative to this config file.
+  envDir: fileURLToPath(new URL('../../', import.meta.url)),
   // The React plugin transforms JSX and enables fast updates while editing.
   plugins: [react()],
   server: {

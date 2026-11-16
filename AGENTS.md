@@ -14,6 +14,7 @@ Read the relevant documentation before changing code:
 - Start from `main` on a short-lived branch. Keep `main` buildable.
 - Follow [ADR 0002](docs/decisions/0002-delivery-strategy.md) when naming branches: `feature/<name>` for features, `fix/<name>` for fixes, `chore/<name>` for maintenance, and `docs/<name>` for documentation. Use these prefixes instead of agent defaults such as `codex/`.
 - Explain the change and acceptance checks before implementation.
+- Before handing back, stop the local servers and containers you started for testing, even if a check failed. Leave pre-existing services running. Verify that the services you stopped released their ports. Keep test services running only if the developer asks you to.
 - At the end of each turn that changes repository files, validate the work and make a local commit containing only the changes from that turn. Commit without waiting for separate confirmation unless the developer asks to leave the changes uncommitted.
 - After implementation and validation, present the local changes and check results for developer review. Create the pull request only after the developer reviews the changes and explicitly tells you to proceed.
 - Prefer straightforward, maintainable code; justify dependencies and cloud costs.
