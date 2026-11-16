@@ -90,3 +90,23 @@ Vite proxies `/api` to NestJS. The demo routes `/api/*` through CloudFront to AP
 Follow the [AWS and Cognito development runbook](aws-cognito-development.md) to set up the development User Pool and public app client. Configure the **public** issuer/domain/client ID in local environment settings; do not put a client secret in React. Live login requires an internet connection. Local backend validates tokens and checks membership in local PostgreSQL.
 
 M1 stays runnable without Cognito; CI identity tests use controlled token fixtures. Never enable a test-auth bypass in a public deployment.
+
+## Identity schema
+
+With the local PostgreSQL service running, apply the committed migrations using
+`pnpm --filter @ai-sales-operations/api prisma:migrate:local`. This command reads
+`DIRECT_URL` from the root `.env`. The API uses `DATABASE_URL` for requests.
+For protected routes, set `COGNITO_USER_POOL_ID`, `VITE_COGNITO_ISSUER`, `VITE_COGNITO_CLIENT_ID`
+and `VITE_COGNITO_API_RESOURCE_URL` in that same file.
+
+To create synthetic data for a smoke test, sign in as a synthetic user, call
+`GET /api/me`, and create an organisation through `POST /api/organisations`
+using a fresh request UUID. That request also creates the first administrator.
+A second synthetic user signs in and shares their application user ID with the
+administrator, who issues an invitation. See the
+[protected API contract](../architecture/identity.md#protected-api-contract)
+for request bodies and acceptance.
+
+Keep schema-generated SQL intact. When a database rule requires custom SQL,
+place it in its own later timestamped migration directory as `migration.sql`.
+Prisma applies both migrations in order through the same command.
