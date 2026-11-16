@@ -37,7 +37,7 @@ Track delivery in the [M2 Identity GitHub milestone](https://github.com/Mingxuan
 
 ### 3. Implement API identity and tenant authorisation
 
-[Issue #14](https://github.com/MingxuanHu/ai-sales-operations/issues/14)
+[Issue #14](https://github.com/MingxuanHu/ai-sales-operations/issues/14) · [PR #20](https://github.com/MingxuanHu/ai-sales-operations/pull/20)
 
 - **Goal.** Give future NestJS features a shared way to authenticate callers and enforce organisation membership and roles.
 - **In scope.** Implement the schema specified in Issue 1 as Prisma models and migrations. Implement the agreed organisation creation and membership onboarding flows. Implement access-token verification, identity resolution, membership lookup and tenant-scoped permission checks. Expose the signed-in user's memberships and a protected path that exercises tenant access. Keep test fixtures isolated. Add an explicit, repeatable Prisma seed command for local synthetic data if the onboarding flows alone cannot support the smoke tests. Document the M3 demo handoff for applying schema migrations and bootstrapping a synthetic organisation and first administrator against the separate demo pool and database. Run demo onboarding in M3.
