@@ -17,7 +17,7 @@ Track delivery in the [M3 First cloud deploy GitHub milestone](https://github.co
 
 ### 1. Allocate the AWS-managed demo HTTPS origin
 
-[Issue #24](https://github.com/MingxuanHu/ai-sales-operations/issues/24) · [Demo web runbook](../../infra/web/README.md)
+[Issue #24](https://github.com/MingxuanHu/ai-sales-operations/issues/24) · [PR #29](https://github.com/MingxuanHu/ai-sales-operations/pull/29) · [Demo web runbook](../../infra/web/README.md)
 
 - **Goal.** Obtain the final demo HTTPS URL before configuring Cognito.
 - **In scope.** Define the demo web stack in TypeScript CDK with a CloudFront distribution, private S3 origin and origin access control. Use the assigned `*.cloudfront.net` hostname and default CloudFront certificate. Publish a minimal placeholder to verify HTTPS. Record the origin, `/auth/callback` redirect, root sign-out URL and `/api` token audience. Use **AI Sales Operations Demo** as the proposed Google consent-screen name.
