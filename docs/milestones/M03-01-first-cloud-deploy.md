@@ -82,13 +82,31 @@ migration history access. The pooled URL is stored in
 
 ### 3. Package and deploy the NestJS backend with CDK
 
-[Issue #26](https://github.com/MingxuanHu/ai-sales-operations/issues/26)
+[Issue #26](https://github.com/MingxuanHu/ai-sales-operations/issues/26) · [PR #31](https://github.com/MingxuanHu/ai-sales-operations/pull/31) · [Demo API runbook](../../infra/api/README.md)
 
 - **Goal.** Verify the deployed API directly through API Gateway before deploying the frontend.
 - **In scope.** Share NestJS configuration, controllers, guards and services across local HTTP and Lambda entrypoints. Select a supported Lambda Node.js runtime, verify dependency compatibility and package the handler, generated Prisma client and runtime dependencies. Record the source revision and artifact version for rollback. Define API Gateway HTTP API, Lambda, throttling and scoped SSM read permissions in TypeScript CDK. Pass demo Cognito outputs as Lambda runtime settings and retrieve the pooled database URL from SSM before database initialisation. Check quotas and pricing before provisioning.
 - **Out of scope.** Frontend infrastructure, browser deployment and schema changes.
 - **Acceptance and validation.** Run `pnpm check` with Docker, test the packaged handler with representative HTTP API events, check the artifact excludes env files and synthesize the backend stack. After authorised deployment, call `/api/health` and a database-backed protected endpoint through the API Gateway HTTPS URL. Use demo Cognito tokens from Issue 2 with the agreed audience. Verify authorised access, missing-token rejection and denial of cross-tenant access.
 - **Dependencies.** Issue 2 and separate authorisation for deployment and IAM changes. See the [system architecture](../architecture/system.md#public-demo-target-from-m3) and [hosting ADR](../decisions/0003-hosting.md).
+
+**Deployment evidence (18 November 2026).** The additions-only
+`issue-26-demo-api` change set created `SalesOperationsDemoApi` in
+`ap-southeast-2`. The initial HTTPS requests returned `500` because the
+Lambda loader blocked Nest's CommonJS-to-ESM imports. The reviewed
+`issue-26-node-esm-interop` change set updated the Lambda code and runtime
+settings and reached `UPDATE_COMPLETE`. Deployed source revision
+`856b171`, CDK Lambda asset
+`15037159dd0d2cc6b620bdc768d6c6a47315365abe5e97f3971d89d9de6b4653`.
+
+The [API Gateway origin](https://hcwmvuy7t9.execute-api.ap-southeast-2.amazonaws.com)
+uses a rate limit of 5 requests per second and a burst limit of 10. The
+live readiness check returned `200` with `{"status":"ok"}` and `/api/me`
+without a token returned `401`. Two synthetic users signed in through
+Cognito Managed Login and exchanged PKCE codes for access tokens with
+the demo API audience. The authenticated `/api/me` returned `200`. Creating
+a synthetic organisation returned `201`. Its admin could read it (`200`)
+and the other user was denied (`404`).
 
 ### 4. Deploy the frontend and smoke-test the public demo
 
