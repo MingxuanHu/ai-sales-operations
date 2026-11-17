@@ -5,7 +5,7 @@ Public source does not imply public credentials. Never commit `.env`, database U
 | Secret or credential | Local | CI / PR | Demo |
 | --- | --- | --- | --- |
 | PostgreSQL application connection (`DATABASE_URL`) | Direct URL to local Docker DB | Direct URL to temporary test DB | Pooled Neon URL in AWS SSM SecureString |
-| PostgreSQL schema migration connection (`DIRECT_URL`) | Same local URL and credentials as the application | Direct URL to temporary test DB | Protected deploy-only secret, direct Neon URL |
+| PostgreSQL schema migration connection (`DIRECT_URL`) | Same local URL and credentials as the application | Direct URL to temporary test DB | Direct Neon URL fetched on demand for the M3 manual release. Protected deploy-only secret for automation. |
 | AI provider key | Local `.env` or mock (from M9) | Mock | AWS SSM SecureString |
 | AWS deployment access | Personal authenticated CLI | None | Short-lived GitHub OIDC role |
 

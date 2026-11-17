@@ -5,7 +5,7 @@
 ## Scope and acceptance
 
 - **In scope.** One demo environment with CloudFront and private S3, API Gateway HTTP API and NestJS on Lambda, a separate Cognito pool and Neon database, an AWS-assigned CloudFront HTTPS hostname, and a repeatable manual release.
-- **Out of scope.** GitHub OIDC and automated releases (M4), sales features, additional hosted environments, custom domains, unrestricted Google sign-in and real customer data.
+- **Out of scope.** GitHub OIDC and automated releases (M4), sales features, additional hosted environments, custom domains and real customer data.
 - **Infrastructure convention.** Define AWS resources in TypeScript CDK workspace packages under `infra/`. Follow `infra/cognito/` for package layout and CLI use. Commit CDK source, package configuration and any lockfile changes. Synthesize CloudFormation from CDK and review change sets before authorised execution. Keep infrastructure setup metadata in the root `.env.aws` and its template. Follow the [hosting decision](../decisions/0003-hosting.md#application-configuration) for application settings.
 - **Acceptance evidence.** Record local checks, reviewed change sets and the public demo URL. Verify the private origin, HTTPS web and API paths, native and Google sign-in, sign-out, organisation creation, invitation acceptance and denial of cross-tenant access. Record deployment and rollback steps and results without exposing credentials, tokens or identity details.
 
@@ -42,13 +42,43 @@ returned `403`.
 
 ### 2. Prepare demo Cognito and Neon
 
-[Issue #25](https://github.com/MingxuanHu/ai-sales-operations/issues/25)
+[Issue #25](https://github.com/MingxuanHu/ai-sales-operations/issues/25) · [PR #30](https://github.com/MingxuanHu/ai-sales-operations/pull/30) · [Demo Cognito and Google runbook](../engineering/aws-cognito-development.md#m3--demo-cognito) · [Demo Neon runbook](../engineering/neon-demo.md)
 
 - **Goal.** Provide working identity and a migrated database before packaging or deploying the Lambda backend.
-- **In scope.** Reuse the Cognito definitions in `infra/cognito/` with explicit development and demo configuration and separate stack identities, pools, domains and app clients. Keep development stack and construct IDs stable. Configure the demo app client with the URLs from Issue 1. In a new demo Google Cloud project, configure the approved consent-screen name, create a web OAuth client for the demo Cognito redirect, and allowlist synthetic test accounts. Keep the demo Google project in Testing for M3. See the [Google project and branding guidance](https://developers.google.com/identity/siwg/best-practices). Publish the non-secret Cognito outputs used by Vite and Lambda. Provision demo Neon with a least-privilege pooled runtime role and a separate direct migration role. Store the pooled URL in SSM SecureString and apply committed migrations with `pnpm --filter @ai-sales-operations/api prisma:migrate`, supplying `DIRECT_URL` only to the authorised migration command. Run this as a manual release step for M3 and automate it before backend rollout in M4. Lambda cold starts do not run migrations.
+- **In scope.** Reuse the Cognito definitions in `infra/cognito/` with explicit development and demo configuration and separate stack identities, pools, domains and app clients. Keep development stack and construct IDs stable. Configure the demo app client with the URLs from Issue 1. In a new demo Google Cloud project, configure the approved consent-screen name, and create a web OAuth client for the demo Cognito redirect. Keep the demo Google project in Testing for M3. See the [Google project and branding guidance](https://developers.google.com/identity/siwg/best-practices). Publish the non-secret Cognito outputs used by Vite and Lambda. Provision demo Neon with a least-privilege pooled runtime role and a separate direct migration role. Store the pooled URL in SSM SecureString and apply committed migrations with `pnpm --filter @ai-sales-operations/api prisma:migrate`, supplying `DIRECT_URL` only to the authorised migration command. Run this as a manual release step for M3 and automate it before backend rollout in M4. Lambda cold starts do not run migrations.
 - **Out of scope.** Lambda, API Gateway and frontend deployment.
-- **Acceptance and validation.** Run `pnpm typecheck` and synthesize both environment configurations with the package-local CDK CLI. Compare development synthesis before and after the refactor and check the change set for resource replacements. After authorised provisioning, use a controlled OAuth test client to exercise native and Google sign-in with synthetic accounts before the React app is published. Capture the redirect to the registered HTTPS callback in memory before browser navigation, then complete the PKCE exchange and verify issuer, client ID and the final `/api` audience on initial and refreshed tokens. Use the allowlisted Google test accounts for federation. Confirm sign-out targets the agreed URL. Verify migrations are current and the pooled runtime role can perform application reads and writes without schema privileges.
+- **Acceptance and validation.** Run `pnpm typecheck` and synthesize both environment configurations with the package-local CDK CLI. Compare development synthesis before and after the refactor and check the change set for resource replacements. After the demo application is deployed, use a controlled OAuth test client to exercise native and Google sign-in with synthetic accounts. Capture the redirect to the registered HTTPS callback in memory before browser navigation, then complete the PKCE exchange and verify issuer, client ID and the final `/api` audience on initial and refreshed tokens. Confirm sign-out targets the agreed URL. Verify migrations are current and the pooled runtime role can perform application reads and writes without schema privileges.
 - **Dependencies.** Issue 1 and authorised provisioning. See the [demo identity handoff](../engineering/security.md#m3-demo-identity-handoff) and [Prisma's deployment migration guidance](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/development-and-production).
+
+**Native Cognito deployment evidence.** The additions-only
+`issue-25-demo-native-cognito` change set for `SalesOperationsDemoCognito` in
+`ap-southeast-2` reached `CREATE_COMPLETE`. The deployed authorisation
+endpoint accepted the registered CloudFront callback and PKCE challenge,
+redirected to Managed Login, and the login page returned HTTP `200`.
+The Managed Login base URL is
+`https://sales-ops-demo-d3finwpu.auth.ap-southeast-2.amazoncognito.com`.
+The Google OAuth redirect uses this base URL plus `/oauth2/idpresponse`.
+Native sign-in and token exchange still need verification.
+
+**Google configuration review.** The demo Google project is External and in
+Testing. Its saved web client uses the deployed Cognito origin and the exact
+`/oauth2/idpresponse` redirect. The client secret is present in Secrets
+Manager. The `issue-25-register-demo-google` change set added Google to the
+demo pool and reached `UPDATE_COMPLETE`. AWS readback confirmed the client ID,
+scopes and attribute mappings. The original pool, domain and app client are
+preserved. The `issue-25-enable-demo-google` change set updated the existing app
+client in place and reached `UPDATE_COMPLETE`. AWS readback confirmed the
+client supports native Cognito and Google with the same callback and sign-out
+URLs. Live sign-in tests will follow application deployment.
+
+**Neon deployment evidence.** Prisma applied both committed identity
+migrations to the demo `production` branch in AWS Sydney and reported the
+schema up to date. Prisma read and wrote a synthetic row through the pooled
+`sales_ops_runtime` connection and rolled the transaction back. The role has
+no Neon administrative membership, schema creation, temporary table, or
+migration history access. The pooled URL is stored in
+`/sales-operations/demo/database-url` as an SSM SecureString in
+`ap-southeast-2`.
 
 ### 3. Package and deploy the NestJS backend with CDK
 
@@ -65,7 +95,7 @@ returned `403`.
 [Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27)
 
 - **Goal.** Publish the working demo at the agreed CloudFront HTTPS URL.
-- **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings, replace the placeholder with the React build and explain that Google sign-in is available to allowlisted demo accounts. Document release ordering, cost alerts and rollback.
+- **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings and replace the placeholder with the React build. Use the demo Cognito app client for native and Google sign-in. Document release ordering, cost alerts and rollback.
 - **Out of scope.** Automated releases and GitHub OIDC.
-- **Acceptance and validation.** Run `pnpm typecheck`, build the web app with demo configuration and synthesize the frontend stack. After authorised deployment, verify HTTPS, private S3 access, the SPA callback and `/api/health` at the same CloudFront URL. Test native sign-in, Google sign-in with an allowlisted account, sign-out, first-admin provisioning, invitation acceptance and denial of cross-tenant access with synthetic users. Record dated results and the demo URL.
+- **Acceptance and validation.** Run `pnpm typecheck`, build the web app with demo configuration and synthesize the frontend stack. After authorised deployment, verify HTTPS, private S3 access, the SPA callback and `/api/health` at the same CloudFront URL. Test native sign-in, Google sign-in with a synthetic account, sign-out, first-admin provisioning, invitation acceptance and denial of cross-tenant access with synthetic users. Record dated results and the demo URL.
 - **Dependencies.** Issues 1–3 and authorised deployment.

@@ -1,12 +1,12 @@
-# AWS and Cognito for local development
+# AWS and Cognito setup
 
-This runbook covers developer access to AWS and the development Cognito resources for [M2 Issue 13](../milestones/M02-01-identity.md#2-configure-development-aws-and-cognito). IAM Identity Center signs developers in to AWS. Cognito Managed Login signs synthetic application users in to the local React app. Vite, NestJS and PostgreSQL still run locally using the [local development guide](local-development.md).
+This runbook covers developer access to AWS, the M3 demo pool, and the development Cognito resources for [M2 Issue 13](../milestones/M02-01-identity.md#2-configure-development-aws-and-cognito). IAM Identity Center signs developers in to AWS. Cognito Managed Login signs synthetic application users in to the local React app. Vite, NestJS and PostgreSQL still run locally using the [local development guide](local-development.md).
 
 You can complete the AWS CLI setup now. The CDK commands use the TypeScript infrastructure package described in step 3.
 
-## Create your local setup record
+## M2 — Development Cognito
 
-From the repository root, copy the [AWS settings template](../../.env.aws.example) once.
+Before setting up AWS, copy the [AWS settings template](../../.env.aws.example) once from the repository root.
 
 ```bash
 cp -n .env.aws.example .env.aws
@@ -14,7 +14,7 @@ cp -n .env.aws.example .env.aws
 
 Fill in `.env.aws` as you go. Git ignores the local copy and allows the template to be committed. Use this file as a reference for infrastructure setup. AWS CLI reads its profile and workload Region from `~/.aws/config`. The apps use the repository-root `.env`. Keep passwords, access keys, tokens and the Google client secret out of `.env.aws`.
 
-## 1. Set up the AWS account
+### 1. Set up the AWS account
 
 1. If you already have an approved development account, get its account ID, workload Region and IAM Identity Center access details from the account owner. Otherwise, use the [standard AWS signup flow](https://docs.aws.amazon.com/accounts/latest/reference/getting-started.html). Verify the email address, complete contact and payment verification, review the account and support plan, and wait for activation.
 2. For a new standalone account, sign in as root for initial setup and register MFA under **Security credentials**. Keep access to the root email and MFA recovery method. Leave root access keys uncreated and reserve root for account-owner tasks. [AWS sign-in security practices](https://docs.aws.amazon.com/signin/latest/userguide/best-practices-admin.html)
@@ -22,7 +22,7 @@ Fill in `.env.aws` as you go. Git ignores the local copy and allows the template
 4. Sign out of the root session and use the access portal to verify that the developer can open the development account. Keep permissions scoped to the task. Ask the account owner to provide any bootstrap or deployment roles through the existing account process.
 5. In **Billing and Cost Management → Budgets**, create a monthly cost budget with an email alert you monitor. Check Cognito Essentials, verification email, Secrets Manager and any CDK bootstrap storage costs in the intended Region. An alert does not cap spending. [AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-create.html), [Cognito pricing](https://aws.amazon.com/cognito/pricing/), [Secrets Manager pricing](https://aws.amazon.com/secrets-manager/pricing/), [CloudFormation pricing](https://aws.amazon.com/cloudformation/pricing/)
 
-## 2. Install and verify the AWS CLI
+### 2. Install and verify the AWS CLI
 
 1. Install [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) with the installer for your operating system. On macOS, Homebrew users can run `brew install awscli`. Run `aws --version` and confirm it starts with `aws-cli/2.`.
 2. Configure a named profile. In the wizard enter a session name such as `sales-operations`, the access portal URL, and the **Identity Center Region**. Keep the default account access scope, approve the browser prompt, and select the development account and assigned role. Set the **CLI default Region** to the workload Region where the Cognito stack will live. It can differ from the Identity Center Region. Record the Identity Center and workload Regions in `.env.aws`. Use `json` for output. [AWS CLI SSO setup](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html)
@@ -36,7 +36,7 @@ Fill in `.env.aws` as you go. Git ignores the local copy and allows the template
 
 3. Check that STS reports the expected development account and role, and that the last command reports the intended workload Region. Stop if either differs. If the session expires, repeat `aws sso login`. Keep the CLI session and SSO cache local. If a command returns `AccessDenied`, verify the profile and Region, then ask the account owner about the specific denied action.
 
-## 3. Install, configure and verify TypeScript CDK
+### 3. Install, configure and verify TypeScript CDK
 
 1. **Use the infrastructure package.** The Issue 13 CDK app lives in `infra/cognito/`, alongside the top-level `apps/` directory. The package contains `cdk.json` (the command CDK uses to start the TypeScript app), the stack source and a `package.json` with the local CDK CLI (`aws-cdk`) and construct library (`aws-cdk-lib`). The workspace registers `infra/*` and the shared lockfile pins the package dependencies. [AWS CDK with TypeScript](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-typescript.html)
 2. **Install and verify the project CLI.** Set up Node.js and pnpm using the [local development guide](local-development.md) and check the [CDK-supported Node.js versions](https://docs.aws.amazon.com/cdk/v2/guide/node-versions.html). Run the following from the repository root. The version command should report CDK v2. Run subsequent CDK commands from `infra/cognito/`, where the CLI can find `cdk.json`.
@@ -72,7 +72,7 @@ Fill in `.env.aws` as you go. Git ignores the local copy and allows the template
      --query 'Stacks[0].StackStatus' --output text
    ```
 
-## 4. Create the development Cognito pool with CloudFormation
+### 4. Create the development Cognito pool with CloudFormation
 
 The Issue 13 TypeScript CDK app defines the User Pool, Managed Login domain, branding, public app client and API resource server. CDK generates the CloudFormation JSON automatically, and CloudFormation creates the resources when you execute the reviewed change set. The app reads the account, workload Region, stack name and prefix from the ignored root `.env.aws`. Git tracks the source, package configuration and lockfile. Git ignores `cdk.out/` and `node_modules/`. [AWS CDK synthesis](https://docs.aws.amazon.com/cdk/v2/guide/configure-synth.html)
 
@@ -115,9 +115,9 @@ The Issue 13 TypeScript CDK app defines the User Pool, Managed Login domain, bra
 4. **Execute the reviewed change set.** After developer approval, choose **Execute change set** in CloudFormation and watch **Events** for `CREATE_COMPLETE` or `UPDATE_COMPLETE`. If it rolls back, inspect the first failed resource event, fix the cause and prepare a fresh change set. For an update, compare the User Pool ID before and after.
 5. **Verify the resource server and copy the deployed domain.** Check that the stack **Resources** tab lists `DevelopmentApiResourceServer` and that its physical ID matches the API resource URL. In step 6, pass that same value as `resource` and verify the access token audience at sign-in and after refresh. Open the stack's **Outputs** tab and copy the Managed Login URL. Confirm it matches **Amazon Cognito → User pools → your development pool → Branding → Domain** in the workload Region. Use that exact URL for Google registration in step 5.
 
-## 5. Register Google and update the Cognito stack
+### 5. Register Google and update the Cognito stack
 
-### A. Copy the deployed Cognito URLs
+#### A. Copy the deployed Cognito URLs
 
 1. In the AWS Console, select the development Region and open **CloudFormation → Stacks → your Cognito stack → Outputs**. Copy the value of `ManagedLoginUrl` without a trailing slash. For the Sydney example, it is `https://sales-ops-dev-k7m4.auth.ap-southeast-2.amazoncognito.com`. Use the value from your own stack.
 2. Append `/oauth2/idpresponse` to that base URL and save the complete URL as `GOOGLE_OAUTH_REDIRECT_URI` in the root `.env.aws`. The Sydney example looks like this:
@@ -128,7 +128,7 @@ The Issue 13 TypeScript CDK app defines the User Pool, Managed Login domain, bra
 
    Google returns users to this HTTPS endpoint. Cognito then returns them to the app's existing localhost callback. [AWS Google federation setup](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html)
 
-### B. Create the Google OAuth client
+#### B. Create the Google OAuth client
 
 1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview). Use the project picker at the top to select or create a development project. Record its **Project ID** as `GOOGLE_CLOUD_PROJECT_ID` in `.env.aws`.
 2. If Google asks you to configure the app, choose **Get started**. Enter a development app name such as **Sales Operations Dev**, select a user support email, and enter a developer contact email. Choose **External** if you plan to test with a personal Google account. Keep the app in **Testing**. Under **Audience → Test users**, add the Google account you plan to use for the smoke test if the section is available.
@@ -137,14 +137,14 @@ The Issue 13 TypeScript CDK app defines the User Pool, Managed Login domain, bra
 5. Under **Authorized JavaScript origins**, choose **Add URI** and paste the base `ManagedLoginUrl` from part A. Under **Authorized redirect URIs**, choose **Add URI** and paste the full URL ending in `/oauth2/idpresponse`. Choose **Create**.
 6. Copy the **Client ID** to `GOOGLE_OAUTH_CLIENT_ID` in `.env.aws`. Keep the **Client secret** available for the next part and paste it directly into AWS Secrets Manager. Keep the secret out of both env files, Git, chat and screenshots. [AWS Google OAuth client settings](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html), [Google OAuth app states](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
 
-### C. Save the client secret in AWS
+#### C. Save the client secret in AWS
 
 1. In the development AWS account, switch to the same Region as the Cognito stack. Open **Secrets Manager → Store a new secret**. If you already have the secret in Key/value pairs with the key `client_secret`, use its existing reference in step 4 below.
 2. Choose **Other type of secret**. In **Key/value pairs**, enter `client_secret` in the key field and paste the Google OAuth client secret in the value field. Keep the default encryption key unless your account requires a different one. Choose **Next**.
 3. Enter a name such as `sales-operations/dev/google-oauth`. Choose **Next**, leave automatic rotation off for this manually managed Google credential, choose **Next** again, then **Store**.
 4. Open the saved secret and copy its **Secret name** or **ARN** into `GOOGLE_OAUTH_CLIENT_SECRET_REF` in `.env.aws`. This field identifies the secret for CloudFormation. [AWS Secrets Manager console steps](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html)
 
-### D. Hand off the CDK update
+#### D. Hand off the CDK update
 
 Once the four `GOOGLE_*` fields are filled in and the secret is stored, the manual setup is complete. The CDK app enables Google when both `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET_REF` are set. Synthesize the stack again with those values in place.
 
@@ -154,7 +154,7 @@ Use the [change-set workflow](#4-create-the-development-cognito-pool-with-cloudf
 
 When rotating the Google credential later, update the secret and the Cognito identity-provider resource so CloudFormation resolves the new value, then repeat the Google smoke test. [CloudFormation secret references](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html)
 
-## 6. Record public settings and smoke-test login
+### 6. Record public settings and smoke-test login
 
 Record the stack's public outputs in the root `.env` as `COGNITO_USER_POOL_ID`, `VITE_COGNITO_ISSUER`, `VITE_COGNITO_DOMAIN` and `VITE_COGNITO_CLIENT_ID`. Keep the callback, sign-out URL and API resource URL there too. When sign-in is wired up, local NestJS configuration will map the shared public values from the root `.env` to its backend settings. See the [hosting decision](../decisions/0003-hosting.md#application-configuration). The User Pool issuer in the standard AWS partition is `https://cognito-idp.<region>.amazonaws.com/<pool-id>`, and its signing keys are at `<issuer>/.well-known/jwks.json`. Use the separate Managed Login base URL for authorization, token exchange, revocation and logout. React needs the public client ID, issuer, Managed Login URL, local callback, sign-out URL and API resource URL. NestJS needs the issuer, public client ID and API resource URL.
 
@@ -169,7 +169,7 @@ Before the React integration lands, use a local OAuth/OIDC test client that can 
 7. Record the date, Region, stack status, whether the pool ID was preserved on update, and the pass/fail result of each check. Keep passwords, tokens, verification codes and identity details out of the evidence. Run `node scripts/check-docs.mjs`. [Cognito token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html), [Cognito logout endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/logout-endpoint.html)
 
 
-### Development smoke-test evidence
+#### Development smoke-test evidence
 
 **14 November 2026 · ap-southeast-2 · `UPDATE_COMPLETE`.** The Google federation and API resource-server updates preserved the existing User Pool, domain and app client.
 
@@ -178,3 +178,25 @@ Before the React integration lands, use a local OAuth/OIDC test client that can 
 - Both flows returned to the allowlisted sign-out URL. Cognito rejected the unregistered callback.
 
 For M3, carry forward the CDK resource settings and smoke-test procedure. Use a separate demo pool, app client, domain and Google OAuth registration with the deployed HTTPS callback and sign-out URLs and the demo API resource URL. Keep development callbacks and synthetic development users confined to the development pool.
+
+## M3 — Demo Cognito
+
+### 1. Prepare the separate M3 demo pool
+
+1. Copy the verified CloudFront origin from the [M3 identity handoff](../milestones/M03-01-first-cloud-deploy.md#1-allocate-the-aws-managed-demo-https-origin) into `DEMO_WEB_ORIGIN` in `.env.aws`. Set `DEMO_COGNITO_DOMAIN_PREFIX` to an available prefix such as `sales-ops-demo-k7m4`. Use a different prefix from development.
+2. From `infra/cognito/`, run `pnpm exec cdk synth SalesOperationsDemoCognito -c target=demo --strict --quiet`. Verify the HTTPS callback ends in `/auth/callback`, the sign-out URL ends in `/`, and the resource server identifier ends in `/api`. The client should be public, use the authorization code grant, and list only native Cognito.
+3. Use the [M2 change-set workflow in step 4](#4-create-the-development-cognito-pool-with-cloudformation) with `stack=SalesOperationsDemoCognito`, `change_set=issue-25-demo-native-cognito`, and `-c target=demo` on each CDK command. Verify the change set targets a separate stack and contains additions only. After authorised execution, record the four public outputs for demo deployment using the [application configuration decision](../decisions/0003-hosting.md#application-configuration).
+4. Run the native checks in [M2 step 6](#6-record-public-settings-and-smoke-test-login) with demo URLs. Before React is deployed, use a controlled browser OAuth test client that intercepts the exact HTTPS callback before navigation. Keep the code, verifier, and tokens in memory. Verify the demo issuer, client ID and `/api` audience on initial and refreshed access tokens, then verify the HTTPS sign-out redirect.
+
+### 2. Register a separate demo Google OAuth client
+
+1. In [Google Cloud](https://console.cloud.google.com/), create a project for the demo. Open **Google Auth Platform** and choose **Get started**. Enter **AI Sales Operations Demo**, a monitored support and contact email, and **External** for the audience. Leave publishing status at **Testing** and add only controlled synthetic Google accounts under **Audience → Test users**.
+2. Copy the demo stack's deployed `ManagedLoginUrl` from CloudFormation **Outputs**. Use `amazoncognito.com` under **Branding → Authorized domains**, use basic OpenID, email and profile scopes in **Data Access**, and create a **Web application** client named **AI Sales Operations Demo Cognito**. Enter the Cognito Managed Login URL as the JavaScript origin and that URL plus `/oauth2/idpresponse` as the redirect URI. Leave the development OAuth client and its settings in place. [AWS demo federation settings](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html)
+3. Store the Google secret directly in Secrets Manager in the demo stack's Region as in [M2 step 5C](#c-save-the-client-secret-in-aws). Use a separate name such as `sales-operations/demo/google-oauth` and the JSON key `client_secret`. Keep the secret value out of Git and the env files. In the ignored root `.env.aws`, set `DEMO_GOOGLE_OAUTH_CLIENT_ID` to the demo client ID and `DEMO_GOOGLE_OAUTH_CLIENT_SECRET_REF` to the secret name or ARN.
+4. Keep Google in **Testing**. Google's basic sign-in scopes are exempt from the Testing user-list restriction, so Google accounts can sign in once the provider is enabled on the app client. NestJS still enforces organisation membership for tenant resources. [Google Auth Platform audience rules](https://support.google.com/cloud/answer/15549945)
+
+### 3. Deploy Google federation
+
+1. With the demo Google client ID and secret reference set in `.env.aws`, use the [M2 change-set workflow in step 4](#4-create-the-development-cognito-pool-with-cloudformation) with `stack=SalesOperationsDemoCognito`, `change_set=issue-25-enable-demo-google`, and `-c target=demo` on CDK commands. Expect Google to be added to the pool if needed and enabled alongside native Cognito on the existing app client. Verify that the demo pool, domain and app client are preserved.
+2. After authorised execution, confirm the provider exists on the demo pool and the app client supports both `COGNITO` and `Google`.
+3. After application deployment, verify native and Google sign-in with synthetic accounts. Check the PKCE exchange, audience on initial and refreshed access tokens, and the demo sign-out redirect.

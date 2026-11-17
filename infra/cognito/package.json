@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "unit-tests": "node --test"
   },
   "dependencies": {
     "aws-cdk-lib": "2.276.0",
