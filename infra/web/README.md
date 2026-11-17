@@ -1,6 +1,7 @@
 # Allocate the demo HTTPS origin
 
-This is the web stack for issue #24. It uses the shared `AWS_ACCOUNT_ID` and
+This is the web stack for [issue #24](../../docs/milestones/M03-01-first-cloud-deploy.md#1-allocate-the-aws-managed-demo-https-origin).
+It uses the shared `AWS_ACCOUNT_ID` and
 `AWS_REGION` from the root `.env.aws`. Use the AWS CLI profile authorised for
 that account and Region. See the [AWS setup runbook](../../docs/engineering/aws-cognito-development.md)
 for CLI access and CDK bootstrap.
