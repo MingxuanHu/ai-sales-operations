@@ -1,7 +1,4 @@
-// This import runs setup code that lets Nest read metadata from decorators at runtime.
-import 'reflect-metadata'
-import { NestFactory } from '@nestjs/core'
-import { AppModule } from './app.module'
+import { createApp } from './create-app'
 
 async function bootstrap() {
   // Vite exposes VITE_ settings to the browser by default. Map those same public
@@ -9,10 +6,7 @@ async function bootstrap() {
   process.env.COGNITO_ISSUER ??= process.env.VITE_COGNITO_ISSUER ?? ''
   process.env.COGNITO_APP_CLIENT_ID ??= process.env.VITE_COGNITO_CLIENT_ID ?? ''
   process.env.COGNITO_API_RESOURCE_URL ??= process.env.VITE_COGNITO_API_RESOURCE_URL ?? ''
-  // await waits for Nest to initialise the root module before we configure the server.
-  const app = await NestFactory.create(AppModule)
-  // The global prefix turns the controller's /health path into /api/health.
-  app.setGlobalPrefix('api')
+  const app = await createApp()
   // Listen for shutdown signals so Nest can close the database pool.
   app.enableShutdownHooks()
   // The loopback address makes the server reachable only from this machine.

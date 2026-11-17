@@ -10,9 +10,12 @@
     "build": "pnpm run prisma:generate && tsc",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:migrate:local": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate deploy"
+    "prisma:migrate:local": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate deploy",
+    "package:lambda": "node ../../scripts/package-api.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "3.1170.0",
+    "@codegenie/serverless-express": "5.0.0",
     "@nestjs/common": "12.4.2",
     "@nestjs/core": "12.4.2",
     "@nestjs/platform-express": "12.4.2",
@@ -23,7 +26,11 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@types/aws-lambda": "8.10.164",
     "@types/node": "26.6.6",
     "prisma": "7.10.1"
-  }
+  },
+  "files": [
+    "dist/"
+  ]
 }
