@@ -143,7 +143,7 @@ stopped at pnpm's noninteractive dependency setup prompt; running
 Test containers were removed and no test HTTP server remained listening;
 pre-existing services were left running.
 
-**Pending developer review and deployment authorization.** No AWS resources
+**Pre-deployment status (superseded by deployment evidence below).** No AWS resources
 or published S3 objects were changed for #27. Change-set review, billing alert
 verification, upload/invalidation, and every live smoke check in the web
 runbook remain pending, including native/Google sign-in, refreshed tokens,
@@ -166,3 +166,68 @@ Validation for these corrections: `pnpm lint`,
 `node scripts/check-docs.mjs`, and `git diff --check` passed. A direct comparison
 confirmed the issue #24 document remains unchanged as the README prefix.
 No servers or containers were started for these checks.
+
+
+**Deployment evidence (18 November 2026).** Following developer authorization,
+released source revision `fe63faf` to the existing
+[demo HTTPS URL](https://d3finwpuxpr8bj.cloudfront.net). `cdk diff --no-change-set`
+and the prepared `issue-27-demo-web` change set showed one new SPA function,
+an in-place update of distribution `E1NWV6DKPQ0SSF`, and CDK metadata.
+No bucket, distribution or OAC replacement, resource removal or IAM change
+was proposed. Executed the reviewed change set; `SalesOperationsDemoWeb`
+reached `UPDATE_COMPLETE` and CloudFront reached `Deployed`.
+
+Rebuilt React with the deployed demo Cognito outputs and all six demo
+`VITE_*` settings, synthesized the web stack, and saved the previous template
+and S3 placeholder before publication. Uploaded hashed assets before
+`index.html`, then completed invalidation `I4GQSC02M6R6CZNO6Q8SRTGYJ3` for `/*`.
+Release files, previous assets/template, reviewed assembly, build settings,
+SHA-256 manifest, change set and smoke results are saved locally under the
+ignored `build/releases/issue-27-fe63faf/` directory. The published entrypoint
+SHA-256 is `ee4f160fb1fcec3a743a9e99b2d8b7fedb32927fe74bca5b206003c426e25975`.
+
+The local release helper ran `pnpm --filter @ai-sales-operations/web build`,
+`pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict --no-lookups --quiet`,
+CDK change-set preparation, `aws cloudformation execute-change-set`,
+`aws s3 sync` for assets, `aws s3 cp` for the entrypoint, and
+`aws cloudfront create-invalidation`. The full application checks passed in
+the implementation step; the subsequent review correction passed lint,
+web unit tests and type checks before this release. No source code changed
+during deployment.
+
+All 12 public HTTP smoke checks passed:
+
+| Deployed check | Observed result |
+| --- | --- |
+| `index.html` and all three hashed assets | `200`; each SHA-256 matches the release artifact |
+| `/auth/callback` and `/organisations/synthetic-smoke` | `200`; response matches the React entrypoint |
+| HTTP root | `301` to the same HTTPS root |
+| Unsigned S3 `index.html` | `403` |
+| Missing asset | `403`; no HTML shell substitution |
+| CloudFront `/api/health` | `200`, `{"status":"ok"}` |
+| CloudFront `/api/me`, missing or invalid token | `401`, JSON rather than the SPA shell |
+
+Browser verification displayed the React sign-in screen with the corrected
+Google wording. A direct callback without an OAuth attempt showed the
+expected recoverable error and cleared the callback URL. The sign-in button
+opened the demo Cognito Managed Login page with native and Google options,
+the registered CloudFront callback, PKCE and exact `/api` resource audience.
+Authenticated native/Google callback completion, token refresh, sign-out,
+first-admin provisioning, invitations and cross-tenant denial through
+CloudFront still require synthetic account sign-in. No tokens or identity
+details were recorded.
+
+Cost checks found an existing USD 5 monthly budget with actual-spend email
+alerts at 85% and 100% and a forecast alert at 100%, plus a daily anomaly
+subscription. No billing configuration changed; mailbox receipt is not
+verified. Reviewed the linked CloudFront/S3 pricing and CloudFront quotas.
+The Service Quotas CLI query for CloudFront returned `NoSuchResourceException`;
+no quota increase was requested. The release adds only one function and one
+API cache behavior to the existing distribution.
+
+The first local execution wrapper raised a JSON parsing error after AWS
+accepted `execute-change-set`, because that operation returns no response
+body. Status readback confirmed `UPDATE_IN_PROGRESS`; the wrapper was fixed
+to handle an empty success response and execution was not repeated. Vite's
+large-chunk warning and CDK's feature-flag notice remain non-failing. No local
+servers or containers were started for deployment.
