@@ -110,7 +110,7 @@ and the other user was denied (`404`).
 
 ### 4. Deploy the frontend and smoke-test the public demo
 
-[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [Demo web release runbook](../../infra/web/README.md)
+[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [Demo web release runbook](../../infra/web/README.md#issue-27--deploy-the-frontend-and-verify-the-public-demo)
 
 - **Goal.** Publish the working demo at the agreed CloudFront HTTPS URL.
 - **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings and replace the placeholder with the React build. Use the demo Cognito app client for native and Google sign-in. Document release ordering, cost alerts and rollback.
@@ -151,3 +151,18 @@ sign-out, first-admin creation, invitations and cross-tenant denial through
 CloudFront. The existing demo URL is
 https://d3finwpuxpr8bj.cloudfront.net; local checks do not establish that it
 serves this React build.
+
+
+**Review corrections (18 November 2026).** Removed the stale Google account
+allowlist notice from the sign-in screen and web release instructions. The
+existing demo identity runbook and Google's audience rules confirm that the
+configured basic sign-in scopes are exempt from the Testing user-list
+restriction. Issue #27's GitHub text still contains the older restriction;
+no application allowlist is implemented. Restored the issue #24 web runbook
+verbatim and appended the issue #27 release procedure under its own heading.
+Validation for these corrections: `pnpm lint`,
+`pnpm --filter @ai-sales-operations/web unit-tests` (23 tests),
+`pnpm --filter @ai-sales-operations/web typecheck`,
+`node scripts/check-docs.mjs`, and `git diff --check` passed. A direct comparison
+confirmed the issue #24 document remains unchanged as the README prefix.
+No servers or containers were started for these checks.

@@ -1,4 +1,66 @@
-# Demo web release
+# Allocate the demo HTTPS origin
+
+This is the web stack for [issue #24](../../docs/milestones/M03-01-first-cloud-deploy.md#1-allocate-the-aws-managed-demo-https-origin).
+It uses the shared `AWS_ACCOUNT_ID` and
+`AWS_REGION` from the root `.env.aws`. Use the AWS CLI profile authorised for
+that account and Region. See the [AWS setup runbook](../../docs/engineering/aws-cognito-development.md)
+for CLI access and CDK bootstrap.
+
+From the repository root, run these local checks:
+
+```sh
+pnpm typecheck
+pnpm --filter @ai-sales-operations/infra-web unit-tests
+pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict SalesOperationsDemoWeb
+```
+
+## Deploy and verify
+
+Before provisioning, verify the profile points to the intended account, check
+current AWS costs and quotas, and review a CloudFormation change set before
+execution. CDK can prepare a change set with `cdk deploy --method prepare-change-set`
+from this package, using the authorised profile. Review the S3 bucket policy
+and the CloudFront origin access control in the change set.
+
+After authorised execution, read the outputs from the
+`SalesOperationsDemoWeb` stack. Use the configured profile and Region for the
+S3 upload. From the repository root:
+
+```sh
+aws s3 cp infra/web/placeholder/index.html "s3://${web_assets_bucket}/index.html" \
+  --profile "$aws_profile" --region "$aws_region" \
+  --content-type text/html --cache-control no-cache
+
+curl --fail --silent --show-error "${demo_web_origin}/" | grep -F '<h1>AI Sales Operations Demo</h1>'
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
+  "https://${web_assets_bucket_regional_domain}/index.html"
+```
+
+Set the shell variables from `WebAssetsBucketName`,
+`WebAssetsBucketRegionalDomain`, and `DemoWebOrigin`, and from your AWS
+profile and Region. Expect the placeholder heading over CloudFront HTTPS
+and HTTP `403` from the unsigned S3 request.
+
+## Hand off to demo Cognito
+
+Set `DEMO_WEB_ORIGIN` in the root `.env.aws` to the `DemoWebOrigin` output,
+without a trailing slash. Record the assigned hostname and exact resolved
+URLs in the issue #24 acceptance evidence:
+
+| Setting | Value |
+| --- | --- |
+| Web origin | `DEMO_WEB_ORIGIN` |
+| Cognito callback | `DEMO_WEB_ORIGIN` + `/auth/callback` |
+| Cognito sign-out | `DEMO_WEB_ORIGIN` + `/` |
+| API token audience | `DEMO_WEB_ORIGIN` + `/api` |
+| Proposed Google consent-screen name | AI Sales Operations Demo |
+
+Keep the distribution's construct ID when adding the SPA and API routing
+in issue #27 so the assigned hostname remains stable. The S3 bucket is
+retained if the stack is deleted.
+
+
+# Issue 27 — Deploy the frontend and verify the public demo
 
 This stack serves React from private S3 and forwards `/api/*` to the verified
 API Gateway origin. Keep `WebAssets`, `WebDistribution`, and the stack name
@@ -50,9 +112,13 @@ protected release storage. Keep the previous build too, including all hashed
 assets; a later build overwrites the local `dist` directory. Rebuild whenever
 public settings change. Never upload the checkout or local environment files.
 
-The demo Google project remains in Testing: only allowlisted demo Google
-accounts can use Google sign-in. Native Cognito registration is a separate
-flow. Use synthetic identities for both.
+The demo Google project remains in Testing. Its basic sign-in scopes
+(`openid email profile`) are exempt from Google's Testing user-list restriction;
+Google sign-in does not require an account allowlist. NestJS checks organisation
+membership separately for tenant access. Native Cognito registration is a
+separate flow. Use synthetic identities for both smoke tests. See
+[Google's audience rules](https://support.google.com/cloud/answer/15549945) and
+the [demo identity setup](../../docs/engineering/aws-cognito-development.md#m3--demo-cognito).
 
 ## 3. Synthesize and review infrastructure
 
@@ -142,7 +208,7 @@ curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
 | Missing `/assets/missing.js` | S3 error, not the React HTML document |
 | `/api/health` | `200`, `{"status":"ok"}` |
 | `/api/me` without a token | `401`, not an HTML shell |
-| Native registration/sign-in and allowlisted Google sign-in | Callback completes; protected workspace loads |
+| Native registration/sign-in and Google sign-in | Callback completes; protected workspace loads |
 | Initial and refreshed access tokens | Demo issuer/client and exact CloudFront `/api` audience; verify in memory without recording tokens |
 | Create a synthetic organisation | Creator becomes its first administrator |
 | Invite another synthetic identity and accept | New membership appears and grants the invited role |
