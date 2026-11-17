@@ -42,7 +42,7 @@ returned `403`.
 
 ### 2. Prepare demo Cognito and Neon
 
-[Issue #25](https://github.com/MingxuanHu/ai-sales-operations/issues/25) · [Demo Cognito and Google runbook](../engineering/aws-cognito-development.md#m3--demo-cognito) · [Demo Neon runbook](../engineering/neon-demo.md)
+[Issue #25](https://github.com/MingxuanHu/ai-sales-operations/issues/25) · [PR #30](https://github.com/MingxuanHu/ai-sales-operations/pull/30) · [Demo Cognito and Google runbook](../engineering/aws-cognito-development.md#m3--demo-cognito) · [Demo Neon runbook](../engineering/neon-demo.md)
 
 - **Goal.** Provide working identity and a migrated database before packaging or deploying the Lambda backend.
 - **In scope.** Reuse the Cognito definitions in `infra/cognito/` with explicit development and demo configuration and separate stack identities, pools, domains and app clients. Keep development stack and construct IDs stable. Configure the demo app client with the URLs from Issue 1. In a new demo Google Cloud project, configure the approved consent-screen name, and create a web OAuth client for the demo Cognito redirect. Keep the demo Google project in Testing for M3. See the [Google project and branding guidance](https://developers.google.com/identity/siwg/best-practices). Publish the non-secret Cognito outputs used by Vite and Lambda. Provision demo Neon with a least-privilege pooled runtime role and a separate direct migration role. Store the pooled URL in SSM SecureString and apply committed migrations with `pnpm --filter @ai-sales-operations/api prisma:migrate`, supplying `DIRECT_URL` only to the authorised migration command. Run this as a manual release step for M3 and automate it before backend rollout in M4. Lambda cold starts do not run migrations.
