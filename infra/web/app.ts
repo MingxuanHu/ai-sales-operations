@@ -10,4 +10,7 @@ if (!account || !region) {
   throw new Error('Set AWS_ACCOUNT_ID and AWS_REGION in the root .env.aws.');
 }
 
-new DemoWebStack(new App(), 'SalesOperationsDemoWeb', { env: { account, region } });
+// Pass the verified API stack output explicitly; no cross-stack export ties the releases together.
+const apiOrigin = process.env.DEMO_API_ORIGIN;
+if (!apiOrigin) throw new Error('Set DEMO_API_ORIGIN to the verified API Gateway origin.');
+new DemoWebStack(new App(), 'SalesOperationsDemoWeb', { env: { account, region }, apiOrigin });

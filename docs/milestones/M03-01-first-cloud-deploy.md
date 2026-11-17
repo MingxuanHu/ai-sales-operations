@@ -110,10 +110,44 @@ and the other user was denied (`404`).
 
 ### 4. Deploy the frontend and smoke-test the public demo
 
-[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27)
+[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [Demo web release runbook](../../infra/web/README.md)
 
 - **Goal.** Publish the working demo at the agreed CloudFront HTTPS URL.
 - **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings and replace the placeholder with the React build. Use the demo Cognito app client for native and Google sign-in. Document release ordering, cost alerts and rollback.
 - **Out of scope.** Automated releases and GitHub OIDC.
 - **Acceptance and validation.** Run `pnpm typecheck`, build the web app with demo configuration and synthesize the frontend stack. After authorised deployment, verify HTTPS, private S3 access, the SPA callback and `/api/health` at the same CloudFront URL. Test native sign-in, Google sign-in with a synthetic account, sign-out, first-admin provisioning, invitation acceptance and denial of cross-tenant access with synthetic users. Record dated results and the demo URL.
 - **Dependencies.** Issues 1–3 and authorised deployment.
+
+
+**Local implementation evidence (18 November 2026; not deployed).** Added
+SPA browser-route rewrites and an HTTPS API origin with caching disabled,
+all application methods allowed, and bearer tokens forwarded. The deployed
+web template and local synthesis retain `WebAssets27872646`,
+`WebDistribution59C46482`, and
+`WebDistributionOrigin1S3OriginAccessControl83AD2F73` logical IDs.
+This template comparison does not replace review of an AWS change set.
+
+Validation: `pnpm check` passed lint, workspace type checks, all unit tests,
+the isolated PostgreSQL identity/health integration suite, and builds.
+`node scripts/check-docs.mjs` passed. The web stack's five unit tests cover
+private S3 access, HTTPS/OAC, uncached API forwarding, SPA rewrites with
+OAuth query preservation, and invalid origin rejection.
+`DEMO_API_ORIGIN=https://hcwmvuy7t9.execute-api.ap-southeast-2.amazonaws.com
+pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict --no-lookups --quiet`
+passed. The web build command in the release runbook passed with all six
+public settings from the deployed demo Cognito outputs and CloudFront URLs.
+Vite warned about an existing JavaScript chunk above 500 kB; CDK reported
+unconfigured feature flags. Neither check failed. The first unit-test attempt
+stopped at pnpm's noninteractive dependency setup prompt; running
+`CI=true pnpm install --frozen-lockfile` restored the pinned dependencies.
+Test containers were removed and no test HTTP server remained listening;
+pre-existing services were left running.
+
+**Pending developer review and deployment authorization.** No AWS resources
+or published S3 objects were changed for #27. Change-set review, billing alert
+verification, upload/invalidation, and every live smoke check in the web
+runbook remain pending, including native/Google sign-in, refreshed tokens,
+sign-out, first-admin creation, invitations and cross-tenant denial through
+CloudFront. The existing demo URL is
+https://d3finwpuxpr8bj.cloudfront.net; local checks do not establish that it
+serves this React build.
