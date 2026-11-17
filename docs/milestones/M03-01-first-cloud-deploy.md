@@ -82,7 +82,7 @@ migration history access. The pooled URL is stored in
 
 ### 3. Package and deploy the NestJS backend with CDK
 
-[Issue #26](https://github.com/MingxuanHu/ai-sales-operations/issues/26) · [Demo API runbook](../../infra/api/README.md)
+[Issue #26](https://github.com/MingxuanHu/ai-sales-operations/issues/26) · [PR #31](https://github.com/MingxuanHu/ai-sales-operations/pull/31) · [Demo API runbook](../../infra/api/README.md)
 
 - **Goal.** Verify the deployed API directly through API Gateway before deploying the frontend.
 - **In scope.** Share NestJS configuration, controllers, guards and services across local HTTP and Lambda entrypoints. Select a supported Lambda Node.js runtime, verify dependency compatibility and package the handler, generated Prisma client and runtime dependencies. Record the source revision and artifact version for rollback. Define API Gateway HTTP API, Lambda, throttling and scoped SSM read permissions in TypeScript CDK. Pass demo Cognito outputs as Lambda runtime settings and retrieve the pooled database URL from SSM before database initialisation. Check quotas and pricing before provisioning.
