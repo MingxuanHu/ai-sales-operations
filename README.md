@@ -2,7 +2,7 @@
 
 A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
-> **Status:** M1 bootstrap. The React and NestJS health shell runs locally.
+> **Status:** M3 kickoff. The React and NestJS app supports local Cognito sign-in and organisation onboarding. The first public demo is planned.
 
 ## Product
 

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 1 · Foundation | [M1 — Bootstrap](../milestones/M01-01-bootstrap.md) | React/NestJS workspace, local PostgreSQL, AGENTS.md, baseline CI |
 | 1 · Foundation | [M2 — Identity](../milestones/M02-01-identity.md) | Cognito login/register, protected React shell, organisation membership and tenant checks |
-| 2 · Delivery | M3 — First cloud deploy | CloudFront/S3, API Gateway/Lambda, Neon, Cognito demo configuration, public HTTPS |
+| 2 · Delivery | [M3 — First cloud deploy](../milestones/M03-01-first-cloud-deploy.md) | CloudFront/S3, API Gateway/Lambda, Neon, Cognito demo configuration, public HTTPS |
 | 2 · Delivery | M4 — CI/CD & AI review | Protected `main`, OIDC deployment, AI PR comments, automated demo release |
 | 3 · Sales SaaS | M5 — Master data | Product/customer CRUD, validation and UI |
 | 3 · Sales SaaS | M6 — Orders & approvals | Order lifecycle, discount rule, manager approvals, audit and seed data |
