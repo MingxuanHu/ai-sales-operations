@@ -17,13 +17,28 @@ Track delivery in the [M3 First cloud deploy GitHub milestone](https://github.co
 
 ### 1. Allocate the AWS-managed demo HTTPS origin
 
-[Issue #24](https://github.com/MingxuanHu/ai-sales-operations/issues/24)
+[Issue #24](https://github.com/MingxuanHu/ai-sales-operations/issues/24) · [PR #29](https://github.com/MingxuanHu/ai-sales-operations/pull/29) · [Demo web runbook](../../infra/web/README.md)
 
 - **Goal.** Obtain the final demo HTTPS URL before configuring Cognito.
 - **In scope.** Define the demo web stack in TypeScript CDK with a CloudFront distribution, private S3 origin and origin access control. Use the assigned `*.cloudfront.net` hostname and default CloudFront certificate. Publish a minimal placeholder to verify HTTPS. Record the origin, `/auth/callback` redirect, root sign-out URL and `/api` token audience. Use **AI Sales Operations Demo** as the proposed Google consent-screen name.
 - **Out of scope.** React deployment and API routing.
 - **Acceptance and validation.** Run `pnpm typecheck` and synthesize the web stack. After authorised deployment, verify the placeholder over HTTPS and verify anonymous S3 access is denied. Record the hostname and exact identity URLs. See the [CloudFront distribution settings](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral.html).
 - **Dependencies.** Authorised provisioning and IAM changes where required.
+
+**Deployment evidence (17 November 2026).** Reviewed the `issue-24-demo-web`
+change set for `SalesOperationsDemoWeb` in `ap-southeast-2`. It contained
+additions only. CloudFormation reached `CREATE_COMPLETE`. The CloudFront
+HTTPS request returned `200` and the response body matched the placeholder
+source. An unsigned request for the same object at the S3 regional endpoint
+returned `403`.
+
+| Demo identity handoff | Verified deployment value |
+| --- | --- |
+| Web origin (`DEMO_WEB_ORIGIN`) | `https://d3finwpuxpr8bj.cloudfront.net` |
+| Cognito callback | `https://d3finwpuxpr8bj.cloudfront.net/auth/callback` |
+| Cognito sign-out | `https://d3finwpuxpr8bj.cloudfront.net/` |
+| API token audience | `https://d3finwpuxpr8bj.cloudfront.net/api` |
+| Proposed Google consent-screen name | AI Sales Operations Demo |
 
 ### 2. Prepare demo Cognito and Neon
 
