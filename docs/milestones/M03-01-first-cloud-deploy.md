@@ -25,6 +25,21 @@ Track delivery in the [M3 First cloud deploy GitHub milestone](https://github.co
 - **Acceptance and validation.** Run `pnpm typecheck` and synthesize the web stack. After authorised deployment, verify the placeholder over HTTPS and verify anonymous S3 access is denied. Record the hostname and exact identity URLs. See the [CloudFront distribution settings](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral.html).
 - **Dependencies.** Authorised provisioning and IAM changes where required.
 
+**Deployment evidence (17 November 2026).** Reviewed the `issue-24-demo-web`
+change set for `SalesOperationsDemoWeb` in `ap-southeast-2`. It contained
+additions only. CloudFormation reached `CREATE_COMPLETE`. The CloudFront
+HTTPS request returned `200` and the response body matched the placeholder
+source. An unsigned request for the same object at the S3 regional endpoint
+returned `403`.
+
+| Demo identity handoff | Verified deployment value |
+| --- | --- |
+| Web origin (`DEMO_WEB_ORIGIN`) | `https://d3finwpuxpr8bj.cloudfront.net` |
+| Cognito callback | `https://d3finwpuxpr8bj.cloudfront.net/auth/callback` |
+| Cognito sign-out | `https://d3finwpuxpr8bj.cloudfront.net/` |
+| API token audience | `https://d3finwpuxpr8bj.cloudfront.net/api` |
+| Proposed Google consent-screen name | AI Sales Operations Demo |
+
 ### 2. Prepare demo Cognito and Neon
 
 [Issue #25](https://github.com/MingxuanHu/ai-sales-operations/issues/25)
