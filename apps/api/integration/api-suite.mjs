@@ -8,11 +8,14 @@ import test from 'node:test'
 import { fileURLToPath, URL } from 'node:url'
 import { promisify } from 'node:util'
 import { randomUUID } from 'node:crypto'
+import { createServer, connect } from 'node:net'
+import { setTimeout, clearTimeout } from 'node:timers'
 import { NestFactory } from '@nestjs/core'
 // Build runs before this suite, so Node loads the same compiled modules as the API.
 import { AppModule } from '../dist/app.module.js'
 import { AccessTokenVerifier } from '../dist/modules/identity/access-token.verifier.js'
 import { checkIdentity } from './identity.mjs'
+import { PrismaService } from '../dist/database/prisma.service.js'
 
 const run = promisify(execFile)
 const composeFile = fileURLToPath(new URL('./compose.yaml', import.meta.url))
@@ -58,6 +61,43 @@ test('API identity and health use the isolated PostgreSQL instance', async (cont
   const healthy = await fetch(healthUrl)
   assert.equal(healthy.status, 200)
   assert.deepEqual(await healthy.json(), { status: 'ok' })
+
+  await context.test('database connections tolerate a wake-up longer than two seconds', async () => {
+    const directUrl = env.DATABASE_URL
+    const target = new URL(directUrl)
+    const sockets = new Set()
+    // Delay the PostgreSQL handshake, not query execution, to simulate a sleeping compute.
+    const proxy = createServer((client) => {
+      const upstream = connect(Number(target.port), target.hostname)
+      sockets.add(client)
+      sockets.add(upstream)
+      const delay = setTimeout(() => {
+        client.pipe(upstream)
+        upstream.pipe(client)
+      }, 2_500)
+      client.on('error', () => upstream.destroy())
+      upstream.on('error', () => client.destroy())
+      client.on('close', () => { clearTimeout(delay); upstream.destroy() })
+      upstream.on('close', () => client.destroy())
+    })
+    let delayedDatabase
+    try {
+      await new Promise((resolve, reject) => {
+        proxy.once('error', reject)
+        proxy.listen(0, '127.0.0.1', resolve)
+      })
+      const delayedUrl = new URL(directUrl)
+      delayedUrl.port = String(proxy.address().port)
+      env.DATABASE_URL = delayedUrl.href
+      delayedDatabase = new PrismaService()
+      assert.deepEqual(await delayedDatabase.client.$queryRaw`SELECT 1 AS ready`, [{ ready: 1 }])
+    } finally {
+      env.DATABASE_URL = directUrl
+      await delayedDatabase?.onModuleDestroy()
+      for (const socket of sockets) socket.destroy()
+      await new Promise((resolve) => proxy.close(resolve))
+    }
+  })
 
   // Reuse the API and database for identity tests before stopping PostgreSQL to test readiness.
   await context.test('Identity and onboarding enforce tenant boundaries', () => checkIdentity(app))

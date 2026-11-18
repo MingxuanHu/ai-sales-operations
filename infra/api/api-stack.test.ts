@@ -29,6 +29,7 @@ test('the demo stack routes HTTP API v2 events and throttles the default stage',
   template.hasResourceProperties('AWS::Lambda::Function', {
     Handler: 'dist/lambda.handler',
     Runtime: 'nodejs26.x',
+    Timeout: 28,
     Environment: {
       Variables: Match.objectEquals({
         NODE_OPTIONS: '--experimental-require-module',

@@ -30,7 +30,8 @@ export class PrismaService implements OnModuleDestroy {
     return new PrismaClient({
       adapter: new PrismaPg({
         connectionString,
-        connectionTimeoutMillis: 2_000,
+        // A suspended Neon compute needs time to resume before PostgreSQL accepts a connection.
+        connectionTimeoutMillis: 10_000,
         query_timeout: 2_000,
       }),
     })

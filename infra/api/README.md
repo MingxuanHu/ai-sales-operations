@@ -103,7 +103,7 @@ staged files in protected release storage for rollback.
 
 Before provisioning, check the Sydney account's Lambda concurrency quota,
 Neon connection capacity, and current regional prices. The stack uses a
-512 MiB Lambda with a 15-second timeout and an API limit of 5 requests per
+512 MiB Lambda with a 28-second timeout and an API limit of 5 requests per
 second with a burst of 10. API Gateway charges depend on requests and data
 transfer. Lambda charges depend on invocations and duration. Standard
 Parameter Store interactions at standard throughput carry no additional
@@ -171,3 +171,14 @@ that fails smoke tests, use the previous reviewed cloud assembly to prepare
 and execute a rollback change set against the same stack, then re-run the
 smoke tests. On a first release, keep the API out of the frontend rollout
 until a reviewed fix passes verification.
+
+
+## Idle database wake-up
+
+The PostgreSQL adapter allows 10 seconds to establish a connection, including
+Neon resuming from scale to zero. Query execution still has its separate
+2-second timeout. Lambda allows 28 seconds, below the HTTP API's fixed
+30-second integration limit. Raising Lambda above that limit would not make
+the browser wait longer successfully. Longer waits can increase the billed
+duration of failed requests; this change does not keep Neon compute running.
+See [HTTP API quotas](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-quotas.html).

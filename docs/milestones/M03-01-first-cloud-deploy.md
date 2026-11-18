@@ -288,3 +288,30 @@ its synthetic invitation. Reusing the Managed Login cookie above was a new
 authorization-code flow, not a refresh-token test. Neither remaining check
 is claimed as completed. No local services were started. Documentation
 validation: `node scripts/check-docs.mjs` and `git diff --check` passed.
+
+
+**Developer acceptance update (18 November 2026).** The developer explicitly
+accepted deferring live invitation issuance/acceptance until an invitation
+management UI exists, following the decision in
+[PR #22](https://github.com/MingxuanHu/ai-sales-operations/pull/22).
+Existing web and PostgreSQL integration coverage remains in place. The
+developer also reported that live token refresh works. This is developer
+verification, not an independently observed token exchange.
+
+The developer reported a failure while refreshing invitations after database
+idle. Deployed Lambda configuration confirmed a 15-second timeout. A scoped
+six-hour Lambda log search found one `Connection terminated due to connection
+timeout` marker and no `Task timed out` or `Status: timeout` markers. These
+results support a connection-timeout failure, not a confirmed Lambda timeout;
+Neon wake-up as the cause remains a hypothesis. Increased connection time
+from 2 to 10 seconds and Lambda time from 15 to 28 seconds, preserving the
+2-second query limit and the HTTP API's 30-second request boundary. Added a
+real PostgreSQL integration check with a 2.5-second delayed handshake.
+
+Validation for the timeout correction: `pnpm check`,
+`pnpm --filter @ai-sales-operations/api run package:lambda`,
+`NODE_OPTIONS=--experimental-require-module node --test scripts/test-api-artifact.mjs`,
+`node scripts/check-docs.mjs`, and `git diff --check` passed. The integration
+suite successfully connected through the 2.5-second handshake delay. Its
+first validation attempt failed lint because the new test needed explicit
+Node timer imports; those imports were added before the passing full run.
