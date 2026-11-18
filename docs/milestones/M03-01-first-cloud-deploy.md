@@ -262,3 +262,29 @@ of the published React entrypoint. Google sign-in has been handed to the
 developer in the open tab. Google callback completion, invitation acceptance,
 live cross-tenant denial and refresh-token checks remain pending. No local
 servers or containers were started during these checks.
+
+
+**Google browser checks (18 November 2026).** The developer completed Google
+sign-in in the deployed demo tab. The authenticated onboarding screen loaded
+with no organisation memberships, separately from the native account that
+created the synthetic organisation. Opened that organisation's direct URL
+and started sign-in again; the existing Managed Login session completed the
+callback and returned to the requested organisation route. The protected
+workspace displayed `Access denied` and `Your account does not have access
+to this organisation.` No organisation details were shown. This verifies
+live browser cross-tenant denial through CloudFront; the browser observation
+does not distinguish the API's `403` and `404` responses. Returning through
+`Back to organisations` restored the Google account's empty onboarding view.
+The Google session was left open for further checks. No credentials or
+tokens were collected, and no AWS resources or application data changed
+during this verification.
+
+Native and Google callback completion, first-admin creation, native sign-out,
+and browser cross-tenant denial have now passed. **Live invitation acceptance
+and refresh-token verification remain pending.** The current UI can accept
+invitations but does not expose an invitation-issuing form, so the live
+invitation check needs an authenticated administrator API request to prepare
+its synthetic invitation. Reusing the Managed Login cookie above was a new
+authorization-code flow, not a refresh-token test. Neither remaining check
+is claimed as completed. No local services were started. Documentation
+validation: `node scripts/check-docs.mjs` and `git diff --check` passed.
