@@ -90,7 +90,7 @@ test('browser routes serve the shell while preserving OAuth query parameters and
   const functions = template.findResources('AWS::CloudFront::Function');
   const code = Object.values(functions)[0].Properties.FunctionCode;
   // Execute the actual synthesized edge function with representative CloudFront requests.
-  for (const uri of ['/', '/auth/callback', '/organisations/synthetic']) {
+  for (const uri of ['/', '/auth/callback', '/onboarding', '/organisations/synthetic']) {
     const request = { uri, querystring: { code: { value: 'synthetic' }, state: { value: 'fixture' } } };
     const result = runInNewContext(`${code}; handler(event)`, { event: { request } });
     assert.equal(result.uri, '/index.html');

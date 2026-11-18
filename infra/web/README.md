@@ -132,7 +132,7 @@ pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict --no-lookup
 
 Synthesis only writes the cloud assembly under `infra/web/cdk.out`. Archive
 that assembly with the build. The default S3 behavior has a viewer-request
-function for `/`, `/auth/callback`, and `/organisations/*`; it serves
+function for `/`, `/auth/callback`, `/onboarding`, and `/organisations/*`; it serves
 `index.html` without discarding OAuth query parameters. Missing assets and
 API errors retain their original status. Add new browser routes to the
 function as the app grows. No distribution-wide error-to-HTML fallback is used.

@@ -231,3 +231,34 @@ body. Status readback confirmed `UPDATE_IN_PROGRESS`; the wrapper was fixed
 to handle an empty success response and execution was not repeated. Vite's
 large-chunk warning and CDK's feature-flag notice remain non-failing. No local
 servers or containers were started for deployment.
+
+
+**Authenticated browser checks (18 November 2026).** The developer completed
+native Cognito sign-in in the deployed demo tab. The protected onboarding
+screen loaded with no memberships. Creating a new synthetic organisation
+opened its workspace and displayed the `Admin` role, verifying first-admin
+provisioning and protected API access through CloudFront. Sign-out cleared
+the workspace and returned to the registered HTTPS root. No credentials or
+tokens were collected.
+
+This check exposed a missing direct `/onboarding` rewrite. Added it to the
+SPA function and its existing execution test, and updated only the issue #27
+portion of the web runbook. `pnpm lint`,
+`pnpm --filter @ai-sales-operations/infra-web typecheck`,
+`pnpm --filter @ai-sales-operations/infra-web unit-tests` (five tests),
+`node scripts/check-docs.mjs`, and `git diff --check` passed.
+Synthesized and reviewed `issue-27-onboarding-route`: only the existing
+function code changes, with an in-place dependent distribution refresh.
+No replacements, IAM changes or S3 uploads are involved.
+The first execution guard stopped before execution because it expected only
+the function resource; inspection confirmed the additional distribution
+entry is its dynamic function-ARN dependency with `Replacement=False`.
+Executed the reviewed correction after that inspection. The previous
+template, reviewed change set and assembly are saved locally under
+`build/releases/issue-27-onboarding/`.
+The correction reached `UPDATE_COMPLETE`; CloudFront readback reported
+`Deployed`. A public `GET /onboarding` returned `200` with the exact SHA-256
+of the published React entrypoint. Google sign-in has been handed to the
+developer in the open tab. Google callback completion, invitation acceptance,
+live cross-tenant denial and refresh-token checks remain pending. No local
+servers or containers were started during these checks.

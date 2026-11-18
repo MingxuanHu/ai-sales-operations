@@ -36,7 +36,7 @@ export class DemoWebStack extends Stack {
     const spaRoutes = new CloudFrontFunction(this, 'SpaRoutes', {
       code: FunctionCode.fromInline(`function handler(event) {
   var request = event.request;
-  if (request.uri === '/' || request.uri === '/auth/callback' ||
+  if (request.uri === '/' || request.uri === '/auth/callback' || request.uri === '/onboarding' ||
       request.uri.indexOf('/organisations/') === 0) {
     request.uri = '/index.html';
   }
