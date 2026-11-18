@@ -1,0 +1,69 @@
+name: Rollback demo
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Retained successful release ID (40-character SHA-runID)'
+        required: true
+        type: string
+      confirm_release:
+        description: 'Confirm target by entering the same release ID again'
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: demo-publication
+  cancel-in-progress: false
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    steps:
+      # Always use current main's rollback code, never code from the old bundle.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Validate provenance, expiry, checksums and compatibility
+        env:
+          RELEASE_ID: ${{ inputs.release_id }}
+          CONFIRM_RELEASE: ${{ inputs.confirm_release }}
+        run: node scripts/demo-release.mjs select "$RELEASE_ID"
+      - name: Obtain short-lived demo credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ vars.DEMO_RELEASE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          role-duration-seconds: 3600
+          role-session-name: demo-rollback-${{ github.run_id }}
+          mask-aws-account-id: true
+      - name: Restore exact API and web artifacts and smoke test
+        # Rollback never runs Prisma, old scripts, or infrastructure deployments.
+        run: node scripts/demo-release.mjs publish
+      - name: Retain diagnostic record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-record-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-record/
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Summarize result and retained releases
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: node scripts/demo-release.mjs catalog

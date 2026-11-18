@@ -10,7 +10,7 @@
     "dev:down": "docker compose stop salesOpDb",
     "lint": "eslint .",
     "typecheck": "pnpm -r run typecheck",
-    "unit-tests": "pnpm -r run unit-tests",
+    "unit-tests": "node --test scripts/test-demo-release.mjs && pnpm -r run unit-tests",
     "integration-tests": "pnpm --filter @ai-sales-operations/api run integration-tests",
     "build": "pnpm -r run build",
     "check": "pnpm lint && pnpm typecheck && pnpm unit-tests && pnpm integration-tests && pnpm build"

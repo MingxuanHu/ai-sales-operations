@@ -1,0 +1,102 @@
+name: Release demo
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+permissions: {}
+# Shared with rollback. Never cancel a running migration or publication.
+concurrency:
+  group: demo-publication
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Verify trusted CI and all six checks
+        id: gate
+        run: node scripts/demo-release.mjs gate
+      - name: Check out exactly the checked revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.gate.outputs.sha }}
+          persist-credentials: false
+      - name: Install pinned tools and locked dependencies
+        run: |
+          npm install --global "$(node -p 'require("./package.json").packageManager')"
+          pnpm install --frozen-lockfile
+      - name: Package and verify Lambda
+        run: |
+          pnpm --filter @ai-sales-operations/api run package:lambda
+          NODE_OPTIONS=--experimental-require-module node --test scripts/test-api-artifact.mjs
+          mkdir release
+          (cd build/demo-api && zip -qr ../../release/api.zip .)
+          # Direct Lambda ZIP upload is limited to 50 MiB.
+          test "$(wc -c < release/api.zip)" -le 52428800
+      - name: Build public demo web assets
+        env:
+          VITE_COGNITO_DOMAIN: ${{ vars.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_CLIENT_ID: ${{ vars.VITE_COGNITO_CLIENT_ID }}
+          VITE_COGNITO_ISSUER: ${{ vars.VITE_COGNITO_ISSUER }}
+          VITE_COGNITO_REDIRECT_URI: ${{ vars.VITE_COGNITO_REDIRECT_URI }}
+          VITE_COGNITO_SIGN_OUT_URL: ${{ vars.VITE_COGNITO_SIGN_OUT_URL }}
+          VITE_COGNITO_API_RESOURCE_URL: ${{ vars.VITE_COGNITO_API_RESOURCE_URL }}
+        run: |
+          pnpm --filter @ai-sales-operations/web build
+          cp -R apps/web/dist release/web
+      - name: Obtain short-lived demo credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ vars.DEMO_RELEASE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          role-duration-seconds: 3600
+          role-session-name: demo-release-${{ github.run_id }}
+          mask-aws-account-id: true
+      - name: Record immutable release manifest
+        id: manifest
+        run: node scripts/demo-release.mjs prepare
+      - name: Retain exact bundles and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-${{ steps.manifest.outputs.id }}
+          path: release/
+          retention-days: 90
+          if-no-files-found: error
+      - name: Apply committed migrations
+        # This is the only step receiving the direct database credential.
+        env:
+          DIRECT_URL: ${{ secrets.DEMO_DIRECT_URL }}
+        run: node scripts/demo-migrate.mjs
+      - name: Release API then web and smoke test
+        run: node scripts/demo-release.mjs publish
+      - name: Retain diagnostic record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-record-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-record/
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Summarize result and retained releases
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: node scripts/demo-release.mjs catalog

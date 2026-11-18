@@ -71,18 +71,18 @@ their sources. The first verification failed because the default list page
 omitted variables; the larger-page retry passed. Existing variables were updated
 by name and unrelated settings were preserved.
 
-The deployment role ARN awaits #35. `DEMO_DIRECT_URL` still requires the separate
-Neon credential-transfer procedure; the local Docker credential is unsuitable.
+Issue #35 subsequently configured `DEMO_RELEASE_ROLE_ARN`. `DEMO_DIRECT_URL`
+was transferred using the authorized Neon procedure during #36; see the [migration credential record](../milestones/M04-01-cicd-ai-review.md#migration-credential-setup-record).
 Shared issuer/client/audience values are stored once under their public `VITE_`
-names and can be mapped to the API contract by the future release workflow.
+names. The #36 workflow publishes code without changing Lambda runtime settings.
 
 | Target | Names and handling |
 | --- | --- |
 | Public web build | `VITE_COGNITO_DOMAIN`, `VITE_COGNITO_CLIENT_ID`, `VITE_COGNITO_ISSUER`, `VITE_COGNITO_REDIRECT_URI`, `VITE_COGNITO_SIGN_OUT_URL`, `VITE_COGNITO_API_RESOURCE_URL`. Public GitHub environment variables can supply these to Vite; the resulting assets expose them. |
-| AWS deployment metadata | Public variables `AWS_REGION`, `DEMO_WEB_ORIGIN`, `DEMO_DATABASE_URL_PARAMETER`; the latter is an SSM parameter name, not its secret value. Store `AWS_ACCOUNT_ID` as a `demo` environment secret and consume it through `secrets.AWS_ACCOUNT_ID`. The deployment role ARN input is to be finalized in #35. No stored AWS access keys. |
+| AWS deployment metadata | Public variables `AWS_REGION`, `DEMO_WEB_ORIGIN`, `DEMO_DATABASE_URL_PARAMETER`; the latter is an SSM parameter name, not its secret value. Store `AWS_ACCOUNT_ID` as a `demo` environment secret and consume it through `secrets.AWS_ACCOUNT_ID`. Issue #35 configured `DEMO_RELEASE_ROLE_ARN`. No stored AWS access keys. |
 | API configuration | `COGNITO_USER_POOL_ID`, `COGNITO_ISSUER`, `COGNITO_APP_CLIENT_ID`, `COGNITO_API_RESOURCE_URL` belong to Lambda runtime configuration. Reuse the corresponding public web settings when assembling the runtime configuration instead of maintaining duplicate shared values. |
 | API runtime database | `DATABASE_URL` stays in SSM SecureString and is retrieved through the existing API mechanism. Never provide it to web builds or PR jobs. |
-| Migration secret | GitHub Environment `demo` secret `DEMO_DIRECT_URL`, mapped to `DIRECT_URL` only in the migration step. Transfer remains pending under the milestone's separate credential procedure. |
+| Migration secret | GitHub Environment `demo` secret `DEMO_DIRECT_URL`, mapped to `DIRECT_URL` only in the migration step. Transfer completed during #36; see the milestone evidence record. |
 
 Keep the root `.env` as the sole local application environment file and
 `.env.aws` for infrastructure metadata. See the
