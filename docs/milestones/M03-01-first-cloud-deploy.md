@@ -315,3 +315,38 @@ Validation for the timeout correction: `pnpm check`,
 suite successfully connected through the 2.5-second handshake delay. Its
 first validation attempt failed lint because the new test needed explicit
 Node timer imports; those imports were added before the passing full run.
+
+
+**Timeout deployment (18 November 2026).** Released source `9194ba6` and CDK
+asset `dbdea0052486589abb1221e2c8dffa58204627aec59b0aa89891928eabd6b211`
+through reviewed change set `issue-27-database-wake-timeout`. Template
+comparison confirmed only Lambda code, timeout and asset metadata changed;
+API integration and invoke-permission entries in the change set were dynamic
+references to the unchanged function ARN. Their definitions, IAM roles,
+throttling and database infrastructure remained identical. The stack reached
+`UPDATE_COMPLETE`, Lambda reported `Successful`, and deployed configuration
+confirmed `Timeout=28`. Retrieved the deployed package without logging its
+signed URL and verified its SHA-256 against Lambda's
+`V3r0tH27ROlPPq8zH1EDKWK0V9cveWQ2hJSaxvKpV1s=`. The compiled database provider
+contains the 10-second connection and unchanged 2-second query timeouts.
+API Gateway readback confirmed its integration limit is 30,000 ms.
+
+The direct API readiness request returned `200` in 4,438 ms; CloudFront
+readiness returned `200` in 147 ms; CloudFront `/api/me` without a token
+returned `401` in 65 ms. These confirm post-deployment readiness and the
+unauthenticated boundary, but do not prove Neon was suspended during the
+request. An actual idle/resume recurrence remains a runtime observation to
+confirm; the controlled delayed-handshake regression passed locally.
+Synthesis, `cdk diff --no-change-set`, change-set preparation/execution and
+package verification passed. The previous template, new assembly, change set,
+deployed package and smoke evidence are saved locally under the ignored
+`build/releases/issue-27-timeout/` directory. Test Docker containers were
+removed and their ports released; the test HTTP server and TCP delay proxy
+stopped. Listener readback showed only the pre-existing Node service on
+port 4317. No pre-existing service was stopped.
+
+**Current acceptance status.** The agreed invitation-test deferral and the
+developer-verified token refresh resolve the previously reported #27
+acceptance blockers. Review the timeout correction and run the PR's required
+checks before merging and closing the issue. Keep the live invitation test
+explicitly deferred until invitation management UI work.
