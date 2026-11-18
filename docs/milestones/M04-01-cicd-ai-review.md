@@ -65,6 +65,13 @@ Issue #35's acceptance criteria are satisfied.
 
 [Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36)
 
+**Local implementation (18 November 2026):** release and manual rollback workflows,
+immutable checksummed bundles, conservative compatibility checks, failure-path
+tests and the [release/recovery runbook](../engineering/demo-releases.md) are
+implemented for developer review. No PR or live release has been created.
+Deployment/rollback and authenticated smoke acceptance remain pending separate
+authorization. The authorized migration-secret transfer completed; see below.
+
 - **Goal.** Release the tested `main` revision through the existing M3 infrastructure and verify the public result.
 - **In scope.** Add a release workflow that waits for all required checks on the same revision, uses Environment `demo` and OIDC, and serializes releases to prevent overlapping migrations/publications. Package and verify Lambda, build React with public demo settings, run committed Prisma migrations with the direct credential confined to that step, release API before web assets, publish hashed assets before the entrypoint, and wait for CloudFront invalidation. Preserve the existing CDK stack/resource identities. Record revision, artifact checksums, prior artifacts and migration outcome for diagnosis and rollback. Document partial-failure recovery and forward-compatible schema changes; a code rollback must not imply reversing a migration.
 - **Migration credential.** The developer authorized using the Neon CLI to retrieve the existing demo owner's direct connection URL and store it in GitHub. Follow the [Neon runbook](../engineering/neon-demo.md#3-apply-the-repository-migrations) and record execution evidence below. Store it once as the `DEMO_DIRECT_URL` secret in GitHub Environment `demo`. Map it to `DIRECT_URL` only for the migration step; never put it in repository files, artifacts, logs, web builds or Lambda settings. AWS OIDC supplies AWS credentials, not a Neon database password. No Neon API key or interactive Neon login is needed on the runner. Update this secret when the database password rotates.
@@ -92,9 +99,42 @@ This kickoff changes documentation only. Run `node scripts/check-docs.mjs` and `
 
 ## Migration credential setup record
 
-**Authorization and current status.** The developer approved retrieving the direct migration credential with the Neon CLI and saving it in GitHub. The developer reports prior Neon CLI use during M3. Current executable checks found neither `neon` nor `neonctl` on `PATH`; that check does not establish whether a prior invocation used a package runner or another executable location. The shared prior-chat link could not be fetched during follow-up. Recover or re-establish the CLI invocation and check existing authentication before deciding installation or login is needed. No connection URL was retrieved and no GitHub secret was created or changed during this kickoff. Secret transfer remains pending; this is a procedure, not completed setup evidence.
+**Execution evidence — 18 November 2026.** The developer explicitly authorized
+transferring the existing demo owner's direct URL to `DEMO_DIRECT_URL` in
+GitHub Environment `demo` during this implementation. The official CLI was
+recovered as `npx --yes neonctl@9.6.2`; existing credentials under the CLI's
+normal config directory worked without login or a stored runner Neon API key.
 
-**Planned procedure.**
+Verified organization `org-still-wildflower-76083072`, existing project
+`twilight-hill-16825711` (`my-first-project`, AWS Sydney, PostgreSQL 18),
+production branch `br-morning-art-a7s34jtr`, database `neondb`, and owner
+`neondb_owner`. Endpoint metadata confirmed the direct demo host. GitHub API
+readback verified Environment `demo` has exactly the `main` branch policy.
+
+The transfer captured stdout from `npx --yes neonctl@9.6.2 connection-string
+BRANCH_ID --project-id PROJECT_ID --database-name neondb --role-name neondb_owner`
+in Node process memory, validated the exact direct hostname/database/owner and
+presence of a password, then passed the URL through stdin to
+`gh secret set DEMO_DIRECT_URL --env demo --repo MingxuanHu/ai-sales-operations`.
+Child-process diagnostics were captured and suppressed, and the in-memory
+reference cleared after transfer. No credential was printed or written to a
+repository file, temporary file or local env file. No migration was run.
+
+`gh secret list --env demo --repo MingxuanHu/ai-sales-operations --json name,updatedAt`
+reported `DEMO_DIRECT_URL` updated at `2026-11-18T04:52:29Z`. This proves secret
+storage metadata, not connectivity or migration success. The first transfer
+attempt was rejected by automatic approval review pending specific authorization;
+it did not execute. The developer then explicitly authorized the named credential
+and destination, and the retry succeeded. Initial sandboxed npm discovery failed
+with DNS denial; network-enabled CLI discovery succeeded. A project listing
+without `--org-id` prompted for an organization; supplying the existing ID worked.
+CLI 9.6.2 has no `endpoints list` command; the supported `api /projects/PROJECT_ID/endpoints`
+command provided the endpoint metadata after correcting a missing leading slash.
+
+**Rotation procedure.** Repeat the validated transfer when the password rotates.
+The procedure below remains the operational reference, not unfinished setup.
+
+**Procedure.**
 
 1. Recover the prior Neon CLI invocation or use the official CLI through a package runner; install it only if needed. Check existing authentication before using `neon login`, and confirm the existing demo project, branch, database and migration owner with the developer's account. Keep the local Docker `.env` unchanged.
 2. Confirm GitHub repository `MingxuanHu/ai-sales-operations` and Environment `demo` are configured for trusted `main`. Retrieve the direct URL using `neon connection-string BRANCH_ID --project-id PROJECT_ID --database-name DATABASE --role-name OWNER_ROLE` with pooling disabled. Capture stdout in memory with shell tracing disabled; validate the expected host, database and role without printing the URL.
@@ -102,4 +142,4 @@ This kickoff changes documentation only. Run `node scripts/check-docs.mjs` and `
 4. Verify the secret's name and update metadata using `gh secret list --env demo --repo MingxuanHu/ai-sales-operations`; GitHub does not return the stored value. Record the actual commands with placeholder identifiers, the confirmed non-secret target identifiers, success/failure and secret metadata here. This metadata proves storage, not database connectivity.
 5. During the authorized deployment validation, map the secret to `DIRECT_URL` only in the migration step and record migration/status results. Do not claim that storage alone verifies the credential or run migrations as part of this setup.
 
-After execution, replace the pending status with actual evidence and any failures. Never copy the credential, its password or a credential-bearing error into this record.
+Record each rotation with secret update metadata and any failures. Never copy the credential, its password or a credential-bearing error into this record.
