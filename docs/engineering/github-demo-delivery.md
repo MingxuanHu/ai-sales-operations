@@ -34,14 +34,27 @@ OIDC trust and trusted release workflow checks remain separate work in #35–#36
 
 ## Configuration contract for subsequent issues
 
-The environment now contains **11 public variables** configured and read back
-on 18 November 2026. No secrets were added by this configuration step.
+The environment now contains **10 public variables** and the environment secret
+`AWS_ACCOUNT_ID`, configured on 18 November 2026. The account ID was initially
+configured as a variable, then moved to a secret at the developer's request.
+The secret was written through stdin and its metadata verified before deleting
+the variable; a subsequent variable listing confirmed its removal. GitHub does
+not return secret values, so this verifies storage metadata rather than a
+secret-value readback. The original 11 variables had passed value readback.
+
+Future deployment workflows must read `${{ secrets.AWS_ACCOUNT_ID }}` and map it
+to the deployment process's `AWS_ACCOUNT_ID` environment variable. There is no
+existing release workflow consumer to update. This reduces casual visibility
+and allows GitHub to mask the value when that secret is used in a job; it does
+not replace AWS authorization. AWS does not classify account IDs as secrets.
+See [AWS account identifiers](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-identifiers.html)
+and [GitHub secret masking](https://docs.github.com/en/actions/concepts/security/secrets).
 These settings prepare inputs for #35–#36; release automation is not implemented
 yet. Never copy a local env file into GitHub or deployment artifacts.
 
 The requested `local.env` and `.env.database` files were absent. The root `.env`
 contains development Cognito settings and localhost database/redirect URLs, so
-it was not used for demo values. Four variables came from `.env.aws`:
+it was not used for demo values. Four settings came from `.env.aws`:
 `AWS_REGION`, `AWS_ACCOUNT_ID`, `DEMO_WEB_ORIGIN` and
 `DEMO_DATABASE_URL_PARAMETER`. The six `VITE_COGNITO_*` variables listed below
 and `COGNITO_USER_POOL_ID` came from the existing `SalesOperationsDemoCognito`
@@ -66,7 +79,7 @@ names and can be mapped to the API contract by the future release workflow.
 | Target | Names and handling |
 | --- | --- |
 | Public web build | `VITE_COGNITO_DOMAIN`, `VITE_COGNITO_CLIENT_ID`, `VITE_COGNITO_ISSUER`, `VITE_COGNITO_REDIRECT_URI`, `VITE_COGNITO_SIGN_OUT_URL`, `VITE_COGNITO_API_RESOURCE_URL`. Public GitHub environment variables can supply these to Vite; the resulting assets expose them. |
-| AWS deployment metadata | `AWS_REGION`, `AWS_ACCOUNT_ID`, `DEMO_WEB_ORIGIN`, `DEMO_DATABASE_URL_PARAMETER`; the latter is an SSM parameter name, not its secret value. The deployment role ARN input is to be finalized in #35. No stored AWS access keys. |
+| AWS deployment metadata | Public variables `AWS_REGION`, `DEMO_WEB_ORIGIN`, `DEMO_DATABASE_URL_PARAMETER`; the latter is an SSM parameter name, not its secret value. Store `AWS_ACCOUNT_ID` as a `demo` environment secret and consume it through `secrets.AWS_ACCOUNT_ID`. The deployment role ARN input is to be finalized in #35. No stored AWS access keys. |
 | API configuration | `COGNITO_USER_POOL_ID`, `COGNITO_ISSUER`, `COGNITO_APP_CLIENT_ID`, `COGNITO_API_RESOURCE_URL` belong to Lambda runtime configuration. Reuse the corresponding public web settings when assembling the runtime configuration instead of maintaining duplicate shared values. |
 | API runtime database | `DATABASE_URL` stays in SSM SecureString and is retrieved through the existing API mechanism. Never provide it to web builds or PR jobs. |
 | Migration secret | GitHub Environment `demo` secret `DEMO_DIRECT_URL`, mapped to `DIRECT_URL` only in the migration step. Transfer remains pending under the milestone's separate credential procedure. |
