@@ -110,7 +110,7 @@ and the other user was denied (`404`).
 
 ### 4. Deploy the frontend and smoke-test the public demo
 
-[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [Demo web release runbook](../../infra/web/README.md#issue-27--deploy-the-frontend-and-verify-the-public-demo)
+[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [PR #32](https://github.com/MingxuanHu/ai-sales-operations/pull/32) · [Demo web release runbook](../../infra/web/README.md#issue-27--deploy-the-frontend-and-verify-the-public-demo)
 
 - **Goal.** Publish the working demo at the agreed CloudFront HTTPS URL.
 - **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings and replace the placeholder with the React build. Use the demo Cognito app client for native and Google sign-in. Document release ordering, cost alerts and rollback.
