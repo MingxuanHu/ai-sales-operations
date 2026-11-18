@@ -63,9 +63,46 @@ migration output, credentials, tokens, local env files or customer data.
 
 ## Actions rollback UI
 
-Open **Actions → Rollback demo → Run workflow** on branch `main`. Copy a retained
-successful release ID from a release summary into both `release_id` and
-`confirm_release`. These are validated text inputs, not a dynamic dropdown.
+**Availability:** these controls appear only after the workflows are merged
+into `main`. Before the first rollback, there must be a successful automated
+release to return to. The manual M3 deployment is not selectable.
+
+1. Open the [repository Actions page](https://github.com/MingxuanHu/ai-sales-operations/actions).
+   Select **Release demo**, then open a successful run. In its **Summary**, find
+   the release catalog. Choose a retained successful release with an expiry
+   date still in the future. Copy its entire release ID: a 40-character source
+   SHA, a hyphen, then the numeric Actions run ID. Do not copy the artifact's
+   `demo-` prefix, a short commit hash or just the run number.
+2. Save the **currently intended newer release ID** too. You will use this ID
+   if you want to return to the newer version after testing the rollback.
+   The older release must satisfy the compatibility rules below; an unexpired
+   artifact alone does not guarantee it is compatible.
+3. In the Actions sidebar select **Rollback demo**, then **Run workflow**.
+   Select branch **main**. Paste the chosen older ID into both **release_id**
+   and **confirm_release**, then click **Run workflow**. These are validated
+   text inputs, not a version dropdown. This click authorizes a real demo
+   publication; rollback does not have a preview mode.
+4. Open the newly created run. It may wait while another demo publication is
+   active. Wait for the complete run to turn green, including **Restore exact
+   API and web artifacts and smoke test**. Do not treat successful input
+   validation or OIDC exchange alone as a successful rollback.
+5. Open the [demo](https://d3finwpuxpr8bj.cloudfront.net), refresh the page, and
+   check the intended behavior. Automated smoke checks verify HTML and asset
+   hashes, routes, API health, unauthenticated rejection and private S3 access.
+   Sign in with a synthetic demo identity to verify authenticated behavior too;
+   this manual check is not part of the workflow.
+6. To restore the newer release, repeat steps 3–5 using the newer release ID
+   saved in step 2 in **both** inputs. This republishes that exact retained
+   bundle; it does not rebuild it or reverse database changes.
+
+**If rollback fails:** open the first failed step. Validation failures for a
+missing, expired, mistyped or incompatible release occur before publication;
+choose another eligible ID or prepare a reviewed forward fix. If publication
+has started, some API or web files may already have changed. Read the
+`demo-record-runID-attempt` artifact in the run's **Artifacts** section for the
+last recorded stage and previous/selected release, then use the recovery table
+below. A failure before publication may have no diagnostic artifact. Never
+assume a red run automatically restored the previous version.
 
 The current trusted main scripts verify the source workflow, repository, main
 branch, event, successful run result, ID and artifact expiry before downloading.
