@@ -37,8 +37,7 @@ Issue closure follows the authorized merge.
 
 ### 2. Define least-privilege AWS OIDC deployment access
 
-[Issue #35](https://github.com/MingxuanHu/ai-sales-operations/issues/35)
-· [PR #41](https://github.com/MingxuanHu/ai-sales-operations/pull/41)
+[Issue #35](https://github.com/MingxuanHu/ai-sales-operations/issues/35) · [PR #41 — implementation](https://github.com/MingxuanHu/ai-sales-operations/pull/41) · [PR #42 — acceptance evidence](https://github.com/MingxuanHu/ai-sales-operations/pull/42)
 
 **Local implementation (18 November 2026):** the [delivery CDK package](../../infra/delivery/README.md)
 defines exact immutable GitHub repository/demo trust, optional native provider
