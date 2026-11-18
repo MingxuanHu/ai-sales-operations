@@ -17,7 +17,7 @@
 
 ### 1. Protect main and establish the demo release environment
 
-[Issue #34](https://github.com/MingxuanHu/ai-sales-operations/issues/34)
+[Issue #34](https://github.com/MingxuanHu/ai-sales-operations/issues/34) · [PR #39](https://github.com/MingxuanHu/ai-sales-operations/pull/39)
 
 **Implementation status (18 November 2026):** all six checks are required and
 Environment `demo` allows only branch `main`; effective settings were read back.
