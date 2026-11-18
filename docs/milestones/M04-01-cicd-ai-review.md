@@ -39,6 +39,14 @@ Issue closure follows the authorized merge.
 
 [Issue #35](https://github.com/MingxuanHu/ai-sales-operations/issues/35)
 
+**Local implementation (18 November 2026):** the [delivery CDK package](../../infra/delivery/README.md)
+defines exact immutable GitHub repository/demo trust, optional native provider
+creation or reuse, and permissions limited to existing application artifact
+publication targets. Review the proposed direct artifact release approach for
+#36: automated CDK infrastructure deployment is deliberately not granted.
+IAM application, change-set review and a trusted live identity check remain
+pending separate authorization; no live acceptance is claimed.
+
 - **Goal.** Allow the trusted demo release job to use temporary AWS credentials without stored AWS access keys.
 - **In scope.** Add reviewable TypeScript CDK definitions and tests for the deployment role and any required OIDC provider setup, reusing an existing provider where appropriate. Bind trust to the actual repository and `demo` environment, with the expected audience. Scope deployment permissions to the existing demo resources and required CDK publishing/execution paths; explain any actions that cannot use resource-level restrictions. Separate migration-secret access from runtime access and document bootstrap prerequisites and revocation.
 - **Out of scope.** Broad administrator access, replacing demo resources, and automatic application deployment.

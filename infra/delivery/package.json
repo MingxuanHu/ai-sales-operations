@@ -1,0 +1,17 @@
+{
+  "name": "@ai-sales-operations/infra-delivery",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "unit-tests": "node --test delivery-stack.test.ts"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.276.0",
+    "constructs": "10.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "aws-cdk": "2.1148.1"
+  }
+}

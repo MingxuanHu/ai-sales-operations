@@ -25,4 +25,5 @@ Documents are organised by purpose. Keep the root [README](../README.md) focused
 - [`engineering/neon-demo.md`](engineering/neon-demo.md) — demo database roles, migrations, and runtime connection setup.
 - [`engineering/delivery.md`](engineering/delivery.md) — milestone kickoff, GitHub Issues/PRs, validation checks, AI review and CI/CD.
 - [`engineering/github-demo-delivery.md`](engineering/github-demo-delivery.md) — effective main protection, demo environment configuration and acceptance evidence.
+- [`../infra/delivery/README.md`](../infra/delivery/README.md) — scoped demo OIDC role, trust, setup and revocation.
 - [`engineering/security.md`](engineering/security.md) — secrets and deployment trust boundaries.
