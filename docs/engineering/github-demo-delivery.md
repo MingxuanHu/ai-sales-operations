@@ -34,11 +34,34 @@ OIDC trust and trusted release workflow checks remain separate work in #35–#36
 
 ## Configuration contract for subsequent issues
 
-The environment currently contains **no variables or secrets**. The following
-names describe the existing application contract and the planned deployment
-inputs; they are not evidence that release automation or credentials exist.
-Populate public values from reviewed stack outputs when #35–#36 implement their
-consumers. Never copy a local env file into GitHub or deployment artifacts.
+The environment now contains **11 public variables** configured and read back
+on 18 November 2026. No secrets were added by this configuration step.
+These settings prepare inputs for #35–#36; release automation is not implemented
+yet. Never copy a local env file into GitHub or deployment artifacts.
+
+The requested `local.env` and `.env.database` files were absent. The root `.env`
+contains development Cognito settings and localhost database/redirect URLs, so
+it was not used for demo values. Four variables came from `.env.aws`:
+`AWS_REGION`, `AWS_ACCOUNT_ID`, `DEMO_WEB_ORIGIN` and
+`DEMO_DATABASE_URL_PARAMETER`. The six `VITE_COGNITO_*` variables listed below
+and `COGNITO_USER_POOL_ID` came from the existing `SalesOperationsDemoCognito`
+stack outputs and URLs derived from the demo web origin. AWS STS confirmed the
+profile's account matched `.env.aws` before reading the stack. No database or
+SSM secret value was retrieved.
+
+The setup used Node's `parseEnv` to read `.env.aws`, AWS CLI
+`sts get-caller-identity` and `cloudformation describe-stacks` with the configured
+profile and region, then `gh api` POST/PATCH requests to the environment
+`variables` endpoint. Values were passed through stdin as JSON, without printing
+them. A GET of that endpoint with `?per_page=100` verified all 11 values against
+their sources. The first verification failed because the default list page
+omitted variables; the larger-page retry passed. Existing variables were updated
+by name and unrelated settings were preserved.
+
+The deployment role ARN awaits #35. `DEMO_DIRECT_URL` still requires the separate
+Neon credential-transfer procedure; the local Docker credential is unsuitable.
+Shared issuer/client/audience values are stored once under their public `VITE_`
+names and can be mapped to the API contract by the future release workflow.
 
 | Target | Names and handling |
 | --- | --- |
@@ -80,7 +103,7 @@ gh api --method POST repos/MingxuanHu/ai-sales-operations/environments/demo/depl
 gh api repos/MingxuanHu/ai-sales-operations/branches/main/protection
 gh api repos/MingxuanHu/ai-sales-operations/environments/demo
 gh api repos/MingxuanHu/ai-sales-operations/environments/demo/deployment-branch-policies
-gh api repos/MingxuanHu/ai-sales-operations/environments/demo/variables --jq '{total_count,names:[.variables[].name]}'
+gh api 'repos/MingxuanHu/ai-sales-operations/environments/demo/variables?per_page=100' --jq '{total_count,names:[.variables[].name]}'
 gh api repos/MingxuanHu/ai-sales-operations/environments/demo/secrets --jq '{total_count,names:[.secrets[].name]}'
 ```
 
