@@ -110,10 +110,243 @@ and the other user was denied (`404`).
 
 ### 4. Deploy the frontend and smoke-test the public demo
 
-[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27)
+[Issue #27](https://github.com/MingxuanHu/ai-sales-operations/issues/27) · [PR #32](https://github.com/MingxuanHu/ai-sales-operations/pull/32) · [Demo web release runbook](../../infra/web/README.md#issue-27--deploy-the-frontend-and-verify-the-public-demo)
 
 - **Goal.** Publish the working demo at the agreed CloudFront HTTPS URL.
 - **In scope.** Update the demo web stack in TypeScript CDK while preserving the distribution and hostname from Issue 1. Serve the SPA callback and forward `/api/*` to the verified API Gateway origin with caching disabled and bearer tokens forwarded. Build Vite with the demo `VITE_*` settings and replace the placeholder with the React build. Use the demo Cognito app client for native and Google sign-in. Document release ordering, cost alerts and rollback.
 - **Out of scope.** Automated releases and GitHub OIDC.
 - **Acceptance and validation.** Run `pnpm typecheck`, build the web app with demo configuration and synthesize the frontend stack. After authorised deployment, verify HTTPS, private S3 access, the SPA callback and `/api/health` at the same CloudFront URL. Test native sign-in, Google sign-in with a synthetic account, sign-out, first-admin provisioning, invitation acceptance and denial of cross-tenant access with synthetic users. Record dated results and the demo URL.
 - **Dependencies.** Issues 1–3 and authorised deployment.
+
+
+**Local implementation evidence (18 November 2026; not deployed).** Added
+SPA browser-route rewrites and an HTTPS API origin with caching disabled,
+all application methods allowed, and bearer tokens forwarded. The deployed
+web template and local synthesis retain `WebAssets27872646`,
+`WebDistribution59C46482`, and
+`WebDistributionOrigin1S3OriginAccessControl83AD2F73` logical IDs.
+This template comparison does not replace review of an AWS change set.
+
+Validation: `pnpm check` passed lint, workspace type checks, all unit tests,
+the isolated PostgreSQL identity/health integration suite, and builds.
+`node scripts/check-docs.mjs` passed. The web stack's five unit tests cover
+private S3 access, HTTPS/OAC, uncached API forwarding, SPA rewrites with
+OAuth query preservation, and invalid origin rejection.
+`DEMO_API_ORIGIN=https://hcwmvuy7t9.execute-api.ap-southeast-2.amazonaws.com
+pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict --no-lookups --quiet`
+passed. The web build command in the release runbook passed with all six
+public settings from the deployed demo Cognito outputs and CloudFront URLs.
+Vite warned about an existing JavaScript chunk above 500 kB; CDK reported
+unconfigured feature flags. Neither check failed. The first unit-test attempt
+stopped at pnpm's noninteractive dependency setup prompt; running
+`CI=true pnpm install --frozen-lockfile` restored the pinned dependencies.
+Test containers were removed and no test HTTP server remained listening;
+pre-existing services were left running.
+
+**Pre-deployment status (superseded by deployment evidence below).** No AWS resources
+or published S3 objects were changed for #27. Change-set review, billing alert
+verification, upload/invalidation, and every live smoke check in the web
+runbook remain pending, including native/Google sign-in, refreshed tokens,
+sign-out, first-admin creation, invitations and cross-tenant denial through
+CloudFront. The existing demo URL is
+https://d3finwpuxpr8bj.cloudfront.net; local checks do not establish that it
+serves this React build.
+
+
+**Review corrections (18 November 2026).** Removed the stale Google account
+allowlist notice from the sign-in screen and web release instructions. The
+existing demo identity runbook and Google's audience rules confirm that the
+configured basic sign-in scopes are exempt from the Testing user-list
+restriction. Issue #27's GitHub text still contains the older restriction;
+no application allowlist is implemented. Restored the issue #24 web runbook
+verbatim and appended the issue #27 release procedure under its own heading.
+Validation for these corrections: `pnpm lint`,
+`pnpm --filter @ai-sales-operations/web unit-tests` (23 tests),
+`pnpm --filter @ai-sales-operations/web typecheck`,
+`node scripts/check-docs.mjs`, and `git diff --check` passed. A direct comparison
+confirmed the issue #24 document remains unchanged as the README prefix.
+No servers or containers were started for these checks.
+
+
+**Deployment evidence (18 November 2026).** Following developer authorization,
+released source revision `fe63faf` to the existing
+[demo HTTPS URL](https://d3finwpuxpr8bj.cloudfront.net). `cdk diff --no-change-set`
+and the prepared `issue-27-demo-web` change set showed one new SPA function,
+an in-place update of distribution `E1NWV6DKPQ0SSF`, and CDK metadata.
+No bucket, distribution or OAC replacement, resource removal or IAM change
+was proposed. Executed the reviewed change set; `SalesOperationsDemoWeb`
+reached `UPDATE_COMPLETE` and CloudFront reached `Deployed`.
+
+Rebuilt React with the deployed demo Cognito outputs and all six demo
+`VITE_*` settings, synthesized the web stack, and saved the previous template
+and S3 placeholder before publication. Uploaded hashed assets before
+`index.html`, then completed invalidation `I4GQSC02M6R6CZNO6Q8SRTGYJ3` for `/*`.
+Release files, previous assets/template, reviewed assembly, build settings,
+SHA-256 manifest, change set and smoke results are saved locally under the
+ignored `build/releases/issue-27-fe63faf/` directory. The published entrypoint
+SHA-256 is `ee4f160fb1fcec3a743a9e99b2d8b7fedb32927fe74bca5b206003c426e25975`.
+
+The local release helper ran `pnpm --filter @ai-sales-operations/web build`,
+`pnpm --filter @ai-sales-operations/infra-web exec cdk synth --strict --no-lookups --quiet`,
+CDK change-set preparation, `aws cloudformation execute-change-set`,
+`aws s3 sync` for assets, `aws s3 cp` for the entrypoint, and
+`aws cloudfront create-invalidation`. The full application checks passed in
+the implementation step; the subsequent review correction passed lint,
+web unit tests and type checks before this release. No source code changed
+during deployment.
+
+All 12 public HTTP smoke checks passed:
+
+| Deployed check | Observed result |
+| --- | --- |
+| `index.html` and all three hashed assets | `200`; each SHA-256 matches the release artifact |
+| `/auth/callback` and `/organisations/synthetic-smoke` | `200`; response matches the React entrypoint |
+| HTTP root | `301` to the same HTTPS root |
+| Unsigned S3 `index.html` | `403` |
+| Missing asset | `403`; no HTML shell substitution |
+| CloudFront `/api/health` | `200`, `{"status":"ok"}` |
+| CloudFront `/api/me`, missing or invalid token | `401`, JSON rather than the SPA shell |
+
+Browser verification displayed the React sign-in screen with the corrected
+Google wording. A direct callback without an OAuth attempt showed the
+expected recoverable error and cleared the callback URL. The sign-in button
+opened the demo Cognito Managed Login page with native and Google options,
+the registered CloudFront callback, PKCE and exact `/api` resource audience.
+Authenticated native/Google callback completion, token refresh, sign-out,
+first-admin provisioning, invitations and cross-tenant denial through
+CloudFront still require synthetic account sign-in. No tokens or identity
+details were recorded.
+
+Cost checks found an existing USD 5 monthly budget with actual-spend email
+alerts at 85% and 100% and a forecast alert at 100%, plus a daily anomaly
+subscription. No billing configuration changed; mailbox receipt is not
+verified. Reviewed the linked CloudFront/S3 pricing and CloudFront quotas.
+The Service Quotas CLI query for CloudFront returned `NoSuchResourceException`;
+no quota increase was requested. The release adds only one function and one
+API cache behavior to the existing distribution.
+
+The first local execution wrapper raised a JSON parsing error after AWS
+accepted `execute-change-set`, because that operation returns no response
+body. Status readback confirmed `UPDATE_IN_PROGRESS`; the wrapper was fixed
+to handle an empty success response and execution was not repeated. Vite's
+large-chunk warning and CDK's feature-flag notice remain non-failing. No local
+servers or containers were started for deployment.
+
+
+**Authenticated browser checks (18 November 2026).** The developer completed
+native Cognito sign-in in the deployed demo tab. The protected onboarding
+screen loaded with no memberships. Creating a new synthetic organisation
+opened its workspace and displayed the `Admin` role, verifying first-admin
+provisioning and protected API access through CloudFront. Sign-out cleared
+the workspace and returned to the registered HTTPS root. No credentials or
+tokens were collected.
+
+This check exposed a missing direct `/onboarding` rewrite. Added it to the
+SPA function and its existing execution test, and updated only the issue #27
+portion of the web runbook. `pnpm lint`,
+`pnpm --filter @ai-sales-operations/infra-web typecheck`,
+`pnpm --filter @ai-sales-operations/infra-web unit-tests` (five tests),
+`node scripts/check-docs.mjs`, and `git diff --check` passed.
+Synthesized and reviewed `issue-27-onboarding-route`: only the existing
+function code changes, with an in-place dependent distribution refresh.
+No replacements, IAM changes or S3 uploads are involved.
+The first execution guard stopped before execution because it expected only
+the function resource; inspection confirmed the additional distribution
+entry is its dynamic function-ARN dependency with `Replacement=False`.
+Executed the reviewed correction after that inspection. The previous
+template, reviewed change set and assembly are saved locally under
+`build/releases/issue-27-onboarding/`.
+The correction reached `UPDATE_COMPLETE`; CloudFront readback reported
+`Deployed`. A public `GET /onboarding` returned `200` with the exact SHA-256
+of the published React entrypoint. Google sign-in has been handed to the
+developer in the open tab. Google callback completion, invitation acceptance,
+live cross-tenant denial and refresh-token checks remain pending. No local
+servers or containers were started during these checks.
+
+
+**Google browser checks (18 November 2026).** The developer completed Google
+sign-in in the deployed demo tab. The authenticated onboarding screen loaded
+with no organisation memberships, separately from the native account that
+created the synthetic organisation. Opened that organisation's direct URL
+and started sign-in again; the existing Managed Login session completed the
+callback and returned to the requested organisation route. The protected
+workspace displayed `Access denied` and `Your account does not have access
+to this organisation.` No organisation details were shown. This verifies
+live browser cross-tenant denial through CloudFront; the browser observation
+does not distinguish the API's `403` and `404` responses. Returning through
+`Back to organisations` restored the Google account's empty onboarding view.
+The Google session was left open for further checks. No credentials or
+tokens were collected, and no AWS resources or application data changed
+during this verification.
+
+Native and Google callback completion, first-admin creation, native sign-out,
+and browser cross-tenant denial have now passed. **Live invitation acceptance
+and refresh-token verification remain pending.** The current UI can accept
+invitations but does not expose an invitation-issuing form, so the live
+invitation check needs an authenticated administrator API request to prepare
+its synthetic invitation. Reusing the Managed Login cookie above was a new
+authorization-code flow, not a refresh-token test. Neither remaining check
+is claimed as completed. No local services were started. Documentation
+validation: `node scripts/check-docs.mjs` and `git diff --check` passed.
+
+
+**Developer acceptance update (18 November 2026).** The developer explicitly
+accepted deferring live invitation issuance/acceptance until an invitation
+management UI exists, following the decision in
+[PR #22](https://github.com/MingxuanHu/ai-sales-operations/pull/22).
+Existing web and PostgreSQL integration coverage remains in place. The
+developer also reported that live token refresh works. This is developer
+verification, not an independently observed token exchange.
+
+The developer reported a failure while refreshing invitations after database
+idle. Deployed Lambda configuration confirmed a 15-second timeout. A scoped
+six-hour Lambda log search found one `Connection terminated due to connection
+timeout` marker and no `Task timed out` or `Status: timeout` markers. These
+results support a connection-timeout failure, not a confirmed Lambda timeout;
+Neon wake-up as the cause remains a hypothesis. Increased connection time
+from 2 to 10 seconds and Lambda time from 15 to 28 seconds, preserving the
+2-second query limit and the HTTP API's 30-second request boundary. Added a
+real PostgreSQL integration check with a 2.5-second delayed handshake.
+
+Validation for the timeout correction: `pnpm check`,
+`pnpm --filter @ai-sales-operations/api run package:lambda`,
+`NODE_OPTIONS=--experimental-require-module node --test scripts/test-api-artifact.mjs`,
+`node scripts/check-docs.mjs`, and `git diff --check` passed. The integration
+suite successfully connected through the 2.5-second handshake delay. Its
+first validation attempt failed lint because the new test needed explicit
+Node timer imports; those imports were added before the passing full run.
+
+
+**Timeout deployment (18 November 2026).** Released source `9194ba6` and CDK
+asset `dbdea0052486589abb1221e2c8dffa58204627aec59b0aa89891928eabd6b211`
+through reviewed change set `issue-27-database-wake-timeout`. Template
+comparison confirmed only Lambda code, timeout and asset metadata changed;
+API integration and invoke-permission entries in the change set were dynamic
+references to the unchanged function ARN. Their definitions, IAM roles,
+throttling and database infrastructure remained identical. The stack reached
+`UPDATE_COMPLETE`, Lambda reported `Successful`, and deployed configuration
+confirmed `Timeout=28`. Retrieved the deployed package without logging its
+signed URL and verified its SHA-256 against Lambda's
+`V3r0tH27ROlPPq8zH1EDKWK0V9cveWQ2hJSaxvKpV1s=`. The compiled database provider
+contains the 10-second connection and unchanged 2-second query timeouts.
+API Gateway readback confirmed its integration limit is 30,000 ms.
+
+The direct API readiness request returned `200` in 4,438 ms; CloudFront
+readiness returned `200` in 147 ms; CloudFront `/api/me` without a token
+returned `401` in 65 ms. These confirm post-deployment readiness and the
+unauthenticated boundary, but do not prove Neon was suspended during the
+request. An actual idle/resume recurrence remains a runtime observation to
+confirm; the controlled delayed-handshake regression passed locally.
+Synthesis, `cdk diff --no-change-set`, change-set preparation/execution and
+package verification passed. The previous template, new assembly, change set,
+deployed package and smoke evidence are saved locally under the ignored
+`build/releases/issue-27-timeout/` directory. Test Docker containers were
+removed and their ports released; the test HTTP server and TCP delay proxy
+stopped. Listener readback showed only the pre-existing Node service on
+port 4317. No pre-existing service was stopped.
+
+**Current acceptance status.** The agreed invitation-test deferral and the
+developer-verified token refresh resolve the previously reported #27
+acceptance blockers. Review the timeout correction and run the PR's required
+checks before merging and closing the issue. Keep the live invitation test
+explicitly deferred until invitation management UI work.

@@ -45,6 +45,7 @@ describe('protected React shell', () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
     render(<App session={session} />)
+    expect(screen.getByText('Open Managed Login to sign in, register a new account, or continue with Google.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Continue to sign in' }))
     expect(session.beginSignIn).toHaveBeenCalledOnce()
     expect(fetch).not.toHaveBeenCalled()

@@ -36,7 +36,8 @@ export class DemoApiStack extends Stack {
       code: Code.fromAsset(props.artifactPath),
       handler: 'dist/lambda.handler',
       memorySize: 512,
-      timeout: Duration.seconds(15),
+      // Leave room for Neon to wake while staying below the HTTP API’s 30-second limit.
+      timeout: Duration.seconds(28),
       logGroup,
       environment: {
         // Lambda disables the ESM interop that the CommonJS build uses for Nest imports.
