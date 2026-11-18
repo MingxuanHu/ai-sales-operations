@@ -178,17 +178,25 @@ The integration suite removed its temporary PostgreSQL container and server.
 The pre-existing development PostgreSQL and `timescaledb-backup` containers were
 left running. No persistent test servers were started.
 
-**Live acceptance remains pending.** The developer authorized merge and the live
-exercise. PR #44 merged and the first release passed migrations but failed after
-Lambda upload because the v2 waiter required an ungranted API permission. Web
-publication had not started; API health remained good. The recovery uses
-`function-updated`, whose `GetFunctionConfiguration` call is already permitted,
-and records an `api-uploaded` stage before waiting. No IAM change is needed.
-The real Actions UI invalid-ID exercise rejected the target before OIDC or
-publication. See the [dated live evidence](../milestones/M04-01-cicd-ai-review.md#issue-36--first-live-exercise-18-november-2026)
-for run URLs, failure details and the remaining checks. A successful release,
-exact-bundle rollback/restoration, live expiry exercise and synthetic
-authenticated smoke have not yet been demonstrated.
+**Live acceptance verified — 18 November 2026.** PR #44's first attempt exposed
+the waiter permission mismatch; merged PR #45 corrected it without changing IAM.
+Two checked releases subsequently passed publication and public smoke. Actual
+Actions UI rollback to the older retained bundle and restoration of the newer
+bundle both passed, with independent Lambda/web hash checks and a synthetic
+signed-in workspace check after restoration. See the
+[full acceptance record](../milestones/M04-01-cicd-ai-review.md#issue-36--final-live-acceptance-18-november-2026)
+for all run links, copyable release IDs, actual expiry times and test limitations.
+
+The two retained releases use the same reviewed source SHA but have distinct
+API ZIP hashes. The exercise proves exact-artifact recovery, rather than a
+change in product behavior across code versions. Invalid input was rejected
+through the real UI. Expiry rejection used actual artifact metadata with a
+simulated post-expiry clock; no naturally expired artifact was available for a
+live UI test. No destructive schema changes or IAM expansion were needed.
+The final demo points to release
+`7b7a22c295064292c8fabdf4ea4548ad082eb03a-44243929502`. For a future rollback,
+choose a currently retained, compatible ID from the catalog rather than assuming
+these dated examples remain available forever.
 
 ## Verified primary references
 
