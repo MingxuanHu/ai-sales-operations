@@ -63,7 +63,7 @@ Issue #35's acceptance criteria are satisfied.
 
 ### 3. Automate the demo release and add manual version rollback
 
-[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36) · [PR #44 — implementation](https://github.com/MingxuanHu/ai-sales-operations/pull/44) · [PR #45 — release waiter recovery](https://github.com/MingxuanHu/ai-sales-operations/pull/45)
+[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36) · [PR #44 — implementation](https://github.com/MingxuanHu/ai-sales-operations/pull/44) · [PR #45 — release waiter recovery](https://github.com/MingxuanHu/ai-sales-operations/pull/45) · [PR #46 — live acceptance evidence](https://github.com/MingxuanHu/ai-sales-operations/pull/46)
 
 **Local implementation (18 November 2026):** release and manual rollback workflows,
 immutable checksummed bundles, conservative compatibility checks, failure-path
@@ -204,8 +204,10 @@ Ubuntu image migration notices; these did not fail checks. Public route and
 checksum checks passed. The initial failed release remains diagnostic-only and
 is not selectable. Expiry handling has deterministic boundary evidence rather
 than a 90-day live aging test; future code/schema changes still require the
-compatibility checks described in the runbook. Issue #36 is ready to close on
-this recorded evidence; M4 remains open for issue #37.
+compatibility checks described in the runbook. Issue #36 was closed as completed after readback of these results.
+[PR #46](https://github.com/MingxuanHu/ai-sales-operations/pull/46) publishes this
+evidence and the verified runbook; the developer authorized its creation and
+merge after required checks pass. M4 remains open for issue #37.
 
 ### 4. Add independent advisory AI PR review
 
