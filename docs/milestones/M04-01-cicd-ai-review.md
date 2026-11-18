@@ -63,13 +63,14 @@ Issue #35's acceptance criteria are satisfied.
 
 ### 3. Automate the demo release and add manual version rollback
 
-[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36)
+[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36) · [PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44)
 
 **Local implementation (18 November 2026):** release and manual rollback workflows,
 immutable checksummed bundles, conservative compatibility checks, failure-path
 tests and the [release/recovery runbook](../engineering/demo-releases.md) are
-implemented for developer review. No PR or live release has been created.
-Deployment/rollback and authenticated smoke acceptance remain pending separate
+implemented and presented for developer review. The developer authorized
+[PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44), which is open;
+no live release has run. Deployment/rollback and authenticated smoke acceptance remain pending separate
 authorization. The authorized migration-secret transfer completed; see below.
 
 - **Goal.** Release the tested `main` revision through the existing M3 infrastructure and verify the public result.
