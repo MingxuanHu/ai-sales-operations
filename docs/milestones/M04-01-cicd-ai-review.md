@@ -63,7 +63,7 @@ Issue #35's acceptance criteria are satisfied.
 
 ### 3. Automate the demo release and add manual version rollback
 
-[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36) · [PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44)
+[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36) · [PR #44 — implementation](https://github.com/MingxuanHu/ai-sales-operations/pull/44) · [PR #45 — release waiter recovery](https://github.com/MingxuanHu/ai-sales-operations/pull/45)
 
 **Local implementation (18 November 2026):** release and manual rollback workflows,
 immutable checksummed bundles, conservative compatibility checks, failure-path
@@ -108,7 +108,9 @@ migration-secret transfer completed; see below.
   the scoped release policy. AWS documents `function-updated` as using the
   already granted `GetFunctionConfiguration`. The recovery change selects that
   waiter without changing IAM, adds an `api-uploaded` diagnostic stage and a
-  regression assertion. It requires developer review before its PR is created.
+  regression assertion. The developer reviewed the fix and authorized
+  [PR #45](https://github.com/MingxuanHu/ai-sales-operations/pull/45); it is open
+  pending checks and merge authorization.
 - Used the actual **Actions → Rollback demo → Run workflow** UI on `main` with
   `invalid-release-id` in both fields.
   [Run 44241998146](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241998146)
