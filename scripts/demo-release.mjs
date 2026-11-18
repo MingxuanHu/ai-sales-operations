@@ -131,7 +131,10 @@ export async function publish(directory, manifest, { command = aws, request = (u
   record({ stage: 'before-api', previous })
   command('lambda', 'update-function-code', '--function-name', targets.function,
     '--revision-id', config.RevisionId, '--zip-file', `fileb://${resolve(directory, 'api.zip')}`, '--query', 'CodeSha256', '--output', 'text')
-  command('lambda', 'wait', 'function-updated-v2', '--function-name', targets.function)
+  record({ stage: 'api-uploaded', previous })
+  // This waiter uses GetFunctionConfiguration, which the release role permits.
+  // The v2 waiter uses GetFunction and would require an unnecessary IAM grant.
+  command('lambda', 'wait', 'function-updated', '--function-name', targets.function)
   const code = command('lambda', 'get-function-configuration', '--function-name', targets.function, '--query', 'CodeSha256', '--output', 'text')
   assert.equal(code, Buffer.from(manifest.checksums['api.zip'], 'hex').toString('base64'), 'Published Lambda hash mismatch')
   await verifyApi(request)

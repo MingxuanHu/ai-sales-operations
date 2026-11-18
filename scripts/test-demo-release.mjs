@@ -70,12 +70,17 @@ test('tampered artifacts and incompatible releases cause no AWS mutations', asyn
 
 test('publication waits for API then assets then HTML then invalidation and smoke', async (t) => {
   const f = fixture(t)
-  await publish(f.directory, f.manifest, { command: f.command, request: f.request, config })
+  const stages = []
+  await publish(f.directory, f.manifest, { command: f.command, request: f.request, config,
+    record: ({ stage }) => stages.push(stage) })
+  assert.deepEqual(stages, ['before-api', 'api-uploaded', 'api-published', 'web-published', 'smoke-passed'])
   assert.deepEqual(f.calls.map((args) => args.slice(0, 2).join(' ')), [
     's3 cp', 'lambda update-function-code', 'lambda wait', 'lambda get-function-configuration',
     's3 sync', 's3 cp', 'cloudfront create-invalidation', 'cloudfront wait', 's3 cp',
   ])
   assert.ok(f.calls[1].includes('--revision-id'))
+  // Keep the waiter compatible with the existing least-privilege release role.
+  assert.deepEqual(f.calls[2].slice(0, 3), ['lambda', 'wait', 'function-updated'])
   assert.ok(!f.calls.flat().includes('--delete'))
 })
 

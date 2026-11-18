@@ -178,13 +178,17 @@ The integration suite removed its temporary PostgreSQL container and server.
 The pre-existing development PostgreSQL and `timescaledb-backup` containers were
 left running. No persistent test servers were started.
 
-**Live acceptance remains pending.** No release workflow has run, no migration
-has run against Neon, and no live deployment, rollback, invalid/expired-ID UI
-exercise or synthetic authenticated smoke is claimed here. After authorization,
-record workflow URLs, source/release IDs, artifact expiry, public and authenticated
-smoke results, invalid-ID refusal, rollback and restoration results in the
-[M4 specification](../milestones/M04-01-cicd-ai-review.md). Keep tokens and
-synthetic identity details out of records.
+**Live acceptance remains pending.** The developer authorized merge and the live
+exercise. PR #44 merged and the first release passed migrations but failed after
+Lambda upload because the v2 waiter required an ungranted API permission. Web
+publication had not started; API health remained good. The recovery uses
+`function-updated`, whose `GetFunctionConfiguration` call is already permitted,
+and records an `api-uploaded` stage before waiting. No IAM change is needed.
+The real Actions UI invalid-ID exercise rejected the target before OIDC or
+publication. See the [dated live evidence](../milestones/M04-01-cicd-ai-review.md#issue-36--first-live-exercise-18-november-2026)
+for run URLs, failure details and the remaining checks. A successful release,
+exact-bundle rollback/restoration, live expiry exercise and synthetic
+authenticated smoke have not yet been demonstrated.
 
 ## Verified primary references
 
@@ -193,5 +197,7 @@ Checked during implementation:
 [workflow jobs API](https://docs.github.com/en/rest/actions/workflow-jobs#list-jobs-for-a-workflow-run),
 [manual dispatch inputs](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatchinputs),
 [artifact availability and retention](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts),
+[configuration-based Lambda waiter](https://docs.aws.amazon.com/cli/latest/reference/lambda/wait/function-updated.html),
+[GetFunction-based v2 waiter](https://docs.aws.amazon.com/cli/latest/reference/lambda/wait/function-updated-v2.html),
 [Lambda revision-guarded code updates](https://docs.aws.amazon.com/cli/latest/reference/lambda/update-function-code.html),
 [CloudFront invalidation waiter](https://docs.aws.amazon.com/cli/latest/reference/cloudfront/wait/invalidation-completed.html).

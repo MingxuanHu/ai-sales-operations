@@ -69,9 +69,12 @@ Issue #35's acceptance criteria are satisfied.
 immutable checksummed bundles, conservative compatibility checks, failure-path
 tests and the [release/recovery runbook](../engineering/demo-releases.md) are
 implemented and presented for developer review. The developer authorized
-[PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44), which is open;
-no live release has run. Deployment/rollback and authenticated smoke acceptance remain pending separate
-authorization. The authorized migration-secret transfer completed; see below.
+[PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44) and then
+explicitly authorized merge and the live deployment/rollback exercise. PR #44
+was squash-merged at `636857b750aebd0b0a8872afc7219319e50052f2` after all six
+required checks passed. First release execution failed at the Lambda waiter;
+the correction and remaining live acceptance are described below. The authorized
+migration-secret transfer completed; see below.
 
 - **Goal.** Release the tested `main` revision through the existing M3 infrastructure and verify the public result.
 - **In scope.** Add a release workflow that waits for all required checks on the same revision, uses Environment `demo` and OIDC, and serializes releases to prevent overlapping migrations/publications. Package and verify Lambda, build React with public demo settings, run committed Prisma migrations with the direct credential confined to that step, release API before web assets, publish hashed assets before the entrypoint, and wait for CloudFront invalidation. Preserve the existing CDK stack/resource identities. Record revision, artifact checksums, prior artifacts and migration outcome for diagnosis and rollback. Document partial-failure recovery and forward-compatible schema changes; a code rollback must not imply reversing a migration.
@@ -82,6 +85,58 @@ authorization. The authorized migration-secret transfer completed; see below.
 - **Acceptance.** A developer-authorized merge-triggered release deploys exactly the checked revision. Failed checks prevent deployment; migration failure prevents subsequent rollout; a release failure is visible. Verify public HTTPS, SPA routes including `/auth/callback` and `/onboarding`, `/api/health`, unauthenticated `/api/me` rejection, private S3 access and published asset checksums. Use the Actions manual-run UI to select a retained successful release by ID, verify rejection of invalid/expired IDs, roll back to its exact artifacts, then restore the intended release without destructive migrations. Record synthetic authenticated smoke evidence without placing tokens in logs.
 - **Dependencies.** Issues #34–#35 and explicit authorization for the first deployment/rollback exercise. Reuse the [API](../../infra/api/README.md) and [web](../../infra/web/README.md) runbooks. Confirm current GitHub Actions and AWS behavior from primary documentation during implementation.
 - **Validation.** `pnpm check`, `pnpm --filter @ai-sales-operations/api run package:lambda`, `NODE_OPTIONS=--experimental-require-module node --test scripts/test-api-artifact.mjs`, relevant strict CDK syntheses, workflow validation and release-script failure-path tests. Record actual live smoke and rollback commands/results after authorization.
+
+### Issue #36 — first live exercise, 18 November 2026
+
+- Main [CI run 44241738792](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241738792)
+  passed all six checks at merge revision `636857b750aebd0b0a8872afc7219319e50052f2`.
+- [Release run 44241836118](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241836118)
+  passed the same-revision gate, packaging and packaged-handler test, public web
+  build, OIDC exchange, immutable artifact upload, and Prisma migration/status.
+  The sanitized migration record reports `passed`; raw database output was not
+  retained or printed.
+- Retained candidate ID is
+  `636857b750aebd0b0a8872afc7219319e50052f2-44241836118`, with artifact expiry
+  `2027-02-16T05:05:59Z`. The run failed, so this candidate is **not eligible for
+  rollback**. No successful automated release baseline exists yet.
+- The record stopped at `before-api`. Read-only Lambda inspection subsequently
+  confirmed `State: Active`, `LastUpdateStatus: Successful`, and a changed code
+  hash; public `/api/health` returned `200` with `{"status":"ok"}`. Thus the API
+  upload completed, but the workflow stopped before web publication or success
+  marker creation. No automatic rollback was claimed or attempted.
+- The selected `function-updated-v2` waiter requires `GetFunction`, absent from
+  the scoped release policy. AWS documents `function-updated` as using the
+  already granted `GetFunctionConfiguration`. The recovery change selects that
+  waiter without changing IAM, adds an `api-uploaded` diagnostic stage and a
+  regression assertion. It requires developer review before its PR is created.
+- Used the actual **Actions → Rollback demo → Run workflow** UI on `main` with
+  `invalid-release-id` in both fields.
+  [Run 44241998146](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241998146)
+  failed input/provenance validation; OIDC and publication were both skipped.
+  The browser workflow list also showed the failed result. No live expired
+  artifact test is claimed; expiry rejection is covered by local tests only.
+- GitHub auto-closed #36 from the PR's closing reference. It was reopened with
+  `gh issue reopen 36` because live acceptance remains incomplete.
+
+Actual commands included `gh pr merge 44 --squash --match-head-commit <reviewed-SHA>`,
+`gh run watch 44241836118 --exit-status --interval 10` (exit 1),
+`gh run view <run-ID> --json status,conclusion,jobs`, `gh run download 44241836118
+--name demo-record-44241836118-1 --dir <temporary-directory>`, artifact metadata
+readback with `gh api`, public health with `curl -fsS`, and a read-only AWS CLI
+`get-function-configuration` query selecting only hash/status/state. Existing
+local AWS authentication worked; no credential values were inspected or logged.
+
+**Recovery validation:** `pnpm check` passed lint, typecheck, unit tests (including
+all nine release tests), disposable PostgreSQL integration tests and build.
+The regression checks the exact permission-compatible waiter and diagnostic
+stage sequence. `node scripts/check-docs.mjs` and `git diff --check` passed.
+The existing Vite chunk-size warning remains. Test services were removed;
+pre-existing containers were left running.
+
+**Still required:** reviewed waiter correction, successful release baselines,
+retained-bundle rollback and restoration through the Actions UI, live public
+checksum/private-S3 smoke completion, and synthetic authenticated smoke. No IAM
+changes, destructive migrations or database restoration were performed.
 
 ### 4. Add independent advisory AI PR review
 

@@ -58,7 +58,9 @@ not require an explicit Allow and needs no wildcard grant.
 application artifacts directly to the existing resources, keeping CDK
 infrastructure updates as separately authorized operations. Use
 `aws lambda update-function-code --zip-file fileb://...` followed by
-`aws lambda wait function-updated-v2`, then web asset uploads and invalidation.
+`aws lambda wait function-updated`, then web asset uploads and invalidation.
+This waiter uses the granted `GetFunctionConfiguration` API; `function-updated-v2`
+uses `GetFunction`, which this role deliberately does not grant.
 The Lambda ZIP must fit the direct-upload limit; larger artifacts require a
 separately reviewed artifact bucket grant. Keep old web assets, upload HTML
 last, and do not use `sync --delete`. Retain immutable API/web bundles in
