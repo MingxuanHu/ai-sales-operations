@@ -44,8 +44,12 @@ defines exact immutable GitHub repository/demo trust, optional native provider
 creation or reuse, and permissions limited to existing application artifact
 publication targets. Review the proposed direct artifact release approach for
 #36: automated CDK infrastructure deployment is deliberately not granted.
-IAM application, change-set review and a trusted live identity check remain
-pending separate authorization; no live acceptance is claimed.
+The developer subsequently authorized AWS deployment. The reviewed change set
+created the provider and scoped role, and CloudFormation reached
+`CREATE_COMPLETE`; IAM readback matches the intended trust and policy. See the
+[deployment evidence](../../infra/delivery/README.md#authorized-aws-deployment-record--18-november-2026).
+The trusted GitHub identity check remains pending workflow review/merge and
+configuration; full issue acceptance is not yet claimed.
 
 - **Goal.** Allow the trusted demo release job to use temporary AWS credentials without stored AWS access keys.
 - **In scope.** Add reviewable TypeScript CDK definitions and tests for the deployment role and any required OIDC provider setup, reusing an existing provider where appropriate. Bind trust to the actual repository and `demo` environment, with the expected audience. Scope deployment permissions to the existing demo resources and required CDK publishing/execution paths; explain any actions that cannot use resource-level restrictions. Separate migration-secret access from runtime access and document bootstrap prerequisites and revocation.

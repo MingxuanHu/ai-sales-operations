@@ -3,8 +3,9 @@
 This CDK package defines `SalesOperationsDemoDelivery`, separate from the
 existing API, web and Cognito stacks. It creates the `SalesOperationsDemoRelease`
 role and optionally the account-wide GitHub OIDC provider. It adds no dependency
-and no running compute. IAM setup and a live identity check are pending separate
-developer authorization; synthesis does not apply these changes.
+and no running compute. The developer-authorized IAM setup completed on
+18 November 2026; the trusted GitHub identity check remains pending workflow
+review and merge. Synthesis alone does not apply changes.
 
 ## Trust and inspected targets
 
@@ -106,9 +107,10 @@ deletion; remove it separately only after verifying no other roles use it.
 
 ## Separately authorized setup and acceptance
 
-No command in this section has been executed for issue #35. The developer must
-first review the local diff and synthesized template, and authorize IAM/change
-set preparation. Verify the existing CDK bootstrap version and its deployment,
+The setup below was executed after the developer authorized AWS deployment;
+see the deployment record below. For future changes, first review the local
+diff and synthesized template and obtain authorization for IAM changes.
+Verify the existing CDK bootstrap version and its deployment,
 file publishing and CloudFormation execution roles with the human AWS profile.
 The bootstrap bucket/roles are only for this human setup. Do not automatically
 bootstrap or change the bootstrap execution policy. Review its effective access
@@ -192,5 +194,72 @@ trust after repository transfers/renames or OIDC subject configuration changes.
   new workspace importer using existing pinned dependencies.
 
 Application build/database integration checks were not run for this infrastructure
-change. No server or container was started. No AWS/GitHub settings were changed,
-no change set was prepared, and no IAM, deployment or live OIDC acceptance was run.
+change. During that initial local implementation, no server or container was
+started, no AWS/GitHub settings were changed, no change set was prepared and
+no IAM deployment or live OIDC acceptance was run.
+
+## Authorized AWS deployment record — 18 November 2026
+
+The developer instructed “proceed with AWS deployment” after reviewing the
+provider/role scope. Deployed source revision: `d585e01`. The existing human
+profile `sales-operations-dev` authenticated to account `381491963300`.
+The provider list was empty before creation. GitHub's environment policy
+readback still allowed only branch `main`.
+
+The existing `CDKToolkit` stack was `CREATE_COMPLETE`, bootstrap version `33`.
+Readback confirmed the CloudFormation execution role has `AdministratorAccess`
+and trusts CloudFormation; the deployment/file publishing roles trust the
+same account. All three have no permissions boundary. These existing roles
+were used only for this authorized human setup and were not changed. The new
+release role has no permission to assume them.
+
+Commands run successfully (from the repository root):
+
+```sh
+aws sts get-caller-identity --profile sales-operations-dev
+aws iam list-open-id-connect-providers --profile sales-operations-dev
+aws cloudformation describe-stacks --stack-name CDKToolkit \
+  --profile sales-operations-dev --region ap-southeast-2
+gh api repos/MingxuanHu/ai-sales-operations/environments/demo/deployment-branch-policies
+DEMO_GITHUB_OIDC_PROVIDER_MODE=create \
+pnpm --filter @ai-sales-operations/infra-delivery exec cdk synth --strict --no-lookups --quiet
+pnpm --filter @ai-sales-operations/infra-delivery unit-tests
+pnpm --filter @ai-sales-operations/infra-delivery exec cdk --app cdk.out diff \
+  SalesOperationsDemoDelivery --no-change-set --profile sales-operations-dev
+pnpm --filter @ai-sales-operations/infra-delivery exec cdk --app cdk.out deploy \
+  SalesOperationsDemoDelivery --method prepare-change-set \
+  --change-set-name issue-35-demo-oidc --require-approval never --profile sales-operations-dev
+aws cloudformation describe-change-set --stack-name SalesOperationsDemoDelivery \
+  --change-set-name issue-35-demo-oidc --profile sales-operations-dev --region ap-southeast-2
+aws cloudformation execute-change-set --stack-name SalesOperationsDemoDelivery \
+  --change-set-name issue-35-demo-oidc --profile sales-operations-dev --region ap-southeast-2
+aws cloudformation describe-stacks --stack-name SalesOperationsDemoDelivery \
+  --profile sales-operations-dev --region ap-southeast-2
+```
+
+Strict synthesis and all six tests passed again. The diff and prepared change
+set `issue-35-demo-oidc/a99df987-e4ee-461a-8961-e4a498aa0ee3` were inspected
+before execution: additions were exactly one native OIDC provider, one IAM role
+and CDK metadata, with no replacements or application changes. CloudFormation
+finished at **CREATE_COMPLETE**.
+
+Post-deployment `get-role`, `list-role-policies`, `get-role-policy`,
+`list-attached-role-policies` and `get-open-id-connect-provider` readbacks
+confirmed:
+
+- Provider ARN: `arn:aws:iam::381491963300:oidc-provider/token.actions.githubusercontent.com`,
+  audience list exactly `sts.amazonaws.com`.
+- Role ARN: `arn:aws:iam::381491963300:role/SalesOperationsDemoRelease`.
+- Trust exactly the provider, STS audience and immutable demo subject above;
+  maximum session duration `3600` seconds.
+- Exactly one inline policy, `PublishDemo`, matching the four scoped statements
+  in the reviewed template; no attached managed policies or permissions boundary.
+
+No deployment command failed. CDK repeated its feature-flag advisory without
+strict synthesis errors. No application code, runtime settings, database,
+bootstrap policies or GitHub configuration changed, and no local services were
+started. The public role variable `DEMO_RELEASE_ROLE_ARN` still needs to be set
+in GitHub Environment `demo` when configuring the approved workflow. The
+workflow remains local on the issue branch; no PR, merge or dispatch occurred.
+Live GitHub-token/STS acceptance is therefore still pending and issue #35 is
+not yet claimed fully accepted.
