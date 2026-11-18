@@ -4,8 +4,9 @@ This CDK package defines `SalesOperationsDemoDelivery`, separate from the
 existing API, web and Cognito stacks. It creates the `SalesOperationsDemoRelease`
 role and optionally the account-wide GitHub OIDC provider. It adds no dependency
 and no running compute. The developer-authorized IAM setup completed on
-18 November 2026; the trusted GitHub identity check remains pending workflow
-review and merge. Synthesis alone does not apply changes.
+18 November 2026. The trusted GitHub identity check subsequently passed on
+merged `main`; see the final acceptance record below. Synthesis alone does not
+apply changes.
 
 ## Trust and inspected targets
 
@@ -264,3 +265,38 @@ and its exact ARN read back with `gh variable get`. The implementation is under
 [PR #41](https://github.com/MingxuanHu/ai-sales-operations/pull/41). At PR creation,
 merge and live GitHub-token/STS acceptance are still pending; issue #35 is not
 yet claimed fully accepted.
+
+## Final acceptance — 18 November 2026
+
+The developer authorized role-variable configuration, PR creation/merge, the
+trusted identity check and issue closure. Environment `demo` now contains
+`DEMO_RELEASE_ROLE_ARN=arn:aws:iam::381491963300:role/SalesOperationsDemoRelease`;
+its value was read back after configuration. The environment remains main-only.
+
+[PR #41](https://github.com/MingxuanHu/ai-sales-operations/pull/41) merged as
+`ee6decb5ec7d730963c586e7d3651530e45766cb` after all six required checks passed
+on its final source revision: [CI run](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44237908367).
+No administrator bypass or protection change was used.
+
+The [Check demo AWS identity run](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44238068557)
+was manually dispatched on that exact merged `main` revision and completed
+successfully at 15:33 AEDT. All three acceptance steps passed:
+
+- Inspect expected issuer, audience, immutable subject, main ref, environment
+  and repository/owner IDs in memory without printing the token.
+- Obtain short-lived credentials through the deployed OIDC provider and role.
+- Call STS and verify the assumed role is `SalesOperationsDemoRelease`.
+
+Commands were `gh pr merge 41 --squash --match-head-commit <reviewed-head>`,
+`gh workflow run demo-identity-check.yml --ref main`,
+`gh run watch 44238068557 --exit-status --interval 10` and
+`gh run view 44238068557 --json conclusion,status,headSha,url,jobs`.
+The first dispatch immediately after merge returned HTTP 404 while GitHub
+had not yet registered the new workflow. Workflow-list readback then showed
+it active; the retry succeeded. No workflow code change was needed. The runner
+reported an Ubuntu image migration notice; the job passed without errors.
+
+Together with the local negative trust tests, scoped-policy assertions, strict
+synthesis, reviewed change set and IAM readback above, this satisfies issue
+#35's acceptance criteria. PR CI remains separate from the privileged manual
+workflow. No application artifacts were published and no migrations ran.

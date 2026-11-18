@@ -49,8 +49,11 @@ The developer subsequently authorized AWS deployment. The reviewed change set
 created the provider and scoped role, and CloudFormation reached
 `CREATE_COMPLETE`; IAM readback matches the intended trust and policy. See the
 [deployment evidence](../../infra/delivery/README.md#authorized-aws-deployment-record--18-november-2026).
-The trusted GitHub identity check remains pending workflow review/merge and
-configuration; full issue acceptance is not yet claimed.
+The role variable is configured and [PR #41](https://github.com/MingxuanHu/ai-sales-operations/pull/41)
+merged after all six required checks passed. The [trusted main/demo identity run](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44238068557)
+passed claim inspection, OIDC credential exchange and STS role verification
+without releasing application code. See the [final acceptance record](../../infra/delivery/README.md#final-acceptance--18-november-2026).
+Issue #35's acceptance criteria are satisfied.
 
 - **Goal.** Allow the trusted demo release job to use temporary AWS credentials without stored AWS access keys.
 - **In scope.** Add reviewable TypeScript CDK definitions and tests for the deployment role and any required OIDC provider setup, reusing an existing provider where appropriate. Bind trust to the actual repository and `demo` environment, with the expected audience. Scope deployment permissions to the existing demo resources and required CDK publishing/execution paths; explain any actions that cannot use resource-level restrictions. Separate migration-secret access from runtime access and document bootstrap prerequisites and revocation.
