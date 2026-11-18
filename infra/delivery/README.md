@@ -258,8 +258,9 @@ confirmed:
 No deployment command failed. CDK repeated its feature-flag advisory without
 strict synthesis errors. No application code, runtime settings, database,
 bootstrap policies or GitHub configuration changed, and no local services were
-started. The public role variable `DEMO_RELEASE_ROLE_ARN` still needs to be set
-in GitHub Environment `demo` when configuring the approved workflow. The
-workflow remains local on the issue branch; no PR, merge or dispatch occurred.
-Live GitHub-token/STS acceptance is therefore still pending and issue #35 is
-not yet claimed fully accepted.
+started. After subsequent developer authorization, the public role variable
+`DEMO_RELEASE_ROLE_ARN` was set in GitHub Environment `demo` with `gh variable set`
+and its exact ARN read back with `gh variable get`. The implementation is under
+[PR #41](https://github.com/MingxuanHu/ai-sales-operations/pull/41). At PR creation,
+merge and live GitHub-token/STS acceptance are still pending; issue #35 is not
+yet claimed fully accepted.
