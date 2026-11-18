@@ -13,9 +13,11 @@
 
 ## Issues / PRs
 
-**Draft for developer review.** Read all existing GitHub Issues and open milestones: no M4 Issues or milestone exist, and M3 Issues #24–#27 are closed. The four proposals below are not yet created. After the developer confirms this breakdown, create them under **M4 — CI/CD & AI review** and record their real links here. Follow the [kickoff process](../engineering/delivery.md#milestone-kickoff-and-github-issues); implementation requires a separate request.
+**Kickoff complete.** The approved breakdown is tracked in the [M4 — CI/CD & AI review GitHub milestone](https://github.com/MingxuanHu/ai-sales-operations/milestone/4). [PR #33](https://github.com/MingxuanHu/ai-sales-operations/pull/33) contains the reviewed specification. Issues below are created; implementation requires a separate request under the [delivery workflow](../engineering/delivery.md#issue-implementation).
 
 ### 1. Protect main and establish the demo release environment
+
+[Issue #34](https://github.com/MingxuanHu/ai-sales-operations/issues/34)
 
 - **Goal.** Make passing deterministic checks and a reviewed PR the normal route into `main`.
 - **In scope.** Inspect current repository settings and successful check names; configure required `docs-check`, `lint`, `typecheck`, `unit-tests`, `integration-tests` and `build` checks. Require PRs and resolved review conversations where supported; block direct pushes, force pushes and deletion. Do not require another person's approval in this single-developer repository. Create/configure `demo` with deployment restricted to `main`, and document public variables and secret names without their values. Check repository-plan support before choosing protection settings and document any limitation.
@@ -26,14 +28,18 @@
 
 ### 2. Define least-privilege AWS OIDC deployment access
 
+[Issue #35](https://github.com/MingxuanHu/ai-sales-operations/issues/35)
+
 - **Goal.** Allow the trusted demo release job to use temporary AWS credentials without stored AWS access keys.
 - **In scope.** Add reviewable TypeScript CDK definitions and tests for the deployment role and any required OIDC provider setup, reusing an existing provider where appropriate. Bind trust to the actual repository and `demo` environment, with the expected audience. Scope deployment permissions to the existing demo resources and required CDK publishing/execution paths; explain any actions that cannot use resource-level restrictions. Separate migration-secret access from runtime access and document bootstrap prerequisites and revocation.
 - **Out of scope.** Broad administrator access, replacing demo resources, and automatic application deployment.
 - **Acceptance.** Tests reject unrelated repository/environment trust and validate scoped policies. Review synthesis and change sets before separately authorized IAM changes. A trusted `main` job in `demo` can obtain the intended role; PR jobs have no OIDC credential step or deployment environment. Inspect token claims and trust evaluation without printing tokens.
-- **Dependencies.** Proposal 1; separately authorized AWS/IAM changes. Review current AWS/GitHub primary documentation and installed CDK APIs during implementation.
+- **Dependencies.** Issue #34; separately authorized AWS/IAM changes. Review current AWS/GitHub primary documentation and installed CDK APIs during implementation.
 - **Validation.** `pnpm lint`, `pnpm typecheck`, relevant infrastructure unit tests and strict CDK synthesis. After authorization, record IAM readback and a minimal identity check from the trusted job without releasing application changes.
 
 ### 3. Automate the demo release and add manual version rollback
+
+[Issue #36](https://github.com/MingxuanHu/ai-sales-operations/issues/36)
 
 - **Goal.** Release the tested `main` revision through the existing M3 infrastructure and verify the public result.
 - **In scope.** Add a release workflow that waits for all required checks on the same revision, uses Environment `demo` and OIDC, and serializes releases to prevent overlapping migrations/publications. Package and verify Lambda, build React with public demo settings, run committed Prisma migrations with the direct credential confined to that step, release API before web assets, publish hashed assets before the entrypoint, and wait for CloudFront invalidation. Preserve the existing CDK stack/resource identities. Record revision, artifact checksums, prior artifacts and migration outcome for diagnosis and rollback. Document partial-failure recovery and forward-compatible schema changes; a code rollback must not imply reversing a migration.
@@ -42,21 +48,23 @@
 - **Rollback behavior.** Retain immutable web/API bundles and checksum manifests for successful releases, initially targeting 90 days within repository policy and storage limits. Validate that the selected ID belongs to a successful demo release from this repository's trusted `main`, verify checksums, and reject missing, expired or incompatible releases before changing the demo. Use current trusted rollback code and the stored artifacts rather than executing workflow/scripts from the selected old revision or rebuilding it. Serialize rollback with normal deployment, use the same `demo` environment and OIDC restrictions, restore application artifacts, invalidate CloudFront and run smoke checks. Do not run old migrations or automatically restore infrastructure/database state; explicitly check compatibility with the current schema and infrastructure. Record the initiator, previous release, selected release and result. [Artifact retention](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts) limits which versions remain available.
 - **Out of scope.** Automatic destructive schema rollback, database restoration and new product behavior.
 - **Acceptance.** A developer-authorized merge-triggered release deploys exactly the checked revision. Failed checks prevent deployment; migration failure prevents subsequent rollout; a release failure is visible. Verify public HTTPS, SPA routes including `/auth/callback` and `/onboarding`, `/api/health`, unauthenticated `/api/me` rejection, private S3 access and published asset checksums. Use the Actions manual-run UI to select a retained successful release by ID, verify rejection of invalid/expired IDs, roll back to its exact artifacts, then restore the intended release without destructive migrations. Record synthetic authenticated smoke evidence without placing tokens in logs.
-- **Dependencies.** Proposals 1–2 and explicit authorization for the first deployment/rollback exercise. Reuse the [API](../../infra/api/README.md) and [web](../../infra/web/README.md) runbooks. Confirm current GitHub Actions and AWS behavior from primary documentation during implementation.
+- **Dependencies.** Issues #34–#35 and explicit authorization for the first deployment/rollback exercise. Reuse the [API](../../infra/api/README.md) and [web](../../infra/web/README.md) runbooks. Confirm current GitHub Actions and AWS behavior from primary documentation during implementation.
 - **Validation.** `pnpm check`, `pnpm --filter @ai-sales-operations/api run package:lambda`, `NODE_OPTIONS=--experimental-require-module node --test scripts/test-api-artifact.mjs`, relevant strict CDK syntheses, workflow validation and release-script failure-path tests. Record actual live smoke and rollback commands/results after authorization.
 
 ### 4. Add independent advisory AI PR review
+
+[Issue #37](https://github.com/MingxuanHu/ai-sales-operations/issues/37)
 
 - **Goal.** Give the developer useful independent findings on PR diffs without granting merge or deployment authority.
 - **In scope.** Compare available reviewer integrations, permissions, untrusted-diff handling, fork behavior and cost before selecting one with the developer. Add narrowly scoped review configuration and document operation, usage limits and failure handling. Treat repository text and diffs as untrusted input; avoid privileged execution of PR code, deployment secrets and `pull_request_target` execution on untrusted changes. Define a safe fork policy if the chosen integration needs credentials. Keep deterministic checks required when review is unavailable.
 - **Out of scope.** Autonomous fixes/merges, required AI approval and exposing customer data or deployment credentials to the reviewer.
 - **Acceptance.** Record real comments on a representative PR and the developer's disposition, including any incorrect suggestions. Verify review is independent of the implementing agent, has only necessary permissions, cannot deploy, and handles unavailable credentials/provider failures visibly without blocking deterministic CI. Document the chosen service's cost and any developer-approved spending limit.
-- **Dependencies.** Proposal 1; developer selection and authorization for any third-party installation, credential or paid service. This can proceed independently of proposals 2–3.
+- **Dependencies.** Issue #34; developer selection and authorization for any third-party installation, credential or paid service. This can proceed independently of proposals 2–3.
 - **Validation.** `node scripts/check-docs.mjs`, workflow/configuration validation, permission review, and a controlled PR review run. No invented review evidence or provider results.
 
 ## Kickoff validation
 
-This kickoff changes documentation only. Run `node scripts/check-docs.mjs` and `git diff --check`, and verify the new relative documentation links resolve. No application checks, servers, containers, repository settings, IAM resources or deployments are needed for this draft.
+This kickoff changes documentation only. Run `node scripts/check-docs.mjs` and `git diff --check`, and verify the new relative documentation links resolve. No application checks, servers, containers, IAM resources or deployments were needed. GitHub milestone 4 and Issues #34–#37 were created after developer approval; issue and milestone membership were verified through the GitHub API.
 
 ## Migration credential setup record
 
