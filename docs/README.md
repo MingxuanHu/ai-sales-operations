@@ -24,4 +24,5 @@ Documents are organised by purpose. Keep the root [README](../README.md) focused
 - [`engineering/aws-cognito-development.md`](engineering/aws-cognito-development.md) — AWS account, CLI access, and development and demo Cognito setup.
 - [`engineering/neon-demo.md`](engineering/neon-demo.md) — demo database roles, migrations, and runtime connection setup.
 - [`engineering/delivery.md`](engineering/delivery.md) — milestone kickoff, GitHub Issues/PRs, validation checks, AI review and CI/CD.
+- [`engineering/github-demo-delivery.md`](engineering/github-demo-delivery.md) — effective main protection, demo environment configuration and acceptance evidence.
 - [`engineering/security.md`](engineering/security.md) — secrets and deployment trust boundaries.
