@@ -72,9 +72,11 @@ implemented and presented for developer review. The developer authorized
 [PR #44](https://github.com/MingxuanHu/ai-sales-operations/pull/44) and then
 explicitly authorized merge and the live deployment/rollback exercise. PR #44
 was squash-merged at `636857b750aebd0b0a8872afc7219319e50052f2` after all six
-required checks passed. First release execution failed at the Lambda waiter;
-the correction and remaining live acceptance are described below. The authorized
-migration-secret transfer completed; see below.
+required checks passed. The first release failed at the Lambda waiter; PR #45
+corrected it without expanding IAM. Both subsequent releases, Actions UI
+rollback/restoration and synthetic authenticated smoke passed. See the final
+acceptance record below, including the expiry-test method and the same-source
+release limitation. The migration-secret transfer completed; see below.
 
 - **Goal.** Release the tested `main` revision through the existing M3 infrastructure and verify the public result.
 - **In scope.** Add a release workflow that waits for all required checks on the same revision, uses Environment `demo` and OIDC, and serializes releases to prevent overlapping migrations/publications. Package and verify Lambda, build React with public demo settings, run committed Prisma migrations with the direct credential confined to that step, release API before web assets, publish hashed assets before the entrypoint, and wait for CloudFront invalidation. Preserve the existing CDK stack/resource identities. Record revision, artifact checksums, prior artifacts and migration outcome for diagnosis and rollback. Document partial-failure recovery and forward-compatible schema changes; a code rollback must not imply reversing a migration.
@@ -109,8 +111,9 @@ migration-secret transfer completed; see below.
   already granted `GetFunctionConfiguration`. The recovery change selects that
   waiter without changing IAM, adds an `api-uploaded` diagnostic stage and a
   regression assertion. The developer reviewed the fix and authorized
-  [PR #45](https://github.com/MingxuanHu/ai-sales-operations/pull/45); it is open
-  pending checks and merge authorization.
+  [PR #45](https://github.com/MingxuanHu/ai-sales-operations/pull/45), subsequently
+  squash-merged with explicit developer authorization at
+  `7b7a22c295064292c8fabdf4ea4548ad082eb03a`.
 - Used the actual **Actions → Rollback demo → Run workflow** UI on `main` with
   `invalid-release-id` in both fields.
   [Run 44241998146](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241998146)
@@ -135,10 +138,74 @@ stage sequence. `node scripts/check-docs.mjs` and `git diff --check` passed.
 The existing Vite chunk-size warning remains. Test services were removed;
 pre-existing containers were left running.
 
-**Still required:** reviewed waiter correction, successful release baselines,
-retained-bundle rollback and restoration through the Actions UI, live public
-checksum/private-S3 smoke completion, and synthetic authenticated smoke. No IAM
-changes, destructive migrations or database restoration were performed.
+**Status at the end of that first attempt:** release baselines, retained-bundle
+rollback/restoration and authenticated smoke were still pending. They were
+subsequently exercised as recorded below. No IAM changes, destructive migrations
+or database restoration were performed.
+
+### Issue #36 — final live acceptance, 18 November 2026
+
+[PR #44 — implementation](https://github.com/MingxuanHu/ai-sales-operations/pull/44)
+and [PR #45 — recovery](https://github.com/MingxuanHu/ai-sales-operations/pull/45)
+are merged. The developer authorized merge, live release, rollback/restoration
+and issue closure after verification. PR #45's merged revision is
+`7b7a22c295064292c8fabdf4ea4548ad082eb03a`.
+
+| Evidence | Actual result |
+| --- | --- |
+| [Main CI 44243453992](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44243453992) | All six checks passed on both attempts, at the exact merged revision. Attempt 2 was an explicitly scoped rerun to create another retained release. |
+| [Release A — 44243538941](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44243538941) | Passed gate, packaging/test, public build, OIDC, retention, migration/status, API-first publication, invalidation and all public smoke checks. |
+| [Release B — 44243929502](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44243929502) | Passed the same release checks after the second successful CI attempt. |
+| [Rollback B → A — 44244378457](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44244378457) | Submitted through Actions → Rollback demo → Run workflow on main, using A's full ID in both fields; passed provenance, expiry, compatibility, exact-artifact restore, invalidation and smoke. |
+| [Restore A → B — 44244666857](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44244666857) | Submitted through the same UI with B's full ID in both fields; passed all checks. B is the final live release. |
+| [Invalid ID — 44241998146](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44241998146) | Actual UI submission rejected before AWS credentials or publication. |
+| Expiry boundary | The production `validateRelease` function accepted A's actual successful-run/artifact metadata now and rejected it with `Release artifact expired` when passed a clock one millisecond after its actual expiry. This was a simulated clock, not a live expired-artifact UI run. No artifact was deleted or aged. |
+| Authenticated smoke | Developer signed in using an existing synthetic demo account. The protected organisation workspace loaded; after release and again after final restoration, refresh plus Managed Login session resume returned to that workspace. No tokens, passwords or synthetic identity details were recorded. |
+
+**Copyable retained IDs and actual expiry:**
+
+- A: `7b7a22c295064292c8fabdf4ea4548ad082eb03a-44243538941`, expires
+  `2027-02-16T05:20:14Z`.
+- B (final live): `7b7a22c295064292c8fabdf4ea4548ad082eb03a-44243929502`, expires
+  `2027-02-16T05:23:32Z`.
+
+Both bundles use the **same reviewed source revision**. This exercise verifies
+retained-artifact rollback/restoration, not a behavioral change between two code
+versions. Their API ZIP hashes differ, so restoration was not merely a marker
+change. Independent verification after each rollback/restoration compared the
+public current manifest against its saved A/B manifest, compared live Lambda
+`CodeSha256` against that bundle's SHA-256, hashed all four web files, and checked
+exact HTML for `/`, `/auth/callback` and `/onboarding`. It also verified
+`/api/health` = `200` with `{"status":"ok"}`, unauthenticated `/api/me` = `401`,
+and unsigned S3 `index.html` = `403`. All passed for both A and B.
+
+API ZIP SHA-256 values:
+
+- A: `95f72001ed90fd9641b8490dba125ee50b001b76f2de5a7f72103021a7267720`
+- B: `9d5953cdd1c6a66c46c91ba6a9627125cc9028dc7e02671c8c53b5e1cf75f75a`
+
+Sanitized release records report migration `passed`. Both rollback records
+report `smoke-passed`, record the initiator, and contain the correct previous
+and selected release IDs (B → A and A → B). Neither rollback ran migrations,
+old scripts, infrastructure updates or database restoration. IAM was unchanged.
+
+Actual commands included `gh pr merge 45 --squash --match-head-commit <reviewed-SHA>`,
+`gh run rerun 44243453992`, `gh run watch <run-ID> --exit-status --interval 10`
+(all four final release/rollback watches exited 0), `gh api` for run/artifact
+metadata, and `gh run download` for sanitized diagnostic records. An independent
+temporary Node fetch/hash verifier plus read-only `aws lambda
+get-function-configuration --query CodeSha256` checked each restored bundle.
+The actual Actions UI displayed both successful rollback/restoration results.
+Local documentation validation used `node scripts/check-docs.mjs` and
+`git diff --check`. No local test services were started during this live exercise.
+
+The runners emitted Node.js 20 action-runtime deprecation/forced Node.js 24 and
+Ubuntu image migration notices; these did not fail checks. Public route and
+checksum checks passed. The initial failed release remains diagnostic-only and
+is not selectable. Expiry handling has deterministic boundary evidence rather
+than a 90-day live aging test; future code/schema changes still require the
+compatibility checks described in the runbook. Issue #36 is ready to close on
+this recorded evidence; M4 remains open for issue #37.
 
 ### 4. Add independent advisory AI PR review
 
