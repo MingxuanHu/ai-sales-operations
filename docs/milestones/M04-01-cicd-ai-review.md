@@ -19,6 +19,12 @@
 
 [Issue #34](https://github.com/MingxuanHu/ai-sales-operations/issues/34)
 
+**Implementation status (18 November 2026):** all six checks are required and
+Environment `demo` allows only branch `main`; effective settings were read back.
+See the [configuration and evidence record](../engineering/github-demo-delivery.md).
+Local changes await developer review; the controlled PR merge-blocking check
+and issue closure remain pending.
+
 - **Goal.** Make passing deterministic checks and a reviewed PR the normal route into `main`.
 - **In scope.** Inspect current repository settings and successful check names; configure required `docs-check`, `lint`, `typecheck`, `unit-tests`, `integration-tests` and `build` checks. Require PRs and resolved review conversations where supported; block direct pushes, force pushes and deletion. Do not require another person's approval in this single-developer repository. Create/configure `demo` with deployment restricted to `main`, and document public variables and secret names without their values. Check repository-plan support before choosing protection settings and document any limitation.
 - **Out of scope.** AWS IAM, release execution and AI integration.
