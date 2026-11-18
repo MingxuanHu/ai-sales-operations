@@ -124,14 +124,24 @@ The checks request was `strict: true`, with a `checks` array containing the
 six names above as `context`, each with `app_id: 15368`.
 The temporary request files contain only non-secret configuration.
 
-**Pending acceptance:** after developer review authorizes this issue's PR,
-observe the PR while a required check is missing or pending and record GitHub's
-blocked merge state. If a check fails naturally, record that state too;
-otherwise arrange a developer-reviewed temporary failure on the issue branch,
-record the blocked state, then restore the valid content and require all six
-checks to pass. Never attempt a merge, direct push to `main`, force push or
-branch deletion to test protection. Link the actual evidence here before
-closing #34. Do not create a test PR before the required developer review.
+## Issue PR validation
+
+The developer reviewed the local changes and authorized PR creation and merge.
+[PR #39](https://github.com/MingxuanHu/ai-sales-operations/pull/39) received all
+six required checks in [CI run 44233567815](https://github.com/MingxuanHu/ai-sales-operations/actions/runs/44233567815).
+At head `26db0f5845751361fec1f18f123364df0b800406`, GitHub reported
+`mergeStateStatus: BLOCKED` and `mergeable: MERGEABLE` while `docs-check` had
+passed and the five application checks were queued or in progress. This
+records protection blocking an otherwise conflict-free PR while required
+successful results were missing. All six checks then passed. No deliberately
+failing check was introduced; this exercise covers missing/pending results.
+No merge bypass, direct push to `main`, force push or deletion was attempted.
+
+Commands: `gh pr view 39 --json url,state,mergeable,mergeStateStatus,headRefOid,statusCheckRollup`,
+`gh pr checks 39` and `gh pr checks 39 --watch --interval 10`.
+The first `gh pr checks` returned exit code 8, meaning checks were pending;
+the watch completed with exit code 0. This evidence update runs all six checks
+again before the authorized squash merge. AI review integration remains #37.
 
 Local validation for this documentation-only change is
 `node scripts/check-docs.mjs`, relative-link verification and `git diff --check`.
