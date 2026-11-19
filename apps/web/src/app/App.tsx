@@ -44,14 +44,18 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
   useEffect(() => {
     if (status !== 'callback' || callbackStarted.current) return
     callbackStarted.current = true
+    // Cognito returns to /auth/callback?code=...&state=...; save that URL before changing the address.
     const url = new URL(window.location.href)
-    // Replace the callback entry before making network requests so the code leaves browser history.
+    // Immediately replace it with / so the authorization code leaves the current history entry.
+    // This changes the address without reloading; status stays 'callback', showing “Completing sign-in…”.
     void navigate('/', { replace: true })
     if (!session) {
       setStatus('signed-out')
       return
     }
+    // Use the saved callback URL to exchange the code and verify sign-in while / is visible.
     void session.completeSignIn(url).then((returnTo) => {
+      // Once sign-in succeeds, show the saved return route and replace the loading screen.
       void navigate(returnTo, { replace: true })
       setRequests(new AbortController())
       setStatus('signed-in')
