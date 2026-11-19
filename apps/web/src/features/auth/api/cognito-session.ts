@@ -125,14 +125,20 @@ export function createCognitoSession(config: CognitoConfig) {
   return {
     clear,
     hasSession: () => tokens !== undefined,
+    // Starts a browser redirect flow; completeSignIn handles the callback and obtains tokens later.
     async beginSignIn() {
+      // State matches the callback to this attempt; nonce ties the returned ID token to it.
       const attempt: Attempt = {
         state: randomValue(), nonce: randomValue(), verifier: randomValue(), startedAt: Date.now(),
         returnTo: protectedPath(window.location.pathname),
       }
+      // PKCE sends a hash now and requires the saved verifier when exchanging the returned code.
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(attempt.verifier))
-      // Only the one-time redirect values survive navigation through Managed Login.
+      // Per-tab sessionStorage preserves the attempt and return route while the browser leaves the app.
       sessionStorage.setItem(attemptKey, JSON.stringify(attempt))
+      // assign navigates the whole tab to Cognito. Its authorize endpoint redirects to /login
+      // with these parameters, so /login is the URL visible while the sign-in page is open.
+      // After successful sign-in, Cognito returns to redirect_uri with a code and the same state.
       window.location.assign(endpoint('/oauth2/authorize', {
         response_type: 'code', redirect_uri: config.redirectUri, client_id: config.clientId,
         scope: 'openid', resource: config.resource, state: attempt.state, nonce: attempt.nonce,
