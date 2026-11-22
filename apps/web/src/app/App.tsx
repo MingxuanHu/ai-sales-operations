@@ -67,8 +67,10 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
     })
   }, [navigate, session, status])
 
-  // useMemo reuses the API client until the session or its request controller changes.
+  // useMemo runs this calculation during the first render and again when requests or session changes.
+  // Other renders reuse the saved API client. Development Strict Mode may repeat the calculation.
   const api = useMemo(() => {
+    // Initially requests is undefined. Successful sign-in sets it, triggering a render that creates the client.
     if (!session || !requests) return
     function expire() {
       requests?.abort()
@@ -77,6 +79,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
       setError('Your session has ended. Sign in to continue.')
       setStatus('signed-out')
     }
+    // Create the request helpers now; HTTP requests happen later when those helpers are called.
     return createOrganisationsApi(async () => {
       try {
         return await session.accessToken()
