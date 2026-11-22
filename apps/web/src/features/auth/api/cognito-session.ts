@@ -105,14 +105,18 @@ export function createCognitoSession(config: CognitoConfig) {
       throw new Error('Cognito returned an incomplete session.')
     }
 
+    // The initial code exchange supplies the nonce saved before redirecting to Cognito.
     if (nonce !== undefined) {
+      // Verify the ID token's signature, configured issuer/client audience and expiry before trusting its claims.
       const claims = await verify.verify(id_token, {
         customJwtCheck: ({ header }) => {
+          // Accept only Cognito's expected signing algorithm.
           if (header.alg !== 'RS256') throw new Error('Unexpected signing algorithm.')
         },
       }).catch((error: unknown) => {
         throw new CognitoCallbackError(error instanceof FetchError ? 'keys' : 'verification')
       })
+      // Require an expiry and an ID token; matching nonce ties it to this specific sign-in attempt.
       if (typeof claims.exp !== 'number' || claims.token_use !== 'id' || claims.nonce !== nonce) {
         throw new CognitoCallbackError('verification')
       }
@@ -120,6 +124,7 @@ export function createCognitoSession(config: CognitoConfig) {
 
     // Aborted work may have completed its network call just before sign-out.
     signal.throwIfAborted()
+    // For the initial sign-in, save the session only after all ID-token checks have passed.
     tokens = { accessToken: access_token, refreshToken: refresh_token, expiresAt: Date.now() + expires_in * 1000 }
     return tokens.accessToken
   }
