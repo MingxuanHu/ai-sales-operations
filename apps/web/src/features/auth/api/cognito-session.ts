@@ -78,6 +78,8 @@ export function createCognitoSession(config: CognitoConfig) {
   }
 
   async function post(path: string, fields: Record<string, string>, signal: AbortSignal) {
+    // Unlike page navigation, cross-origin fetch needs CORS permission to read the response.
+    // Cognito supplies that permission for /oauth2/token and /oauth2/revoke; no app CORS setting is needed.
     return fetch(endpoint(path), {
       method: 'POST',
       body: new URLSearchParams({ client_id: config.clientId, ...fields }),
@@ -138,6 +140,7 @@ export function createCognitoSession(config: CognitoConfig) {
       sessionStorage.setItem(attemptKey, JSON.stringify(attempt))
       // assign navigates the whole tab to Cognito. Its authorize endpoint redirects to /login
       // with these parameters, so /login is the URL visible while the sign-in page is open.
+      // Cross-origin page navigation is allowed without CORS; this does not fetch a response for JS to read.
       // After successful sign-in, Cognito returns to redirect_uri with a code and the same state.
       window.location.assign(endpoint('/oauth2/authorize', {
         response_type: 'code', redirect_uri: config.redirectUri, client_id: config.clientId,
