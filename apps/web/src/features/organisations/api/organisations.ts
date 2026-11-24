@@ -1,3 +1,5 @@
+import { createProductsApi } from '../../products/api/products'
+
 export type Role = 'admin' | 'salesperson' | 'manager'
 export type Membership = { organisationId: string; name: string; role: Role }
 export type Profile = { userId: string; memberships: Membership[] }
@@ -24,8 +26,8 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
     signal.throwIfAborted()
     if (response.status === 401) onUnauthorized()
     if (!response.ok) {
-      // The two issue conflicts share a status. Read the server detail so the form can explain which occurred.
-      const body = response.status === 409 ? await response.json().catch(() => undefined) : undefined
+      // Validation and conflict responses can explain what the user needs to correct.
+      const body = [400, 409].includes(response.status) ? await response.json().catch(() => undefined) : undefined
       throw new ApiError(response.status, typeof body?.message === 'string' ? body.message : undefined)
     }
     // Successful revocation sends a 204 with no JSON body.
@@ -33,6 +35,7 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
   }
 
   return {
+    products: createProductsApi(request),
     profile: (signal: AbortSignal) => request<Profile>('/me', { signal }),
     overview: (id: string, signal: AbortSignal) =>
       request<Membership>(`/organisations/${encodeURIComponent(id)}`, { signal }),

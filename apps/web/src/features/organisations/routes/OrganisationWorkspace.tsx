@@ -1,5 +1,6 @@
 import { Alert, Button, Paper, Text, Title } from '@mantine/core'
 import { useEffect, useState } from 'react'
+import { ProductsPage } from '../../products/components/ProductsPage'
 import { Navigate, Route, Routes, useNavigate } from 'react-router'
 import type { OrganisationsApi, Profile } from '../api/organisations'
 import { Loading, type LoadResult } from '../components/Loading'
@@ -70,6 +71,15 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           <Route path="/organisations/:organisationId/invitations" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
               {(membership) => <InvitationsPage api={api} userId={userId} onJoined={onJoined} membership={membership} />}
+            </OrganisationAccess>
+          } />
+          <Route path="/organisations/:organisationId/products" element={
+            <OrganisationAccess api={api} onDenied={reloadProfile}>
+              {(membership) => membership.role === 'admin'
+                ? <ProductsPage api={api.products} organisationId={membership.organisationId} />
+                : <Alert role="alert" color="red" title="Access denied">
+                  Only organisation administrators can manage products.
+                </Alert>}
             </OrganisationAccess>
           } />
           <Route path="*" element={<Navigate replace to="/" />} />

@@ -47,6 +47,7 @@ model Organisation {
   creator           ApplicationUser @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
   memberships       Membership[]
   invitations       Invitation[]
+  products          Product[]
 
   // An organisation creation request ID is unique per creator, so retries can reuse the result.
   @@unique([createdByUserId, creationRequestId])
@@ -115,4 +116,18 @@ enum InvitationStatus {
   expired
 
   @@map("invitation_status")
+}
+
+// Decimal stores a unit price exactly, including cents.
+model Product {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organisationId String       @map("organisation_id") @db.Uuid
+  sku            String       @db.VarChar(64)
+  name           String       @db.VarChar(120)
+  unitPrice      Decimal      @map("unit_price") @db.Decimal(12, 2)
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+
+  // The same SKU can belong to different organisations.
+  @@unique([organisationId, sku])
+  @@map("products")
 }
