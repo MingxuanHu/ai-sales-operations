@@ -36,10 +36,14 @@ URL remains in SSM. No env file is copied or built into the bundles.
 3. Upload the immutable `demo-SHA-runID` Actions artifact with a requested
    90-day retention. Repository policy/storage limits may shorten availability.
    Artifacts from failed runs are diagnostic only and cannot be selected.
-4. Run committed Prisma migrations, check their status, and apply the explicit
-   demo runtime grants in `scripts/demo-runtime-grants.sql` using the direct
-   credential only in this step. Update that list when adding application tables
-   that Lambda needs to query. Capture raw CLI output privately because errors
+4. Run committed Prisma migrations, check their status, and configure
+   runtime grants with `scripts/demo-runtime-grants.sql`. The first release
+   repairs access to the existing product and customer tables. PostgreSQL
+   automatically grants the runtime role access to future tables and sequences
+   created in `public` by the same migration login. Prisma creates its migration
+   history before these defaults are configured. Keep `DEMO_DIRECT_URL` on
+   the same migration role when rotating its password. The direct credential
+   is available only in this step. Capture raw CLI output privately because errors
    can contain connection details; retain only a fixed pass/fail result. Any
    failure stops rollout. Investigate through the protected Neon runbook.
 5. Validate local checksums and compatibility. Record the previous manifest
