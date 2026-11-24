@@ -1,4 +1,4 @@
-import { Alert, Button, NativeSelect, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Button, NativeSelect, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { ApiError, type InvitationReceipt, type OrganisationsApi, type Role } from '../api/organisations'
 
@@ -88,47 +88,49 @@ export function StaffInvitation({ api, organisationId }: { api: OrganisationsApi
   }
 
   return (
-    <Stack gap="sm" mt="md" w="100%" maw={440}>
-      <Title order={2} size="h3">Invite staff</Title>
-      <form onSubmit={issue}>
-        <Stack gap="sm">
-          <TextInput
-            label="Recipient user ID"
-            description="Ask the recipient to copy their user ID from Onboarding and invitations."
-            required
-            disabled={Boolean(busy)}
-            value={recipient}
-            onChange={(event) => setRecipient(event.currentTarget.value)}
-          />
-          <NativeSelect
-            label="Role"
-            required
-            disabled={Boolean(busy)}
-            data={[{ value: '', label: 'Choose a role', disabled: true }, ...roles]}
-            value={role}
-            onChange={(event) => {
-              // Match the selected string to a supported role before storing it.
-              setRole(roles.find(({ value }) => value === event.currentTarget.value)?.value ?? '')
-            }}
-          />
-          <Button type="submit" w="fit-content" disabled={Boolean(busy)} loading={busy === 'issue'}>Send invitation</Button>
-        </Stack>
-      </form>
-      {error && <Alert color="red" role="alert">{error}</Alert>}
-      {revoked && <Alert role="status">Invitation revoked.</Alert>}
-      {confirmation && (
-        <Stack gap="xs">
-          <Alert role="status" title="Invitation ready">
-            <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
-              {roles.find(({ value }) => value === confirmation.role)?.label} invitation for {confirmation.recipient}.
-            </Text>
-            <Text size="sm">Expires {new Date(confirmation.expiresAt).toLocaleString()}.</Text>
-          </Alert>
-          <Button w="fit-content" variant="light" color="red" disabled={Boolean(busy)} loading={busy === 'revoke'}
-            onClick={() => revoke(confirmation.invitationId)}
-          >Revoke invitation</Button>
-        </Stack>
-      )}
-    </Stack>
+    <Paper withBorder p="lg">
+      <Stack gap="md">
+        <Title order={2} size="h3">Invite staff</Title>
+        <form onSubmit={issue}>
+          <Stack gap="md">
+            <TextInput
+              label="Recipient user ID"
+              description="Ask the recipient to copy their user ID from the Invitations page."
+              required
+              disabled={Boolean(busy)}
+              value={recipient}
+              onChange={(event) => setRecipient(event.currentTarget.value)}
+            />
+            <NativeSelect
+              label="Role"
+              required
+              disabled={Boolean(busy)}
+              data={[{ value: '', label: 'Choose a role', disabled: true }, ...roles]}
+              value={role}
+              onChange={(event) => {
+                // Match the selected string to a supported role before storing it.
+                setRole(roles.find(({ value }) => value === event.currentTarget.value)?.value ?? '')
+              }}
+            />
+            <Button type="submit" color="teal.8" w="fit-content" disabled={Boolean(busy)} loading={busy === 'issue'}>Send invitation</Button>
+          </Stack>
+        </form>
+        {error && <Alert color="red" role="alert">{error}</Alert>}
+        {revoked && <Alert role="status">Invitation revoked.</Alert>}
+        {confirmation && (
+          <Stack gap="xs">
+            <Alert role="status" title="Invitation ready">
+              <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
+                {roles.find(({ value }) => value === confirmation.role)?.label} invitation for {confirmation.recipient}.
+              </Text>
+              <Text size="sm">Expires {new Date(confirmation.expiresAt).toLocaleString()}.</Text>
+            </Alert>
+            <Button w="fit-content" variant="light" color="red" disabled={Boolean(busy)} loading={busy === 'revoke'}
+              onClick={() => revoke(confirmation.invitationId)}
+            >Revoke invitation</Button>
+          </Stack>
+        )}
+      </Stack>
+    </Paper>
   )
 }

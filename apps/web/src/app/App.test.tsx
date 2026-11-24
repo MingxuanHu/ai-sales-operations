@@ -75,7 +75,7 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession()} />)
-    expect(await screen.findByRole('heading', { name: /don’t belong/ })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Invitations' })).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
     expect(await screen.findByRole('heading', { name: first.name })).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith('/api/invitations/invite/accept', expect.objectContaining({ method: 'POST' }))
@@ -96,7 +96,7 @@ describe('protected React shell', () => {
       if (url === '/api/organisations/first') return Response.json(first)
       throw new Error('Unexpected API request')
     }))
-    render(<App session={mockSession()} />)
+    render(<App session={mockSession('/onboarding')} />)
     fireEvent.change(await screen.findByRole('textbox', { name: 'Organisation name' }), { target: { value: first.name } })
     fireEvent.click(screen.getByRole('button', { name: 'Create organisation' }))
     await screen.findByText('Your request could not be completed. Please try again.')
@@ -116,6 +116,7 @@ describe('protected React shell', () => {
         return new Promise<Response>((resolve) => { finishPrevious = resolve })
       }
       if (url === '/api/organisations/second') return Response.json(second)
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
       throw new Error('Unexpected API request')
     })
     vi.stubGlobal('fetch', fetch)
@@ -134,6 +135,9 @@ describe('protected React shell', () => {
     // act lets React process any updates from the late response before we check the screen.
     await act(async () => finishPrevious(Response.json(first)))
     expect(screen.queryByRole('heading', { name: first.name })).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'Invitations' }))
+    await screen.findByRole('heading', { name: 'Received invitations' })
+    expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeTruthy()
@@ -150,6 +154,7 @@ describe('protected React shell', () => {
     const fetch = vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
       if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
       if (url === path) {
         expect(options.method).toBe('POST')
         const body = JSON.parse(String(options.body))
@@ -170,6 +175,12 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession('/organisations/first')} />)
+    await screen.findByRole('heading', { name: first.name })
+    expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
+    const invitations = screen.getByRole('link', { name: 'Invitations' })
+    fireEvent.click(invitations)
+    expect(await screen.findByRole('heading', { name: 'Received invitations' })).toBeTruthy()
+    expect(invitations.getAttribute('aria-current')).toBe('page')
     fireEvent.change(await screen.findByRole('textbox', { name: 'Recipient user ID' }), { target: { value: ' ' + recipient + ' ' } })
     const picker = screen.getByRole('combobox', { name: 'Role' })
     const send = screen.getByRole('button', { name: 'Send invitation' })
@@ -198,6 +209,7 @@ describe('protected React shell', () => {
     let finishPrevious: (value: Response) => void = () => {}
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: organisations })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
       if (url === '/api/organisations/first/invitations') {
         previousSignal = options.signal ?? null
         return new Promise<Response>((resolve) => { finishPrevious = resolve })
@@ -206,7 +218,7 @@ describe('protected React shell', () => {
       if (organisation) return Response.json(organisation)
       throw new Error('Unexpected API request')
     }))
-    render(<App session={mockSession('/organisations/first')} />)
+    render(<App session={mockSession('/organisations/first/invitations')} />)
     fireEvent.change(await screen.findByRole('textbox', { name: 'Recipient user ID' }), { target: { value: 'abcc5d8a-ead7-4f6a-a7ce-d149103edd80' } })
     fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'salesperson' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invitation' }))
@@ -215,7 +227,8 @@ describe('protected React shell', () => {
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'Enter', code: 'Enter' })
-    await screen.findByRole('heading', { name: second.name })
+    await screen.findByText(second.name)
+    expect(window.location.pathname).toBe('/organisations/second/invitations')
     expect(previousSignal).toHaveProperty('aborted', true)
     await act(async () => finishPrevious(Response.json({ invitationId: 'stale', role: 'salesperson', expiresAt: '2026-11-30' })))
     expect(screen.getByRole('textbox', { name: 'Recipient user ID' })).toHaveProperty('value', '')

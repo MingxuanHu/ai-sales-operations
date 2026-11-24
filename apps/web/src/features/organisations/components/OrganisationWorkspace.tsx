@@ -1,9 +1,11 @@
-import { Alert, Badge, Button, Group, Loader, Paper, Select, Stack, Text, Title } from '@mantine/core'
-import { useEffect, useState } from 'react'
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
+import { Alert, Badge, Button, Group, Loader, NavLink, Paper, Select, Stack, Text, Title } from '@mantine/core'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, Navigate, NavLink as RouterNavLink, Route, Routes, matchPath, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError, type Membership, type OrganisationsApi, type Profile } from '../api/organisations'
-import { Onboarding } from './Onboarding'
+import { CreateOrganisation } from './CreateOrganisation'
+import { InvitationInbox } from './InvitationInbox'
 import { StaffInvitation } from './StaffInvitation'
+import styles from './OrganisationWorkspace.module.css'
 
 // Each status has its own shape, so TypeScript knows data is available only after a successful request.
 type Result<T> = { status: 'loading' } | { status: 'ready'; data: T } | { status: 'failed'; error: unknown }
@@ -32,7 +34,8 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
     setRevision((value) => value + 1)
   }
 
-  function openOrganisation(id: string) {
+  function onJoined(id: string) {
+    reloadProfile()
     void navigate(`/organisations/${encodeURIComponent(id)}`)
   }
 
@@ -44,55 +47,83 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   }
 
   const { memberships, userId } = profile.data
+  // Read the tenant from either workspace route so the picker and navigation stay in sync.
+  const invitationRoute = matchPath('/organisations/:organisationId/invitations', pathname)
+  const overviewRoute = matchPath('/organisations/:organisationId', pathname)
+  const isInvitations = Boolean(invitationRoute) || pathname === '/invitations'
+  const selectedId = (invitationRoute ?? overviewRoute)?.params.organisationId
+  const selectedPath = selectedId ? `/organisations/${encodeURIComponent(selectedId)}` : undefined
+  const inbox = <InvitationInbox api={api} userId={userId} onJoined={onJoined} />
+
   return (
-    <Stack gap="lg">
-      <Group align="end" justify="space-between">
-        {/* The current route determines the selected option and choosing an option changes the route. */}
-        <Select
-          label="Organisation"
-          placeholder={memberships.length ? 'Choose an organisation' : 'No organisations'}
-          data={memberships.map(({ organisationId, name }) => ({ value: organisationId, label: name }))}
-          disabled={!memberships.length}
-          allowDeselect={false}
-          maxDropdownHeight={240}
-          value={memberships.find(({ organisationId }) => pathname === `/organisations/${organisationId}`)?.organisationId ?? null}
-          onChange={(id) => { if (id) openOrganisation(id) }}
-        />
-        <Button component={Link} to="/onboarding" variant="default">Onboarding and invitations</Button>
-      </Group>
-      {/* React Router renders the element whose route matches the URL. The index route handles the workspace home. */}
-      <Routes>
-        <Route index element={memberships.length === 1 ? (
-          <Navigate replace to={`/organisations/${encodeURIComponent(memberships[0].organisationId)}`} />
-        ) : memberships.length ? (
-          <Paper withBorder p="lg">
-            <Title order={1}>Choose an organisation</Title>
-            <Text c="dimmed">Select an organisation to open its workspace.</Text>
-          </Paper>
-        ) : (
-          <Navigate replace to="/onboarding" />
-        )} />
-        <Route path="/onboarding" element={
-          <Onboarding api={api} userId={userId} hasMemberships={memberships.length > 0} onJoined={(id) => {
-            reloadProfile()
-            openOrganisation(id)
-          }} />
-        } />
-        <Route path="/organisations/:organisationId" element={<SelectedOrganisation api={api} onDenied={reloadProfile} />} />
-        <Route path="*" element={<Navigate replace to="/" />} />
-      </Routes>
-    </Stack>
+    <div className={styles.workspace}>
+      <Paper withBorder p="md" className={styles.sidebar}>
+        <Stack gap="md">
+          {memberships.length > 0 && (
+            <Select
+              label="Organisation"
+              placeholder="Choose an organisation"
+              data={memberships.map(({ organisationId, name }) => ({ value: organisationId, label: name }))}
+              allowDeselect={false}
+              maxDropdownHeight={240}
+              value={memberships.find(({ organisationId }) => organisationId === selectedId)?.organisationId ?? null}
+              onChange={(id) => {
+                if (id) void navigate(`/organisations/${encodeURIComponent(id)}${isInvitations ? '/invitations' : ''}`)
+              }}
+            />
+          )}
+          {/* RouterNavLink marks the current page so Mantine can highlight the matching link. */}
+          <nav aria-label="Workspace" className={styles.navigation}>
+            {memberships.length > 0 && <NavLink component={RouterNavLink} to={selectedPath ?? '/'} end label="Overview" />}
+            <NavLink component={RouterNavLink} to={selectedPath ? selectedPath + '/invitations' : '/invitations'} end label="Invitations" />
+            <NavLink component={RouterNavLink} to="/onboarding" end label="Create organisation" />
+          </nav>
+        </Stack>
+      </Paper>
+      <div className={styles.content}>
+        <Routes>
+          <Route index element={memberships.length === 1 ? (
+            <Navigate replace to={`/organisations/${encodeURIComponent(memberships[0].organisationId)}`} />
+          ) : memberships.length ? (
+            <Paper withBorder p="lg">
+              <Title order={1} size="h2">Choose an organisation</Title>
+              <Text c="dimmed">Select an organisation to open its workspace.</Text>
+            </Paper>
+          ) : <Navigate replace to="/invitations" />} />
+          <Route path="/onboarding" element={<CreateOrganisation api={api} onJoined={onJoined} />} />
+          <Route path="/invitations" element={
+            <Stack gap="lg">
+              <Title order={1} size="h2">Invitations</Title>
+              {inbox}
+            </Stack>
+          } />
+          <Route path="/organisations/:organisationId" element={<SelectedOrganisation api={api} onDenied={reloadProfile} />} />
+          <Route path="/organisations/:organisationId/invitations" element={
+            <SelectedOrganisation api={api} onDenied={reloadProfile} inbox={inbox} />
+          } />
+          <Route path="*" element={<Navigate replace to="/" />} />
+        </Routes>
+      </div>
+    </div>
   )
 }
 
-function SelectedOrganisation({ api, onDenied }: { api: OrganisationsApi; onDenied: () => void }) {
-  // useParams reads the organisation ID from the dynamic part of the URL.
+function SelectedOrganisation({ api, onDenied, inbox }: {
+  api: OrganisationsApi
+  onDenied: () => void
+  inbox?: ReactNode
+}) {
   const { organisationId = '' } = useParams()
-  // A new key resets view state immediately when the route changes to another organisation.
-  return <OrganisationOverview key={organisationId} id={organisationId} api={api} onDenied={onDenied} />
+  // Switching the key unmounts the old view and clears its invitation form and confirmation.
+  return <OrganisationOverview key={organisationId} id={organisationId} api={api} onDenied={onDenied} inbox={inbox} />
 }
 
-function OrganisationOverview({ id, api, onDenied }: { id: string; api: OrganisationsApi; onDenied: () => void }) {
+function OrganisationOverview({ id, api, onDenied, inbox }: {
+  id: string
+  api: OrganisationsApi
+  onDenied: () => void
+  inbox?: ReactNode
+}) {
   // Start with a loading screen while the API checks access to this specific organisation.
   const [result, setResult] = useState<Result<Membership>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
@@ -124,16 +155,30 @@ function OrganisationOverview({ id, api, onDenied }: { id: string; api: Organisa
       </Alert>
     )
   }
+  if (inbox) {
+    return (
+      <Stack gap="lg">
+        <div>
+          <Title order={1} size="h2">Invitations</Title>
+          <Text c="dimmed" size="sm">{result.data.name}</Text>
+        </div>
+        <div className={styles.invitationPanels}>
+          {/* The current role comes from the selected organisation's API response. */}
+          {result.data.role === 'admin' && <StaffInvitation api={api} organisationId={id} />}
+          {inbox}
+        </div>
+      </Stack>
+    )
+  }
+
   return (
     <Paper withBorder p="lg">
       <Stack align="start" gap="sm">
-        <Title order={1}>{result.data.name}</Title>
+        <Title order={1} size="h2">{result.data.name}</Title>
         <Group gap="xs">
           <Text size="sm" c="dimmed">Your role</Text>
           <Badge variant="light" tt="capitalize">{result.data.role}</Badge>
         </Group>
-        {/* The overview response supplies the current role for this organisation. */}
-        {result.data.role === 'admin' && <StaffInvitation api={api} organisationId={id} />}
       </Stack>
     </Paper>
   )
