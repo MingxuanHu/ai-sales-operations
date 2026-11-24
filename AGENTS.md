@@ -8,8 +8,11 @@ Read the relevant documentation before changing code:
 
 ## Rules
 
+- If a developer request conflicts with a rule in this file or an applicable repository workflow it references, identify the conflict, cite the relevant rule, and ask the developer how to proceed before taking the affected action. Continue any work that does not depend on that decision.
+
 - Use the repository-root `.env` as the sole local environment file for React and NestJS, and keep its template in `.env.example`. Define shared app settings once. Keep `.env.aws` and `.env.aws.example` for infrastructure setup metadata only. Follow the [application configuration decision](docs/decisions/0003-hosting.md#application-configuration) for local mapping and separate web build and Lambda runtime settings.
 
+- For milestone kickoff, read and follow the [milestone kickoff workflow](docs/engineering/delivery.md#milestone-kickoff-and-github-issues). When review feedback or PR approval arrives, check whether the issue breakdown has been confirmed and resume any remaining kickoff steps under that workflow. If confirmation is still pending, call it out separately from PR approval.
 - Work on one scoped Issue/PR at a time; a milestone may have multiple PRs.
 - Start from `main` on a short-lived branch. Keep `main` buildable.
 - Follow [ADR 0002](docs/decisions/0002-delivery-strategy.md) when naming branches: `feature/<name>` for features, `fix/<name>` for fixes, `chore/<name>` for maintenance, and `docs/<name>` for documentation. Use these prefixes instead of agent defaults such as `codex/`.

@@ -8,9 +8,13 @@
 - **Out of scope.** Orders, inventory, payments, email delivery or email-based account lookup, and a general membership administration console.
 - **Acceptance evidence.** Using synthetic accounts, an administrator issues an invitation and the recipient accepts it in the existing inbox. Administrators can create, list, view, edit and remove products and customers. API integration tests cover current role checks and tenant isolation. Web tests cover the main flows and errors.
 
-## Proposed Issues / PRs
+## Issues / PRs
+
+**Kickoff complete.** The approved breakdown is tracked in the [M5 — Master data GitHub milestone](https://github.com/MingxuanHu/ai-sales-operations/milestone/5). [PR #48](https://github.com/MingxuanHu/ai-sales-operations/pull/48) contains the reviewed specification. Follow the [delivery workflow](../engineering/delivery.md#issue-implementation) for implementation.
 
 ### 1. Complete the company administrator invitation UI
+
+[Issue #49](https://github.com/MingxuanHu/ai-sales-operations/issues/49)
 
 - **Goal.** Let an administrator invite staff from the selected organisation without calling the API manually.
 - **In scope.** Design and build the form for a recipient's shared application user ID and one of the existing roles. Show submission, confirmation with expiry, and recoverable errors. Let the administrator revoke the invitation from its confirmation. Keep the available actions tied to the selected organisation and its current role.
@@ -21,6 +25,8 @@
 
 ### 2. Add product CRUD
 
+[Issue #50](https://github.com/MingxuanHu/ai-sales-operations/issues/50)
+
 - **Goal.** Give administrators a product catalogue for their organisation.
 - **In scope.** Add the Prisma migration, NestJS routes and React screens for product CRUD. Define the minimum fields and constraints needed by M6, including SKU, name and unit price.
 - **Out of scope.** Inventory, imports and price history.
@@ -30,11 +36,11 @@
 
 ### 3. Add customer CRUD
 
+[Issue #51](https://github.com/MingxuanHu/ai-sales-operations/issues/51)
+
 - **Goal.** Give administrators a customer directory for their organisation.
 - **In scope.** Add the Prisma migration, NestJS routes and React screens for customer CRUD. Define the minimum customer fields needed for selecting a customer in M6.
 - **Out of scope.** Customer sign-in, messaging and bulk imports.
 - **Acceptance.** Administrators can manage customer records in the selected organisation. Invalid input produces actionable errors. Foreign records cannot be read or changed through direct API requests.
 - **Dependencies.** Existing identity and tenant authorisation. Scheduled after product CRUD so the two workflows can follow the same conventions.
 - **Validation.** Run `pnpm check` with Docker. Cover role enforcement, validation and tenant isolation in API integration tests and exercise CRUD and errors in React.
-
-Follow the [milestone kickoff workflow](../engineering/delivery.md#milestone-kickoff-and-github-issues) to confirm the breakdown and record the GitHub milestone and issue links.
