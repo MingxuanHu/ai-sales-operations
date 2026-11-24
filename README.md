@@ -1,10 +1,10 @@
 # AI Sales Operations
 
-A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
+[Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
 
 > **Status:** [Milestone 5 kickoff — Master data](docs/milestones/M05-01-master-data.md). Up next are the administrator invitation UI and product and customer management.
 
-[Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
+A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
 ## Product
 
@@ -20,7 +20,7 @@ React · TypeScript · Vite · NestJS · PostgreSQL · Prisma · Amazon Cognito 
 
 ## AI-assisted software delivery
 
-Coding agents present local changes and check results for developer review before opening a PR. The developer decides whether to merge. Required CI checks run on each PR, and merging into protected `main` deploys the public demo automatically. Advisory AI PR review is postponed while we look for a suitable AI reviewer.
+I build this project with help from coding agents. I review their changes and check results before a PR is opened, and I decide whether to merge. Required CI checks run on each PR, and merging into protected `main` deploys the public demo automatically. I’ve postponed advisory AI PR review while I look for a suitable AI reviewer.
 
 Development rules: [AGENTS.md](AGENTS.md) · [Delivery workflow](docs/engineering/delivery.md)
 
