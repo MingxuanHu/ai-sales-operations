@@ -25,7 +25,7 @@
 
 ### 2. Add product CRUD
 
-[Issue #50](https://github.com/MingxuanHu/ai-sales-operations/issues/50)
+[Issue #50](https://github.com/MingxuanHu/ai-sales-operations/issues/50) · [PR #54](https://github.com/MingxuanHu/ai-sales-operations/pull/54)
 
 - **Goal.** Give administrators a product catalogue for their organisation.
 - **In scope.** Add the Prisma migration, NestJS routes and React screens for product CRUD. Define the minimum fields and constraints needed by M6, including SKU, name and unit price.
