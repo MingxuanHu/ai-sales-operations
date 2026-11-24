@@ -36,7 +36,7 @@
 
 ### 3. Add customer CRUD
 
-[Issue #51](https://github.com/MingxuanHu/ai-sales-operations/issues/51)
+[Issue #51](https://github.com/MingxuanHu/ai-sales-operations/issues/51) · [PR #55](https://github.com/MingxuanHu/ai-sales-operations/pull/55)
 
 - **Goal.** Give administrators a customer directory for their organisation.
 - **In scope.** Add the Prisma migration, NestJS routes and React screens for customer CRUD. Use a stable customer ID and a required display name for order selection in M6. Names may repeat within an organisation. Only active administrators in the selected organisation can create, list, view, edit or delete customers.
