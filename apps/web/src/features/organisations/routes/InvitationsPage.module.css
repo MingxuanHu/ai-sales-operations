@@ -1,0 +1,16 @@
+.page {
+  container-type: inline-size;
+}
+
+.panels {
+  display: grid;
+  align-items: start;
+  gap: var(--mantine-spacing-md);
+}
+
+/* Size the cards against their available width inside the workspace. */
+@container (min-width: 42rem) {
+  .panels:has(> :nth-child(2)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

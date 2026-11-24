@@ -14,7 +14,7 @@
 
 ### 1. Complete the company administrator invitation UI
 
-[Issue #49](https://github.com/MingxuanHu/ai-sales-operations/issues/49)
+[Issue #49](https://github.com/MingxuanHu/ai-sales-operations/issues/49) · [PR #53](https://github.com/MingxuanHu/ai-sales-operations/pull/53)
 
 - **Goal.** Let an administrator invite staff from the selected organisation without calling the API manually.
 - **In scope.** Design and build the form for a recipient's shared application user ID and one of the existing roles. Show submission, confirmation with expiry, and recoverable errors. Let the administrator revoke the invitation from its confirmation. Keep the available actions tied to the selected organisation and its current role.

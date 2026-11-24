@@ -1,10 +1,11 @@
-type Role = 'admin' | 'salesperson' | 'manager'
+export type Role = 'admin' | 'salesperson' | 'manager'
 export type Membership = { organisationId: string; name: string; role: Role }
 export type Profile = { userId: string; memberships: Membership[] }
-export type Invitation = Membership & { invitationId: string; expiresAt: string }
+export type InvitationReceipt = { invitationId: string; role: Role; expiresAt: string }
+export type Invitation = Membership & InvitationReceipt
 
 export class ApiError extends Error {
-  constructor(readonly status: number) {
+  constructor(readonly status: number, readonly detail?: string) {
     super('The API request failed.')
   }
 }
@@ -22,8 +23,13 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
     const response = await fetch(`/api${path}`, { ...options, signal, headers, cache: 'no-store' })
     signal.throwIfAborted()
     if (response.status === 401) onUnauthorized()
-    if (!response.ok) throw new ApiError(response.status)
-    return response.json() as Promise<T>
+    if (!response.ok) {
+      // The two issue conflicts share a status. Read the server detail so the form can explain which occurred.
+      const body = response.status === 409 ? await response.json().catch(() => undefined) : undefined
+      throw new ApiError(response.status, typeof body?.message === 'string' ? body.message : undefined)
+    }
+    // Successful revocation sends a 204 with no JSON body.
+    return response.status === 204 ? undefined as T : response.json() as Promise<T>
   }
 
   return {
@@ -31,12 +37,20 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
     overview: (id: string, signal: AbortSignal) =>
       request<Membership>(`/organisations/${encodeURIComponent(id)}`, { signal }),
     invitations: (signal: AbortSignal) => request<{ invitations: Invitation[] }>('/invitations', { signal }),
-    create: (name: string, requestId: string) =>
-      request<{ organisationId: string }>('/organisations', {
-        method: 'POST', body: JSON.stringify({ name, requestId }),
+    issueInvitation: (id: string, recipientUserId: string, role: Role, signal: AbortSignal) =>
+      request<InvitationReceipt>(`/organisations/${encodeURIComponent(id)}/invitations`, {
+        method: 'POST', body: JSON.stringify({ recipientUserId, role }), signal,
       }),
-    accept: (id: string) =>
-      request<{ organisationId: string }>(`/invitations/${encodeURIComponent(id)}/accept`, { method: 'POST' }),
+    revokeInvitation: (id: string, invitationId: string, signal: AbortSignal) =>
+      request<void>(`/organisations/${encodeURIComponent(id)}/invitations/${encodeURIComponent(invitationId)}`, {
+        method: 'DELETE', signal,
+      }),
+    create: (name: string, requestId: string, signal: AbortSignal) =>
+      request<{ organisationId: string }>('/organisations', {
+        method: 'POST', body: JSON.stringify({ name, requestId }), signal,
+      }),
+    accept: (id: string, signal: AbortSignal) =>
+      request<{ organisationId: string }>(`/invitations/${encodeURIComponent(id)}/accept`, { method: 'POST', signal }),
   }
 }
 

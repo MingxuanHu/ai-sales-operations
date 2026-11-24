@@ -10,7 +10,7 @@ import './app.css'
 
 // Lazy loading keeps the protected workspace out of the initial signed-out bundle.
 const OrganisationWorkspace = lazy(async () => {
-  const { OrganisationWorkspace } = await import('../features/organisations/components/OrganisationWorkspace')
+  const { OrganisationWorkspace } = await import('../features/organisations/routes/OrganisationWorkspace')
   return { default: OrganisationWorkspace }
 })
 
