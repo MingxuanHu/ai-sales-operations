@@ -4,7 +4,7 @@
 
 ## Scope and acceptance
 
-- **In scope.** Tenant-scoped order entry and history, a 10% order discount threshold, manager decisions, fulfilment, a transactional order audit trail and repeatable synthetic data.
+- **In scope.** Tenant-scoped order entry and history, a 10% order discount threshold, manager decisions, fulfilment, a transactional order audit trail and a repeatable, full synthetic organisation for the M7 demo.
 - **Out of scope.** Saved drafts, edits after submission, cancellation, returns, tax, shipping, inventory, payments, notifications, dashboards and the GraphQL order detail query.
 - **Acceptance evidence.** Using synthetic staff accounts in the browser, submit orders at 10% and above 10%. Fulfil the first, approve and fulfil one pending order, and reject another. Verify each history, verify that pending and rejected orders cannot be fulfilled, and exercise an organisation switch. API integration tests demonstrate tenant isolation, role enforcement, money calculations, retry handling and competing transitions.
 
@@ -18,9 +18,11 @@
 
 ## Issues / PRs
 
-**Proposed for developer confirmation.** Follow the [kickoff workflow](../engineering/delivery.md#milestone-kickoff-and-github-issues) to create the issues and record their links after confirmation.
+**Kickoff complete.** The approved breakdown is tracked in the [M6 — Orders & approvals GitHub milestone](https://github.com/MingxuanHu/ai-sales-operations/milestone/6). Follow the [delivery workflow](../engineering/delivery.md#issue-implementation) for implementation.
 
 ### 1. Add tenant-scoped order submission and read APIs
+
+[Issue #56](https://github.com/MingxuanHu/ai-sales-operations/issues/56)
 
 - **Goal.** Persist valid orders and the submission decision using organisation master data.
 - **In scope.** Add the Prisma migration, order and line snapshots, audit storage, limited selectors, scoped list and detail reads, and idempotent submission. Apply the discount rule at submission.
@@ -31,6 +33,8 @@
 
 ### 2. Add manager decisions and fulfilment APIs
 
+[Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57)
+
 - **Goal.** Enforce manual approval, rejection and fulfilment with a complete history.
 - **In scope.** Add decision and fulfilment commands using the existing organisation transaction policy. Expose the recorded history through the scoped order detail API.
 - **Out of scope.** Reopening, cancellation and browser controls.
@@ -40,6 +44,8 @@
 
 ### 3. Build the order entry and approval workflows in React
 
+[Issue #58](https://github.com/MingxuanHu/ai-sales-operations/issues/58)
+
 - **Goal.** Let salespeople and managers complete the order lifecycle from the protected app.
 - **In scope.** Add salesperson entry, order list and details, manager pending queue and decision controls, fulfilment and readable audit history. Clear tenant-specific state on organisation switch and handle stale lifecycle responses.
 - **Out of scope.** GraphQL details and M7 reporting.
@@ -47,11 +53,13 @@
 - **Dependencies.** Issues 1 and 2 and the [existing organisation selection flow](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Add web coverage for both roles, recoverable errors and tenant switching. Run the milestone browser acceptance flow against the running NestJS API and PostgreSQL. Use synthetic accounts, customers and products set up through the app. After Issue 3, the complete order flow must be usable through React and NestJS before Issue 4 begins. Confirm the same flow in the demo after the Issue 3 release.
 
-### 4. Add repeatable synthetic order scenarios
+### 4. Provision a complete synthetic organisation for the M7 demo
 
-- **Goal.** Provide predictable data for local demonstrations and M7 reporting checks.
-- **In scope.** Add a documented, explicit local seed command with synthetic customers, products, and pending, approved, rejected and fulfilled orders. Include a second organisation and known fulfilled totals and timestamps.
-- **Out of scope.** Cognito user provisioning, automatic demo database writes and production data.
-- **Acceptance.** Running the command twice produces the same fixture records and totals without duplicating orders or modifying unrelated data. Fixtures satisfy the order and audit invariants.
-- **Dependencies.** Issue 3 completes the browser workflow first. The seed uses the order and audit rules from Issues 1 and 2 and follows the [security rules for synthetic data](../engineering/security.md).
-- **Validation.** Run `pnpm check` with Docker. Run the seed twice against disposable PostgreSQL and verify fixture counts, histories, tenant boundaries and expected net sales.
+[Issue #59](https://github.com/MingxuanHu/ai-sales-operations/issues/59)
+
+- **Goal.** Give the developer a repeatable provisioning command that creates a sign-in-capable synthetic organisation locally and in the authorised demo environment, with enough history to demonstrate M7.
+- **In scope.** Provision a synthetic administrator and supporting salesperson and manager identities in the target environment's Cognito pool. Create a synthetic wholesale company through the existing organisation model, with memberships, representative invitation states, customers, products and multi-line orders across all lifecycle states. Include approval decisions and audit history. Document how to run provisioning, sign in, and verify the fixture.
+- **Out of scope.** Dashboard implementation, public provisioning endpoints, real customer data, and automatic fixture writes during application releases. Running against the shared demo requires explicit developer authorisation.
+- **Acceptance.** A developer can provision the fixture and sign in with its synthetic identities using the existing app. Known fulfilled totals across several reporting periods, products and customers support verification of M7 date filters, rankings and charts. Pending, approved but unfulfilled, and rejected orders exercise exclusions. Re-running provisioning reconciles fixture records without duplicating them or modifying unrelated data. The command scopes writes to the intended environment and fixture, preserves order and audit invariants, and keeps credentials out of source and logs.
+- **Dependencies.** Issue 3 completes the browser workflow first. Reuse the existing identity and master-data models and the order and audit rules from Issues 1 and 2. Follow the [security rules for synthetic data](../engineering/security.md).
+- **Validation.** Run `pnpm check` with Docker. Provision twice in a disposable local environment and verify sign-in, role access, fixture counts, histories, tenant boundaries and expected M7 totals. Verify demo provisioning and sign-in after authorisation.
