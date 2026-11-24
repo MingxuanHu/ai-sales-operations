@@ -1,10 +1,10 @@
 # AI Sales Operations
 
+A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
+
 [Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
 
 > **Status:** [Milestone 5 kickoff — Master data](docs/milestones/M05-01-master-data.md). Up next are the administrator invitation UI and product and customer management.
-
-A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
 ## Product
 
