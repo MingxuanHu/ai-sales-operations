@@ -113,10 +113,14 @@ Prisma applies both migrations in order through the same command.
    Create an organisation and verify that its overview shows the **admin** role.
 3. Open a separate browser session and sign in with the configured synthetic
    Google test account. Copy its application user ID from **Invitations**.
-   Use the supported invitation-issuing API as an administrator with an
-   authorised local client. Then refresh the Google account's invitation inbox
-   and accept the invitation in the app. See the
-   [protected API contract](../architecture/identity.md#protected-api-contract).
+   In the administrator's organisation workspace, enter that ID under
+   **Invite staff**, select a role, and send the invitation. Check the role and
+   expiry in the confirmation. Refresh the Google account's invitation inbox
+   and leave that view open. Revoke the invitation as the administrator, then
+   try to accept the stale invitation in the Google account's view. Confirm
+   that acceptance fails and refreshing removes the invitation. Send a fresh
+   invitation, accept it from the inbox, and confirm the offered role appears
+   in the organisation workspace.
 4. Give one synthetic account memberships in two organisations with different
    roles. Open the organisation selector and switch between them with the
    keyboard. Confirm that the route, organisation-scoped request path, and role

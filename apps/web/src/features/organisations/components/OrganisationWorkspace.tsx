@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError, type Membership, type OrganisationsApi, type Profile } from '../api/organisations'
 import { Onboarding } from './Onboarding'
+import { StaffInvitation } from './StaffInvitation'
 
 // Each status has its own shape, so TypeScript knows data is available only after a successful request.
 type Result<T> = { status: 'loading' } | { status: 'ready'; data: T } | { status: 'failed'; error: unknown }
@@ -131,6 +132,8 @@ function OrganisationOverview({ id, api, onDenied }: { id: string; api: Organisa
           <Text size="sm" c="dimmed">Your role</Text>
           <Badge variant="light" tt="capitalize">{result.data.role}</Badge>
         </Group>
+        {/* The overview response supplies the current role for this organisation. */}
+        {result.data.role === 'admin' && <StaffInvitation api={api} organisationId={id} />}
       </Stack>
     </Paper>
   )

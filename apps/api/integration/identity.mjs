@@ -80,6 +80,18 @@ export async function checkIdentity(app) {
   // Bob belongs to Company A, so 403 specifically means his role lacks invitation permission.
   await request('POST', companyAPath + '/invitations', 'bob', 403, { ...salespersonInvitationBody, recipientUserId: charlieProfile.userId })
 
+  // Revocation removes the pending offer from the inbox and blocks acceptance of a stale copy.
+  const { invitationId: revokedInvitationId } = await request('POST', companyAPath + '/invitations', 'alice', 201, {
+    recipientUserId: charlieProfile.userId, role: 'manager',
+  })
+  const revokePath = companyAPath + '/invitations/' + revokedInvitationId
+  await request('DELETE', revokePath, 'bob', 403)
+  await request('DELETE', revokePath, 'alice', 204)
+  await request('DELETE', revokePath, 'alice', 204)
+  assert.deepEqual(await request('GET', '/invitations', 'charlie', 200), { invitations: [] })
+  await request('POST', '/invitations/' + revokedInvitationId + '/accept', 'charlie', 409)
+  await request('GET', companyAPath, 'charlie', 404)
+
   const { organisationId: companyBId } = await request('POST', '/organisations', 'bob', 201, {
     name: 'Test Company B', requestId: randomUUID(),
   })
