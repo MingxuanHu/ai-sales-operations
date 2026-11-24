@@ -1,3 +1,4 @@
+import { createCustomersApi } from '../../customers/api/customers'
 import { createProductsApi } from '../../products/api/products'
 
 export type Role = 'admin' | 'salesperson' | 'manager'
@@ -36,6 +37,7 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
 
   return {
     products: createProductsApi(request),
+    customers: createCustomersApi(request),
     profile: (signal: AbortSignal) => request<Profile>('/me', { signal }),
     overview: (id: string, signal: AbortSignal) =>
       request<Membership>(`/organisations/${encodeURIComponent(id)}`, { signal }),

@@ -48,6 +48,7 @@ model Organisation {
   memberships       Membership[]
   invitations       Invitation[]
   products          Product[]
+  customers         Customer[]
 
   // An organisation creation request ID is unique per creator, so retries can reuse the result.
   @@unique([createdByUserId, creationRequestId])
@@ -130,4 +131,15 @@ model Product {
   // The same SKU can belong to different organisations.
   @@unique([organisationId, sku])
   @@map("products")
+}
+
+// The stable ID identifies a customer even when another customer shares its name.
+model Customer {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organisationId String       @map("organisation_id") @db.Uuid
+  name           String       @db.VarChar(120)
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, name, id])
+  @@map("customers")
 }
