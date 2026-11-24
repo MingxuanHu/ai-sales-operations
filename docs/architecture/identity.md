@@ -270,6 +270,7 @@ A user can be a `salesperson` in one organisation and a `manager` in another. Ne
 | Organisation overview · view | Any active membership | M2 |
 | Invitations · issue or revoke | `admin` | M2 |
 | Memberships · assign roles or remove access | `admin` | M2 |
+| Products · create, list, view, edit or delete | `admin` | M5 |
 | Orders · create | `salesperson` | M6 |
 | Discount approvals · approve | `manager` | M6 |
 
