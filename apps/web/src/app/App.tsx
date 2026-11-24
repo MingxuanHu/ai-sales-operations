@@ -44,14 +44,18 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
   useEffect(() => {
     if (status !== 'callback' || callbackStarted.current) return
     callbackStarted.current = true
+    // Cognito returns to /auth/callback?code=...&state=...; save that URL before changing the address.
     const url = new URL(window.location.href)
-    // Replace the callback entry before making network requests so the code leaves browser history.
+    // Immediately replace it with / so the authorization code leaves the current history entry.
+    // This changes the address without reloading; status stays 'callback', showing “Completing sign-in…”.
     void navigate('/', { replace: true })
     if (!session) {
       setStatus('signed-out')
       return
     }
+    // Use the saved callback URL to exchange the code and verify sign-in while / is visible.
     void session.completeSignIn(url).then((returnTo) => {
+      // Once sign-in succeeds, show the saved return route and replace the loading screen.
       void navigate(returnTo, { replace: true })
       setRequests(new AbortController())
       setStatus('signed-in')
@@ -63,8 +67,10 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
     })
   }, [navigate, session, status])
 
-  // useMemo reuses the API client until the session or its request controller changes.
+  // useMemo runs this calculation during the first render and again when requests or session changes.
+  // Other renders reuse the saved API client. Development Strict Mode may repeat the calculation.
   const api = useMemo(() => {
+    // Initially requests is undefined. Successful sign-in sets it, triggering a render that creates the client.
     if (!session || !requests) return
     function expire() {
       requests?.abort()
@@ -73,6 +79,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
       setError('Your session has ended. Sign in to continue.')
       setStatus('signed-out')
     }
+    // Create the request helpers now; HTTP requests happen later when those helpers are called.
     return createOrganisationsApi(async () => {
       try {
         return await session.accessToken()

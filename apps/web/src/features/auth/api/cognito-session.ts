@@ -78,6 +78,8 @@ export function createCognitoSession(config: CognitoConfig) {
   }
 
   async function post(path: string, fields: Record<string, string>, signal: AbortSignal) {
+    // Unlike page navigation, cross-origin fetch needs CORS permission to read the response.
+    // Cognito supplies that permission for /oauth2/token and /oauth2/revoke; no app CORS setting is needed.
     return fetch(endpoint(path), {
       method: 'POST',
       body: new URLSearchParams({ client_id: config.clientId, ...fields }),
@@ -103,14 +105,18 @@ export function createCognitoSession(config: CognitoConfig) {
       throw new Error('Cognito returned an incomplete session.')
     }
 
+    // The initial code exchange supplies the nonce saved before redirecting to Cognito.
     if (nonce !== undefined) {
+      // Verify the ID token's signature, configured issuer/client audience and expiry before trusting its claims.
       const claims = await verify.verify(id_token, {
         customJwtCheck: ({ header }) => {
+          // Accept only Cognito's expected signing algorithm.
           if (header.alg !== 'RS256') throw new Error('Unexpected signing algorithm.')
         },
       }).catch((error: unknown) => {
         throw new CognitoCallbackError(error instanceof FetchError ? 'keys' : 'verification')
       })
+      // Require an expiry and an ID token; matching nonce ties it to this specific sign-in attempt.
       if (typeof claims.exp !== 'number' || claims.token_use !== 'id' || claims.nonce !== nonce) {
         throw new CognitoCallbackError('verification')
       }
@@ -118,6 +124,7 @@ export function createCognitoSession(config: CognitoConfig) {
 
     // Aborted work may have completed its network call just before sign-out.
     signal.throwIfAborted()
+    // For the initial sign-in, save the session only after all ID-token checks have passed.
     tokens = { accessToken: access_token, refreshToken: refresh_token, expiresAt: Date.now() + expires_in * 1000 }
     return tokens.accessToken
   }
@@ -125,14 +132,21 @@ export function createCognitoSession(config: CognitoConfig) {
   return {
     clear,
     hasSession: () => tokens !== undefined,
+    // Starts a browser redirect flow; completeSignIn handles the callback and obtains tokens later.
     async beginSignIn() {
+      // State matches the callback to this attempt; nonce ties the returned ID token to it.
       const attempt: Attempt = {
         state: randomValue(), nonce: randomValue(), verifier: randomValue(), startedAt: Date.now(),
         returnTo: protectedPath(window.location.pathname),
       }
+      // PKCE sends a hash now and requires the saved verifier when exchanging the returned code.
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(attempt.verifier))
-      // Only the one-time redirect values survive navigation through Managed Login.
+      // Per-tab sessionStorage preserves the attempt and return route while the browser leaves the app.
       sessionStorage.setItem(attemptKey, JSON.stringify(attempt))
+      // assign navigates the whole tab to Cognito. Its authorize endpoint redirects to /login
+      // with these parameters, so /login is the URL visible while the sign-in page is open.
+      // Cross-origin page navigation is allowed without CORS; this does not fetch a response for JS to read.
+      // After successful sign-in, Cognito returns to redirect_uri with a code and the same state.
       window.location.assign(endpoint('/oauth2/authorize', {
         response_type: 'code', redirect_uri: config.redirectUri, client_id: config.clientId,
         scope: 'openid', resource: config.resource, state: attempt.state, nonce: attempt.nonce,
