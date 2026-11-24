@@ -36,8 +36,14 @@ URL remains in SSM. No env file is copied or built into the bundles.
 3. Upload the immutable `demo-SHA-runID` Actions artifact with a requested
    90-day retention. Repository policy/storage limits may shorten availability.
    Artifacts from failed runs are diagnostic only and cannot be selected.
-4. Run committed Prisma migrations and migration status with the direct
-   credential only in this step. Capture raw CLI output privately because errors
+4. Run committed Prisma migrations, check their status, and configure
+   runtime grants with `scripts/demo-runtime-grants.sql`. The first release
+   repairs access to the existing product and customer tables. PostgreSQL
+   automatically grants the runtime role access to future tables and sequences
+   created in `public` by the same migration login. Prisma creates its migration
+   history before these defaults are configured. Keep `DEMO_DIRECT_URL` on
+   the same migration role when rotating its password. The direct credential
+   is available only in this step. Capture raw CLI output privately because errors
    can contain connection details; retain only a fixed pass/fail result. Any
    failure stops rollout. Investigate through the protected Neon runbook.
 5. Validate local checksums and compatibility. Record the previous manifest
@@ -128,7 +134,7 @@ rather than an old synthesized assembly.
 | Failure boundary | Result and recovery |
 | --- | --- |
 | Gate/build/manifest/retention | No migration or publication. Fix the cause before a new reviewed main revision. |
-| Migration or status | No application publication. Inspect Prisma state through authorized owner access. Do not blindly resolve or reverse a migration. |
+| Migration, status or runtime grants | No application publication. Inspect Prisma state and table permissions through authorized owner access. Do not blindly resolve or reverse a migration. |
 | Lambda update/wait/hash/API smoke | Web publication has not begun; API may already have changed. Inspect the stage record; restore an eligible retained release or publish a forward fix after review. |
 | Asset upload/HTML/invalidation/web smoke | API and some web files may have changed. No success marker is written. Old assets remain. Restore an eligible exact bundle, invalidate and repeat smoke, or release a forward fix. |
 | Success marker/catalog/record upload | Publication may have passed but the workflow can fail. Inspect smoke and record evidence before deciding recovery; a failed run is not a rollback candidate. |

@@ -80,7 +80,7 @@ jobs:
           path: release/
           retention-days: 90
           if-no-files-found: error
-      - name: Apply committed migrations
+      - name: Apply committed migrations and grant runtime table access
         # This is the only step receiving the direct database credential.
         env:
           DIRECT_URL: ${{ secrets.DEMO_DIRECT_URL }}

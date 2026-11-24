@@ -21,6 +21,7 @@ import { PrismaService } from '../dist/database/prisma.service.js'
 
 const run = promisify(execFile)
 const composeFile = fileURLToPath(new URL('./compose.yaml', import.meta.url))
+const demoGrantsFile = fileURLToPath(new URL('../../../scripts/demo-runtime-grants.sql', import.meta.url))
 
 test('API identity and health use the isolated PostgreSQL instance', async (context) => {
   // A unique Compose project gives each run its own container and network.
@@ -48,6 +49,39 @@ test('API identity and health use the isolated PostgreSQL instance', async (cont
 
   // Both migration and runtime connections point to this disposable database.
   await run('pnpm', ['run', 'prisma:migrate'], { env: { ...env, DIRECT_URL: env.DATABASE_URL } })
+
+  await context.test('demo grants repair existing access and apply to future tables without exposing migration history', async () => {
+    // Query PostgreSQL's privilege catalogue without needing a runtime password.
+    const sql = async (statement) => (await compose(
+      'exec', '-T', 'salesOpDb', 'psql', '-U', 'test', '-d', 'readiness',
+      '-v', 'ON_ERROR_STOP=1', '-qAtc', statement,
+    )).stdout.trim()
+    await sql('CREATE ROLE sales_ops_runtime')
+    const readPrivileges = () => sql(`
+      SELECT has_table_privilege('sales_ops_runtime', table_name, privilege)
+      FROM unnest(ARRAY['public.products', 'public.customers', 'public._prisma_migrations']) AS tables(table_name)
+      CROSS JOIN unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) AS privileges(privilege)
+      ORDER BY table_name, privilege
+    `)
+    assert.deepEqual((await readPrivileges()).split('\n'), Array(12).fill('f'))
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await run('pnpm', ['exec', 'prisma', 'db', 'execute', '--file', demoGrantsFile], {
+        env: { ...env, DIRECT_URL: env.DATABASE_URL },
+      })
+      assert.deepEqual((await readPrivileges()).split('\n'), [...Array(4).fill('f'), ...Array(8).fill('t')])
+    }
+
+    // The migration login creates a table in a later release. No grant step is needed for it.
+    await sql('CREATE TABLE public.future_orders (id serial)')
+    const privileges = await sql(`
+      SELECT has_table_privilege('sales_ops_runtime', 'public.future_orders', privilege)
+      FROM unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) AS privileges(privilege)
+    `)
+    assert.deepEqual(privileges.split('\n'), Array(4).fill('t'))
+    assert.equal(await sql("SELECT has_sequence_privilege('sales_ops_runtime', 'public.future_orders_id_seq', 'USAGE')"), 't')
+    assert.equal(await sql('SET ROLE sales_ops_runtime; INSERT INTO public.future_orders DEFAULT VALUES RETURNING id'), '1')
+    assert.deepEqual((await readPrivileges()).split('\n'), [...Array(4).fill('f'), ...Array(8).fill('t')])
+  })
 
   app = await NestFactory.create(AppModule, { logger: false, abortOnError: false })
   app.get(AccessTokenVerifier).verify = async (token) => {

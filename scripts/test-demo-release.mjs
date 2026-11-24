@@ -124,6 +124,37 @@ test('migration errors hide captured credentials and produce a failed outcome', 
   assert.ok(!`${result.stdout}${result.stderr}`.includes(fakeSecret))
 })
 
+test('runtime grants follow migration status and must succeed for release', (t) => {
+  const directory = mkdtempSync(`${tmpdir()}/demo-runtime-grants-test-`)
+  t.after(() => rmSync(directory, { recursive: true, force: true }))
+  const script = fileURLToPath(new URL('./demo-migrate.mjs', import.meta.url))
+  const grants = fileURLToPath(new URL('./demo-runtime-grants.sql', import.meta.url))
+  // Stand in for Prisma and fail only the grants command on the first run.
+  writeFileSync(`${directory}/pnpm`, `#!/bin/sh
+printf '%s\\n' "$*" >> commands
+case "$*" in
+  *"db execute"*) exit "$GRANTS_EXIT_CODE" ;;
+esac
+`, { mode: 0o755 })
+
+  for (const [status, outcome] of [[1, 'failed'], [0, 'passed']]) {
+    writeFileSync(`${directory}/commands`, '')
+    const result = spawnSync(process.execPath, [script], {
+      cwd: directory,
+      encoding: 'utf8',
+      env: { PATH: directory, DIRECT_URL: 'synthetic-url', GRANTS_EXIT_CODE: String(status) },
+    })
+    assert.equal(result.status, status)
+    assert.deepEqual(JSON.parse(readFileSync(`${directory}/release-record/migration.json`, 'utf8')), { result: outcome })
+    const prefix = '--filter @ai-sales-operations/api'
+    assert.deepEqual(readFileSync(`${directory}/commands`, 'utf8').trim().split('\n'), [
+      `${prefix} prisma:migrate`,
+      `${prefix} exec prisma migrate status`,
+      `${prefix} exec prisma db execute --file ${grants}`,
+    ])
+  }
+})
+
 test('workflows confine the secret to migration and serialize all publication', () => {
   for (const name of ['release', 'rollback']) {
     const workflow = readFileSync(new URL(`../.github/workflows/${name}-demo.yml`, import.meta.url), 'utf8')
