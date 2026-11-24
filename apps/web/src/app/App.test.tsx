@@ -345,3 +345,68 @@ describe('product catalogue', () => {
     expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/me', '/api/organisations/second'])
   })
 })
+
+describe('customer directory', () => {
+  const admin = { ...first, role: 'admin' }
+  const directoryPath = '/api/organisations/first/customers'
+
+  it('creates, edits and deletes customers and keeps the form open on server errors', async () => {
+    const customer = { id: 'acme', name: 'Acme Wholesale' }
+    let attempts = 0
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
+      if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === directoryPath && options.method === 'POST') {
+        expect(JSON.parse(String(options.body))).toEqual({ name: 'Acme Wholesale' })
+        attempts++
+        if (attempts === 1) return Response.json({ message: 'Name must contain 1 to 120 characters.' }, { status: 400 })
+        return Response.json(customer, { status: 201 })
+      }
+      if (url === directoryPath) return Response.json({ customers: [] })
+      if (url === directoryPath + '/acme' && options.method === 'PUT') {
+        return Response.json({ ...customer, name: 'Acme Distribution' })
+      }
+      if (url === directoryPath + '/acme' && options.method === 'DELETE') return new Response(null, { status: 204 })
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession()} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Customers' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add customer' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: customer.name } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save customer' }))
+    await screen.findByText('Name must contain 1 to 120 characters.')
+    expect(screen.getByDisplayValue('Acme Wholesale')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save customer' }))
+    await screen.findByText('Customer created.')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Acme Wholesale' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Acme Distribution' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save customer' }))
+    await screen.findByText('Acme Distribution')
+    expect(fetch).toHaveBeenCalledWith(directoryPath + '/acme', expect.objectContaining({
+      method: 'PUT', body: expect.stringContaining('Acme Distribution'),
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Acme Distribution' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByText('Acme Distribution')).toBeTruthy()
+    expect(fetch).not.toHaveBeenCalledWith(directoryPath + '/acme', expect.objectContaining({ method: 'DELETE' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Acme Distribution' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete customer' }))
+    await screen.findByText('Customer deleted.')
+    expect(screen.getByText('No customers yet.')).toBeTruthy()
+  })
+
+  it('gates direct routes with the current organisation role before requesting customers', async () => {
+    const fetch = vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin, second] })
+      if (url === '/api/organisations/second') return Response.json(second)
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/second/customers')} />)
+    expect(await screen.findByText('Only organisation administrators can manage customers.')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Customers' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add customer' })).toBeNull()
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/me', '/api/organisations/second'])
+  })
+})

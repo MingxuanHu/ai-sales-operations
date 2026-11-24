@@ -10,3 +10,7 @@ export function invitationsPath(id?: string) {
 export function productsPath(id: string) {
   return organisationPath(id) + '/products'
 }
+
+export function customersPath(id: string) {
+  return organisationPath(id) + '/customers'
+}
