@@ -2,26 +2,24 @@ import { Alert, Button, Paper, Stack, Text, TextInput, Title } from '@mantine/co
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { type OrganisationsApi } from '../api/organisations'
 
-export function CreateOrganisation({ api, onJoined }: {
+export function CreateOrganisationPage({ api, onJoined }: {
   api: OrganisationsApi
   onJoined: (id: string) => void
 }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  // Refs remember the retry ID and whether the screen is mounted without updating the UI.
+  // Refs remember the retry ID and the current browser request without updating the UI.
   const createAttempt = useRef<{ name: string; id: string } | undefined>(undefined)
-  const active = useRef(false)
+  const pending = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    // Cleanup marks the view inactive so a late response cannot navigate after the user leaves.
-    active.current = true
-    return () => { active.current = false }
-  }, [])
+  // Leaving this page aborts the browser request and prevents late navigation.
+  useEffect(() => () => pending.current?.abort(), [])
 
   async function createOrganisation(event: SubmitEvent<HTMLFormElement>) {
     // Handle the form in React so the browser does not reload the page on submit.
     event.preventDefault()
+    if (pending.current) return
     const trimmed = name.trim()
     if (!trimmed || [...trimmed].length > 120) {
       setError('Enter an organisation name between 1 and 120 characters.')
@@ -32,16 +30,18 @@ export function CreateOrganisation({ api, onJoined }: {
       ? createAttempt.current
       : { name: trimmed, id: crypto.randomUUID() }
     createAttempt.current = attempt
-    if (busy) return
+    const request = new AbortController()
+    pending.current = request
     setBusy(true)
     setError('')
     try {
-      const result = await api.create(attempt.name, attempt.id)
-      if (active.current) onJoined(result.organisationId)
+      const result = await api.create(attempt.name, attempt.id, request.signal)
+      if (!request.signal.aborted) onJoined(result.organisationId)
     } catch {
-      if (active.current) setError('Your request could not be completed. Please try again.')
+      if (!request.signal.aborted) setError('Your request could not be completed. Please try again.')
     } finally {
-      if (active.current) setBusy(false)
+      pending.current = null
+      if (!request.signal.aborted) setBusy(false)
     }
   }
 
@@ -54,7 +54,7 @@ export function CreateOrganisation({ api, onJoined }: {
           <Stack gap="sm">
             <Text c="dimmed" size="sm">You’ll become its first administrator.</Text>
             {/* This is a controlled input. React state supplies the value and onChange updates it as the user types. */}
-            <TextInput label="Organisation name" required value={name} onChange={(event) => setName(event.currentTarget.value)} />
+            <TextInput label="Organisation name" required disabled={busy} value={name} onChange={(event) => setName(event.currentTarget.value)} />
             <Button type="submit" w="fit-content" loading={busy}>Create organisation</Button>
           </Stack>
         </form>

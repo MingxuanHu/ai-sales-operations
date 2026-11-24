@@ -105,6 +105,30 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
+  it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {
+    let pendingSignal: AbortSignal | null = null
+    let finishAcceptance: (response: Response) => void = () => {}
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [] })
+      if (url === '/api/invitations') {
+        return Response.json({ invitations: [{ ...first, invitationId: 'invite', expiresAt: '2026-11-30' }] })
+      }
+      if (url === '/api/invitations/invite/accept') {
+        pendingSignal = options.signal ?? null
+        return new Promise<Response>((resolve) => { finishAcceptance = resolve })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
+    await waitFor(() => expect(pendingSignal).not.toBeNull())
+    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
+    await screen.findByRole('heading', { name: 'Create organisation' })
+    expect(pendingSignal).toHaveProperty('aborted', true)
+    await act(async () => finishAcceptance(Response.json({ organisationId: first.organisationId })))
+    expect(window.location.pathname).toBe('/onboarding')
+  })
+
   it('switches tenant requests, ignores a late response and clears the shell on sign-out', async () => {
     let previousSignal: AbortSignal | null = null
     let finishPrevious: (value: Response) => void = () => {}
@@ -240,9 +264,10 @@ describe('protected React shell', () => {
       ? Response.json({ userId: 'synthetic-user', memberships: [first] })
       : new Response(null, { status: 404 }))
     vi.stubGlobal('fetch', fetch)
-    render(<App session={mockSession('/organisations/foreign')} />)
+    render(<App session={mockSession('/organisations/foreign/invitations')} />)
     expect(await screen.findByText('Access denied')).toBeTruthy()
     expect(screen.queryByRole('heading', { name: first.name })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
   })
 
   it('clears local auth when the API rejects the session', async () => {

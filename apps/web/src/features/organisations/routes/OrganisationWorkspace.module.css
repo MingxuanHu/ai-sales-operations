@@ -1,0 +1,17 @@
+/* The sidebar and content share a row when the screen can fit both. */
+.workspace {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--mantine-spacing-lg);
+}
+
+.content {
+  min-width: 0;
+}
+
+@media (max-width: 48em) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

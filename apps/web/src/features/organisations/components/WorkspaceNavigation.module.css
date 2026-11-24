@@ -1,0 +1,24 @@
+.sidebar {
+  background: var(--mantine-color-body);
+}
+
+.navigation {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.navigation a {
+  border-radius: var(--mantine-radius-md);
+  font-weight: 600;
+}
+
+@media (max-width: 48em) {
+  .navigation {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .navigation a {
+    width: auto;
+  }
+}

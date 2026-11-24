@@ -1,6 +1,6 @@
 import { Alert, Button, NativeSelect, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
-import { ApiError, type InvitationReceipt, type OrganisationsApi, type Role } from '../api/organisations'
+import { ApiError, type InvitationReceipt, type OrganisationsApi, type Role } from '../../api/organisations'
 
 const roles: { value: Role; label: string }[] = [
   { value: 'salesperson', label: 'Salesperson' },

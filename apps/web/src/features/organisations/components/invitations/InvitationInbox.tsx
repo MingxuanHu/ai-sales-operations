@@ -1,6 +1,6 @@
 import { Alert, Button, CopyButton, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, type Invitation, type OrganisationsApi } from '../api/organisations'
+import { ApiError, type Invitation, type OrganisationsApi } from '../../api/organisations'
 
 export function InvitationInbox({ api, userId, onJoined }: {
   api: OrganisationsApi
@@ -14,13 +14,10 @@ export function InvitationInbox({ api, userId, onJoined }: {
   // Store the active invitation ID so only its button displays a spinner.
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState('')
-  const active = useRef(false)
+  const pending = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    // Cleanup marks the view inactive so a late response cannot navigate after the user leaves.
-    active.current = true
-    return () => { active.current = false }
-  }, [])
+  // Leaving this page aborts the browser request and prevents late navigation.
+  useEffect(() => () => pending.current?.abort(), [])
 
   useEffect(() => {
     const request = new AbortController()
@@ -34,24 +31,28 @@ export function InvitationInbox({ api, userId, onJoined }: {
   }, [api, revision])
 
   async function accept(invitationId: string) {
-    if (busy) return
+    if (pending.current) return
+    const request = new AbortController()
+    pending.current = request
     setBusy(invitationId)
     setError('')
     try {
-      const result = await api.accept(invitationId)
+      const result = await api.accept(invitationId, request.signal)
       // The parent supplied onJoined as a prop and uses it to open the organisation.
-      if (active.current) onJoined(result.organisationId)
+      if (!request.signal.aborted) onJoined(result.organisationId)
     } catch (failure) {
-      if (!active.current) return
+      if (request.signal.aborted) return
       setError(failure instanceof ApiError && failure.status === 409
         ? 'This invitation is no longer available. Refresh your invitations to see the latest list.'
         : 'Your request could not be completed. Please try again.')
     } finally {
-      if (active.current) setBusy(undefined)
+      pending.current = null
+      if (!request.signal.aborted) setBusy(undefined)
     }
   }
 
   function refreshInbox() {
+    setError('')
     setInboxFailed(false)
     setInvitations(undefined)
     setRevision((value) => value + 1)
