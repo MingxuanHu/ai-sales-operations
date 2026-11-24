@@ -45,7 +45,7 @@
 - **Out of scope.** GraphQL details and M7 reporting.
 - **Acceptance.** Each role sees its permitted controls. Users can enter orders, see the server-calculated total and status, and resolve orders without issuing API calls manually. A slow response from a previous organisation cannot populate the current view.
 - **Dependencies.** Issues 1 and 2 and the [existing organisation selection flow](../architecture/identity.md).
-- **Validation.** Run `pnpm check` with Docker. Add web coverage for both roles, recoverable errors and tenant switching. Run the milestone browser acceptance flow with synthetic accounts.
+- **Validation.** Run `pnpm check` with Docker. Add web coverage for both roles, recoverable errors and tenant switching. Run the milestone browser acceptance flow against the running NestJS API and PostgreSQL. Use synthetic accounts, customers and products set up through the app. After Issue 3, the complete order flow must be usable through React and NestJS before Issue 4 begins. Confirm the same flow in the demo after the Issue 3 release.
 
 ### 4. Add repeatable synthetic order scenarios
 
@@ -53,5 +53,5 @@
 - **In scope.** Add a documented, explicit local seed command with synthetic customers, products, and pending, approved, rejected and fulfilled orders. Include a second organisation and known fulfilled totals and timestamps.
 - **Out of scope.** Cognito user provisioning, automatic demo database writes and production data.
 - **Acceptance.** Running the command twice produces the same fixture records and totals without duplicating orders or modifying unrelated data. Fixtures satisfy the order and audit invariants.
-- **Dependencies.** Issues 1 and 2 and [security rules for synthetic data](../engineering/security.md).
+- **Dependencies.** Issue 3 completes the browser workflow first. The seed uses the order and audit rules from Issues 1 and 2 and follows the [security rules for synthetic data](../engineering/security.md).
 - **Validation.** Run `pnpm check` with Docker. Run the seed twice against disposable PostgreSQL and verify fixture counts, histories, tenant boundaries and expected net sales.
