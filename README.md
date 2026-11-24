@@ -2,7 +2,9 @@
 
 A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
-> **Status:** [M4 kickoff — CI/CD & AI review](docs/milestones/M04-01-cicd-ai-review.md). The [public demo](https://d3finwpuxpr8bj.cloudfront.net) supports Cognito sign-in and organisation onboarding. Protected delivery, automated releases and advisory AI PR review are next.
+[Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
+
+> **Status:** [Milestone 5 kickoff — Master data](docs/milestones/M05-01-master-data.md). Up next are the administrator invitation UI and product and customer management.
 
 ## Product
 
@@ -18,7 +20,7 @@ React · TypeScript · Vite · NestJS · PostgreSQL · Prisma · Amazon Cognito 
 
 ## AI-assisted software delivery
 
-Coding agents present local changes and check results for developer review before opening a PR. A separate AI reviewer comments on the PR diff, and the developer decides whether to merge. Required CI checks run on each PR. From M4, merging into protected `main` deploys the public demo automatically.
+I build this project with help from coding agents. I review their changes and check results before a PR is opened, and I decide whether to merge. Required CI checks run on each PR, and merging into protected `main` deploys the public demo automatically. I’ve postponed advisory AI PR review while I look for a suitable AI reviewer.
 
 Development rules: [AGENTS.md](AGENTS.md) · [Delivery workflow](docs/engineering/delivery.md)
 
