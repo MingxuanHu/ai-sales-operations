@@ -513,6 +513,20 @@ describe('order workflows', () => {
     fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '10' } })
   }
 
+  it('explains who can submit and approve orders in an empty regular organisation', async () => {
+    const regular = { ...first, role: 'admin', isDemo: false }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [regular] })
+      if (url === '/api/organisations/first') return Response.json(regular)
+      if (url === ordersPath('first')) return Response.json({ orders: [] })
+      throw new Error('Unexpected request')
+    }))
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    expect(await screen.findByRole('heading', { name: 'How to create an order' })).toBeTruthy()
+    expect(screen.getByText(/choose a customer, add products and quantities/)).toBeTruthy()
+    expect(screen.getByText(/approve or reject orders above the discount threshold/)).toBeTruthy()
+  })
+
   it('lets an administrator open orders and see history without order actions', async () => {
     const admin = { ...first, role: 'admin' }
     const path = ordersPath(admin.organisationId)

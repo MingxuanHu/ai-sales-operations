@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Checkbox, Group, Paper, Stack, Table, Text, Title } from '@mantine/core'
+import { Alert, Badge, Button, Checkbox, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
@@ -6,11 +6,12 @@ import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../
 import { OrderDetail } from './OrderDetail'
 import { OrderEntry } from './OrderEntry'
 
-export function OrdersPage({ api, organisationId, role, userId }: {
+export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
   api: OrdersApi
   organisationId: string
   role: Role
   userId: string
+  isDemo: boolean
 }) {
   const [pending, setPending] = useState(role === 'manager')
   const [orders, setOrders] = useState<LoadResult<OrderSummary[]>>({ status: 'loading' })
@@ -58,7 +59,19 @@ export function OrdersPage({ api, organisationId, role, userId }: {
             <Button variant="light" onClick={refreshList}>Retry orders</Button>
           </Alert>}
           {orders.status === 'ready' && (orders.data.length === 0
-            ? <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
+            ? <Stack gap="xs">
+              <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
+              {/* A filtered queue can be empty even when the organisation has orders. */}
+              {!pending && !isDemo && <>
+                <Title order={3} size="h5">How to create an order</Title>
+                <List type="ordered" size="sm" spacing="xs">
+                  <List.Item><strong>Administrator</strong> — Add customers and products, then invite staff as salespeople or managers.</List.Item>
+                  <List.Item><strong>Salesperson</strong> — In Orders, choose a customer, add products and quantities, then submit the order.</List.Item>
+                  <List.Item><strong>Manager</strong> — Review, approve or reject orders above the discount threshold (10% by default). Orders at or below it are approved automatically.</List.Item>
+                  <List.Item><strong>Salesperson</strong> — Open your approved order and select Fulfil when it’s ready.</List.Item>
+                </List>
+              </>}
+            </Stack>
             : <Table.ScrollContainer minWidth={460}>
               <Table>
                 <Table.Thead>

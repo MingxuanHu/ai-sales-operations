@@ -109,7 +109,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           } />
           <Route path="/organisations/:organisationId/orders" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} />}
+              {(membership) => <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} isDemo={membership.isDemo === true} />}
             </OrganisationAccess>
           } />
           <Route path="*" element={<Navigate replace to="/" />} />
