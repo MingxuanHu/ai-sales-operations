@@ -53,6 +53,11 @@
   gap: 0.25rem;
 }
 
+.organisationNavigation {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding-bottom: var(--mantine-spacing-sm);
+}
+
 .navigation a {
   border-radius: var(--mantine-radius-md);
   font-weight: 600;

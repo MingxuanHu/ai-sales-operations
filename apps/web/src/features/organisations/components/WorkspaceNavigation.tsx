@@ -72,27 +72,27 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
           />
         )}
         {/* renderRoot forwards Mantine's link styles to React Router, which sets aria-current. */}
-        <nav aria-label="Workspace" className={styles.navigation}>
-          {memberships.length > 0 && (
+        {selected && (
+          <nav aria-label="Selected organisation" className={`${styles.navigation} ${styles.organisationNavigation}`}>
             <NavLink label="Overview" renderRoot={(props) => (
-              <RouterNavLink {...props} to={selectedId ? organisationPath(selectedId) : '/'} end />
+              <RouterNavLink {...props} to={organisationPath(selected.organisationId)} end />
             )} />
-          )}
-          {selected?.role === 'admin' && (
-            <NavLink label="Products" renderRoot={(props) => (
-              <RouterNavLink {...props} to={productsPath(selected.organisationId)} end />
-            )} />
-          )}
-          {selected?.role === 'admin' && (
-            <NavLink label="Customers" renderRoot={(props) => (
-              <RouterNavLink {...props} to={customersPath(selected.organisationId)} end />
-            )} />
-          )}
-          {selected && (
+            {selected.role === 'admin' && (
+              <>
+                <NavLink label="Products" renderRoot={(props) => (
+                  <RouterNavLink {...props} to={productsPath(selected.organisationId)} end />
+                )} />
+                <NavLink label="Customers" renderRoot={(props) => (
+                  <RouterNavLink {...props} to={customersPath(selected.organisationId)} end />
+                )} />
+              </>
+            )}
             <NavLink label="Orders" renderRoot={(props) => (
               <RouterNavLink {...props} to={ordersPath(selected.organisationId)} end />
             )} />
-          )}
+          </nav>
+        )}
+        <nav aria-label="Workspace" className={styles.navigation}>
           <NavLink label="Create organisation" renderRoot={(props) => (
             <RouterNavLink {...props} to="/onboarding" end />
           )} />

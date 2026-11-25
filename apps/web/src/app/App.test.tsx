@@ -113,8 +113,27 @@ describe('protected React shell', () => {
     expect(await screen.findByRole('heading', { name: 'Set up your organisation' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Explore a demo' })).toBeTruthy()
     const links = within(screen.getByRole('navigation', { name: 'Workspace' })).getAllByRole('link')
-    expect(links.map((link) => link.textContent)).toEqual(['Overview', 'Create organisation', 'Invitations'])
+    expect(links.map((link) => link.textContent)).toEqual(['Create organisation', 'Invitations'])
+    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
     expect(window.location.pathname).toBe('/onboarding')
+  })
+
+  it('shows Overview only after choosing an organisation and groups it with organisation links', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first, second] })
+      if (url === '/api/organisations/first') return Response.json(first)
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession()} />)
+    await screen.findByRole('heading', { name: 'Choose an organisation' })
+    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(first.name))
+    const navigation = await screen.findByRole('navigation', { name: 'Selected organisation' })
+    expect(within(navigation).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
+    expect(within(navigation).getByRole('link', { name: 'Orders' })).toBeTruthy()
+    expect(within(navigation).queryByRole('link', { name: 'Invitations' })).toBeNull()
   })
 
   it('retries demo creation and selects each newly created demo', async () => {
