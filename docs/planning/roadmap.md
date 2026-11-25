@@ -10,7 +10,7 @@
 | 2 · Delivery | [M4 — CI/CD & AI review](../milestones/M04-01-cicd-ai-review.md) | Protected `main`, OIDC deployment, AI PR comments, automated demo release |
 | 3 · Sales SaaS | [M5 — Master data](../milestones/M05-01-master-data.md) | Administrator invitation UI, product/customer CRUD and validation |
 | 3 · Sales SaaS | [M6 — Orders & approvals](../milestones/M06-01-orders-and-approvals.md) | Order lifecycle, discount rule, manager approvals, audit and seed data |
-| 3 · Sales SaaS | M7 — Dashboard | Accurate sales metrics, ranking, date filtering and charts |
+| 3 · Sales SaaS | [M7 — Dashboard](../milestones/M07-01-dashboard.md) | Accurate sales metrics, ranking, date filtering and charts |
 | 3 · Sales SaaS | M8 — GraphQL order details | Order detail screen backed by a tenant-scoped GraphQL query that combines order, customer, line item, product and approval data |
 | 4 · Applied AI | M9 — Analytics copilot | Natural-language questions via authorised metric tools |
 | 4 · Applied AI | M10 — Document ingestion | Tenant-scoped policy upload, chunking, embeddings and vector search |
