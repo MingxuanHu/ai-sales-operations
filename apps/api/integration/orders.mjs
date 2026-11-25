@@ -108,12 +108,23 @@ export async function checkOrders(app) {
   assert.deepEqual(queue.map(({ id }) => id), [pending.id])
 
   const database = app.get(PrismaService).client
-  // Set the policy directly because the feature currently reads settings from PostgreSQL.
+  // Seed an unrelated setting and later inject malformed legacy data.
   const setThreshold = (organisationId, value) => database.organisation.update({
     where: { id: organisationId },
     data: { settings: { orderApprovalThresholdBasisPoints: value, otherSetting: true } },
   })
-  await setThreshold(alpha, 1_001)
+  const settingsPath = a + '/settings'
+  const policy = { orderApprovalThresholdBasisPoints: 1_001 }
+  assert.deepEqual(await request('GET', settingsPath, 'alice', 200), { orderApprovalThresholdBasisPoints: 1_000 })
+  await setThreshold(alpha, 1_000)
+  await request('GET', settingsPath, 'bob', 403)
+  await request('PATCH', settingsPath, 'charlie', 403, policy)
+  await request('PATCH', b + '/settings', 'alice', 404, policy)
+  await request('PATCH', settingsPath, 'alice', 400, { orderApprovalThresholdBasisPoints: 10_001 })
+  await request('PATCH', settingsPath, 'alice', 400, { orderApprovalThresholdBasisPoints: 1.5 })
+  assert.deepEqual(await request('PATCH', settingsPath, 'alice', 200, policy), policy)
+  assert.deepEqual(await request('GET', settingsPath, 'alice', 200), policy)
+  assert.deepEqual((await database.organisation.findUnique({ where: { id: alpha } })).settings, { ...policy, otherSetting: true })
   const customInput = { ...input, requestId: randomUUID(), discountPercent: '10.01' }
   const custom = await request('POST', orders, 'bob', 201, customInput)
   assert.equal(custom.status, 'approved')
@@ -127,7 +138,7 @@ export async function checkOrders(app) {
   const newRequest = { ...customInput, requestId: randomUUID() }
   await request('POST', orders, 'bob', 500, newRequest)
   assert.deepEqual(await request('POST', orders, 'bob', 201, customInput), custom)
-  await setThreshold(alpha, 0)
+  await request('PATCH', settingsPath, 'alice', 200, { orderApprovalThresholdBasisPoints: 0 })
   const zeroThreshold = await request('POST', orders, 'bob', 201, newRequest)
   assert.equal(zeroThreshold.status, 'pending')
   assert.equal(zeroThreshold.approvalThresholdPercent, '0.00')

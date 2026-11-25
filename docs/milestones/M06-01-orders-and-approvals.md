@@ -42,7 +42,9 @@ The authenticated API uses `/api/organisations/:organisationId/orders`.
 
 PostgreSQL stores organisation settings in the `organisations.settings` JSONB column.
 The optional `orderApprovalThresholdBasisPoints` key accepts integers from 0 through 10000,
-where 1000 represents 10%. An absent key uses 10%. Order responses include
+where 1000 represents 10%. An absent key uses 10%. Administrators can update the
+threshold in Settings through `PATCH /api/organisations/:organisationId/settings`.
+Changes apply to new orders and preserve the threshold stored on existing orders. Order responses include
 `approvalThresholdPercent` as a two-place decimal string, like the money and discount fields. A system approval
 has a null actor, and the submission event records the submitting user.
 
@@ -90,7 +92,7 @@ order is visible to the authorised actor but its status no longer allows the com
 [Issue #59](https://github.com/MingxuanHu/ai-sales-operations/issues/59)
 
 - **Goal.** Give each newly registered user one ready-to-use demo organisation. Let any signed-in user create additional demo organisations from the app.
-- **In scope.** Add a **Create demo organisation** button to the organisation selection flow. Each deliberate click creates a separate organisation, grants the requesting user its initial administrator membership, and populates it with a shared synthetic dataset. Use a distinguishable organisation name for each demo. Include customers, products, multi-line orders across all lifecycle states, approval decisions and order history. Preserve known fulfilled totals across reporting periods, products and customers for M7 filters, rankings and charts. Attribute fixture-generated audit events to the system and preserve normal role checks for live order actions. Administrators can permanently delete demo organisations from Overview after typing the exact organisation name.
+- **In scope.** Add a **Create demo organisation** button to the organisation selection flow. Each deliberate click creates a separate organisation, grants the requesting user its initial administrator membership, and populates it with a shared synthetic dataset. Use a distinguishable organisation name for each demo. Include customers, products, multi-line orders across all lifecycle states, approval decisions and order history. Preserve known fulfilled totals across reporting periods, products and customers for M7 filters, rankings and charts. Attribute fixture-generated audit events to the system and preserve normal role checks for live order actions. Administrators can permanently delete demo organisations from Settings after typing the exact organisation name.
 - **Out of scope.** Backfilling demo organisations for existing users, adding fixtures to existing organisations, synthetic sign-in accounts, changes to staff invitations or role assignment flows, dashboard implementation, and seeding during releases.
 - **Acceptance.**
   - A newly registered user gets exactly one demo organisation automatically. Repeated registration completion requests and later sign-ins do not create additional demos.

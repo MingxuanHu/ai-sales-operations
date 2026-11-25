@@ -10,6 +10,7 @@ import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { CreateOrganisationPage } from './CreateOrganisationPage'
 import { InvitationsPage } from './InvitationsPage'
 import { OrganisationAccess } from './OrganisationAccess'
+import { OrganisationSettingsPage } from './OrganisationSettingsPage'
 import { OrganisationOverviewPage } from './OrganisationOverviewPage'
 import { organisationPath } from './workspacePaths'
 import styles from './OrganisationWorkspace.module.css'
@@ -80,10 +81,19 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           <Route path="/invitations" element={<InvitationsPage api={api} userId={userId} onJoined={onJoined} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <OrganisationOverviewPage membership={membership} api={api} onDeleted={() => {
-                reloadProfile()
-                void navigate('/', { replace: true })
-              }} />}
+              {(membership) => <OrganisationOverviewPage membership={membership} />}
+            </OrganisationAccess>
+          } />
+          <Route path="/organisations/:organisationId/settings" element={
+            <OrganisationAccess api={api} onDenied={reloadProfile}>
+              {(membership) => membership.role === 'admin' ? (
+                <OrganisationSettingsPage membership={membership} api={api} onDeleted={() => {
+                  reloadProfile()
+                  void navigate('/', { replace: true })
+                }} />
+              ) : <Alert role="alert" color="red" title="Access denied">
+                Only organisation administrators can manage settings.
+              </Alert>}
             </OrganisationAccess>
           } />
           <Route path="/organisations/:organisationId/invitations" element={

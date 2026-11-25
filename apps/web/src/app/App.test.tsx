@@ -185,6 +185,7 @@ describe('protected React shell', () => {
     let deleted = false
     const fetch = vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: deleted ? [regular] : [demo, regular] })
+      if (url === '/api/organisations/demo/settings') return Response.json({ orderApprovalThresholdBasisPoints: 1000 })
       if (url === '/api/organisations/first') return Response.json(regular)
       if (url === '/api/organisations/demo' && options.method === 'DELETE') {
         expect(JSON.parse(String(options.body))).toEqual({ confirmationName: demo.name })
@@ -196,6 +197,9 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession('/organisations/demo')} />)
+    await screen.findByRole('heading', { name: demo.name })
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Delete demo organisation' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete demo organisation' })
     const confirm = within(dialog).getByRole('button', { name: 'Delete permanently' })
@@ -208,6 +212,33 @@ describe('protected React shell', () => {
     expect(await screen.findByRole('heading', { name: regular.name })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', regular.name)
+  })
+
+  it('loads and saves the organisation threshold from Settings', async () => {
+    const admin = { ...first, role: 'admin', isDemo: false }
+    const save = vi.fn()
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
+      if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === '/api/organisations/first/settings') {
+        if (options.method === 'PATCH') {
+          const body = JSON.parse(String(options.body))
+          save(body)
+          return Response.json(body)
+        }
+        return Response.json({ orderApprovalThresholdBasisPoints: 1000 })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
+    const input = await screen.findByRole('textbox', { name: 'Discount approval threshold (%)' })
+    expect(input).toHaveProperty('value', '10.00')
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
+    fireEvent.change(input, { target: { value: '12.35' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save threshold' }))
+    await screen.findByText('Threshold saved.')
+    expect(save).toHaveBeenCalledWith({ orderApprovalThresholdBasisPoints: 1235 })
   })
 
   it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {

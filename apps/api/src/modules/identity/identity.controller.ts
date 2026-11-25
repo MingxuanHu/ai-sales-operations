@@ -74,6 +74,25 @@ export class IdentityController {
     return this.identity.overview(organisationId, request.userId)
   }
 
+  @Get('organisations/:organisationId/settings')
+  getOrganisationSettings(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+  ) {
+    return this.identity.organisationSettings(organisationId, request.userId)
+  }
+
+  @Patch('organisations/:organisationId/settings')
+  updateOrganisationSettings(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+    @Body() body: unknown,
+  ) {
+    const { orderApprovalThresholdBasisPoints: threshold } = payload(body)
+    if (typeof threshold !== 'number' || !Number.isInteger(threshold) || threshold < 0 || threshold > 10_000) {
+      throw new BadRequestException('Use a threshold from 0% to 100% with up to two decimal places.')
+    }
+    return this.identity.updateApprovalThreshold(organisationId, request.userId, threshold)
+  }
+
   @Delete('organisations/:organisationId')
   @HttpCode(204)
   deleteDemo(

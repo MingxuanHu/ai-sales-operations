@@ -1,7 +1,7 @@
 import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership } from '../api/organisations'
-import { customersPath, invitationsPath, organisationPath, ordersPath, productsPath } from '../routes/workspacePaths'
+import { customersPath, invitationsPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
 const roleLabels = { admin: 'Administrator', manager: 'Manager', salesperson: 'Salesperson' }
@@ -13,9 +13,10 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
   const productsRoute = useMatch('/organisations/:organisationId/products')
   const customersRoute = useMatch('/organisations/:organisationId/customers')
   const ordersRoute = useMatch('/organisations/:organisationId/orders')
+  const settingsRoute = useMatch('/organisations/:organisationId/settings')
   const overviewRoute = useMatch('/organisations/:organisationId')
   const inboxRoute = useMatch('/invitations')
-  const selectedId = (invitationRoute ?? productsRoute ?? customersRoute ?? ordersRoute ?? overviewRoute)?.params.organisationId
+  const selectedId = (invitationRoute ?? productsRoute ?? customersRoute ?? ordersRoute ?? settingsRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
   const options = new Map(memberships.map(({ organisationId, name, role }) => {
     // Match the generated demo name to its own ID so custom names keep their original labels.
@@ -66,6 +67,7 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               const next = memberships.find(({ organisationId }) => organisationId === id)
               if (productsRoute && next?.role === 'admin') void navigate(productsPath(id))
               else if (customersRoute && next?.role === 'admin') void navigate(customersPath(id))
+              else if (settingsRoute && next?.role === 'admin') void navigate(settingsPath(id))
               else if (ordersRoute && next) void navigate(ordersPath(id))
               else void navigate(isInvitations ? invitationsPath(id) : organisationPath(id))
             }}
@@ -90,6 +92,11 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
             <NavLink label="Orders" renderRoot={(props) => (
               <RouterNavLink {...props} to={ordersPath(selected.organisationId)} end />
             )} />
+            {selected.role === 'admin' && (
+              <NavLink label="Settings" renderRoot={(props) => (
+                <RouterNavLink {...props} to={settingsPath(selected.organisationId)} end />
+              )} />
+            )}
           </nav>
         )}
         <nav aria-label="Workspace" className={styles.navigation}>

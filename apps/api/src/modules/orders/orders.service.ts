@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { OrderStatus, Prisma, type SalesOrder } from '../../generated/prisma/client'
+import { approvalThreshold } from '../identity/organisation-settings'
 import { IdentityService } from '../identity/identity.service'
 import { orderInput } from './order-input'
 import { money, orderAmounts } from './order-money'
@@ -33,18 +34,6 @@ function detail(order: Prisma.SalesOrderGetPayload<{ include: typeof details }>)
       kind, actorUserId, fromStatus, toStatus, createdAt,
     })),
   }
-}
-
-function approvalThreshold(settings: Prisma.JsonValue) {
-  // Settings values are JSON, so narrow the value before using it in the approval rule.
-  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
-    const threshold = settings.orderApprovalThresholdBasisPoints
-    if (threshold === undefined) return 1_000 // 1,000 hundredths of a percent is 10%.
-    if (typeof threshold === 'number' && Number.isInteger(threshold) && threshold >= 0 && threshold <= 10_000) {
-      return threshold
-    }
-  }
-  throw new InternalServerErrorException('Invalid organisation order approval settings.')
 }
 
 @Injectable()

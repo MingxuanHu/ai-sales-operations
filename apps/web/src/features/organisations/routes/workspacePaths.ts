@@ -18,3 +18,7 @@ export function customersPath(id: string) {
 export function ordersPath(id: string) {
   return organisationPath(id) + '/orders'
 }
+
+export function settingsPath(id: string) {
+  return organisationPath(id) + '/settings'
+}

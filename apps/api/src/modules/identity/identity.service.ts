@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service'
 import { Prisma } from '../../generated/prisma/client'
 import { MembershipRole } from '../../generated/prisma/enums'
 import { isDemoOrganisation, provisionDemo } from './demo-organisation'
+import { approvalThreshold } from './organisation-settings'
 
 @Injectable()
 export class IdentityService {
@@ -113,6 +114,28 @@ export class IdentityService {
     if (!membership) throw new NotFoundException()
     const { name, settings } = membership.organisation
     return { organisationId: membership.organisationId, name, role: membership.role, isDemo: isDemoOrganisation(settings) }
+  }
+
+  organisationSettings(organisationId: string, userId: string) {
+    return this.database.client.$transaction(async (tx) => {
+      await this.requireRole(tx, organisationId, userId, 'admin')
+      const { settings } = await tx.organisation.findUniqueOrThrow({ where: { id: organisationId } })
+      return { orderApprovalThresholdBasisPoints: approvalThreshold(settings) }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
+  }
+
+  updateApprovalThreshold(organisationId: string, userId: string, orderApprovalThresholdBasisPoints: number) {
+    return this.database.client.$transaction(async (tx) => {
+      // Share the tenant lock with order submission so each new order uses a consistent policy.
+      await this.lockOrganisation(tx, organisationId)
+      await this.requireRole(tx, organisationId, userId, 'admin')
+      const where = { id: organisationId }
+      const { settings } = await tx.organisation.findUniqueOrThrow({ where })
+      // Copy the JSON object before changing one key so the demo flag and other settings survive.
+      const existing = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {}
+      await tx.organisation.update({ where, data: { settings: { ...existing, orderApprovalThresholdBasisPoints } } })
+      return { orderApprovalThresholdBasisPoints }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
   }
 
   deleteDemo(organisationId: string, userId: string, confirmationName: string) {
