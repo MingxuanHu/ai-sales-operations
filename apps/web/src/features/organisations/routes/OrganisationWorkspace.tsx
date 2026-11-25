@@ -42,14 +42,15 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
     void navigate(organisationPath(id))
   }
 
-  function addDemo(membership: Membership) {
-    // Update the picker in place so the current route and its form state stay intact.
+  function openDemo(membership: Membership) {
+    // Add the demo before navigating so the route and picker resolve to the same organisation.
     setProfile((current) => {
       if (current.status !== 'ready' || current.data.memberships.some((item) => item.organisationId === membership.organisationId)) {
         return current
       }
       return { status: 'ready', data: { ...current.data, memberships: [...current.data.memberships, membership] } }
     })
+    void navigate(organisationPath(membership.organisationId))
   }
 
   if (profile.status === 'loading') return <Loading>Loading your organisations…</Loading>
@@ -62,7 +63,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   const { memberships, userId } = profile.data
   return (
     <div className={styles.workspace}>
-      <WorkspaceNavigation memberships={memberships} api={api} onDemoCreated={addDemo} />
+      <WorkspaceNavigation memberships={memberships} api={api} onDemoCreated={openDemo} />
       <div className={styles.content}>
         <Routes>
           <Route index element={memberships.length === 1 ? (

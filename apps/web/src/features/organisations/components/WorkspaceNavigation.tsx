@@ -1,4 +1,4 @@
-import { Alert, Button, NavLink, Paper, Select, Stack } from '@mantine/core'
+import { Button, Modal, NavLink, Paper, Select, Stack, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership, OrganisationsApi } from '../api/organisations'
@@ -24,7 +24,7 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
 
   const requestId = useRef<string | undefined>(undefined)
   const pending = useRef<AbortController | null>(null)
-  const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
   useEffect(() => () => pending.current?.abort(), [])
 
   async function createDemo() {
@@ -39,7 +39,7 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
       if (request.signal.aborted) return
       requestId.current = undefined
       onDemoCreated(membership)
-      setState('success')
+      setState('idle')
     } catch {
       if (!request.signal.aborted) setState('error')
     } finally {
@@ -107,8 +107,9 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
         >
           Create demo organisation
         </Button>
-        {state === 'success' && <Alert role="status">Demo ready. Choose it from the organisation picker.</Alert>}
-        {state === 'error' && <Alert role="alert" color="red">Could not create the demo. Try again.</Alert>}
+        <Modal opened={state === 'error'} onClose={() => setState('idle')} title="Could not create the demo">
+          <Text>Try again.</Text>
+        </Modal>
       </Stack>
     </Paper>
   )

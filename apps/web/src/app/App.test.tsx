@@ -105,7 +105,7 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
-  it('retries demo creation and adds two demos without navigating away from the current organisation', async () => {
+  it('retries demo creation and selects each newly created demo', async () => {
     const demos = [
       { organisationId: 'demo-1', name: 'Fern & Finch Demo 1', role: 'admin' },
       { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
@@ -114,6 +114,7 @@ describe('protected React shell', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
       if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/demo-1') return Response.json(demos[0])
       if (url === '/api/organisations/demo-2') return Response.json(demos[1])
       if (url === '/api/organisations/demo') {
         requests.push(JSON.parse(String(options.body)).requestId)
@@ -126,20 +127,19 @@ describe('protected React shell', () => {
     await screen.findByRole('heading', { name: first.name })
     const create = screen.getByRole('button', { name: 'Create demo organisation' })
     fireEvent.click(create)
-    await screen.findByText('Could not create the demo. Try again.')
+    await screen.findByRole('dialog', { name: 'Could not create the demo' })
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     fireEvent.click(create)
-    await screen.findByText(/Demo ready/)
+    await screen.findByRole('heading', { name: demos[0].name })
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[0].name)
     fireEvent.click(create)
-    await screen.findByText(/Demo ready/)
+    await screen.findByRole('heading', { name: demos[1].name })
     expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
     expect(requests[2]).not.toBe(requests[0])
-    expect(window.location.pathname).toBe('/organisations/first')
-
-    const picker = screen.getByRole('combobox', { name: 'Organisation' })
-    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
-    expect(await screen.findByText(demos[0].name)).toBeTruthy()
-    fireEvent.click(screen.getByText(demos[1].name))
-    expect(await screen.findByRole('heading', { name: demos[1].name })).toBeTruthy()
+    expect(window.location.pathname).toBe('/organisations/demo-2')
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[1].name)
+    expect(screen.queryByText(/Demo ready/)).toBeNull()
   })
 
   it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {
