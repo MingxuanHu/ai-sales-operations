@@ -16,6 +16,7 @@ import { AppModule } from '../dist/app.module.js'
 import { AccessTokenVerifier } from '../dist/modules/identity/access-token.verifier.js'
 import { checkIdentity } from './identity.mjs'
 import { checkCustomers } from './customers.mjs'
+import { checkOrders } from './orders.mjs'
 import { checkProducts } from './products.mjs'
 import { PrismaService } from '../dist/database/prisma.service.js'
 
@@ -139,6 +140,8 @@ test('API identity and health use the isolated PostgreSQL instance', async (cont
   await context.test('Identity and onboarding enforce tenant boundaries', () => checkIdentity(app))
   await context.test('Product CRUD validates input and enforces tenant roles', () => checkProducts(app))
   await context.test('Customer CRUD validates input and enforces tenant roles', () => checkCustomers(app))
+
+  await context.test('Orders enforce tenant scope and preserve submission history', () => checkOrders(app))
 
   await compose('stop', 'salesOpDb')
   const unavailable = await fetch(healthUrl)

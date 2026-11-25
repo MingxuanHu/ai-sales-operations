@@ -4,14 +4,14 @@
 
 ## Scope and acceptance
 
-- **In scope.** Tenant-scoped order entry and history, a 10% order discount threshold, manager decisions, fulfilment, a transactional order audit trail and a repeatable, full synthetic organisation for the M7 demo.
+- **In scope.** Tenant-scoped order entry and history, an organisation-level order discount threshold that defaults to 10%, manager decisions, fulfilment, a transactional order audit trail and a repeatable, full synthetic organisation for the M7 demo.
 - **Out of scope.** Saved drafts, edits after submission, cancellation, returns, tax, shipping, inventory, payments, notifications, dashboards and the GraphQL order detail query.
 - **Acceptance evidence.** Using synthetic staff accounts in the browser, submit orders at 10% and above 10%. Fulfil the first, approve and fulfil one pending order, and reject another. Verify each history, verify that pending and rejected orders cannot be fulfilled, and exercise an organisation switch. API integration tests demonstrate tenant isolation, role enforcement, money calculations, retry handling and competing transitions.
 
 ### Proposed business rules
 
 - An active salesperson submits an order for one customer with at least one line item, positive whole quantities and a single order-wide discount from 0% to 100% with up to two decimal places. The server resolves customer and product IDs within the organisation, snapshots the customer name and product SKU, name and unit price, and calculates the subtotal and discounted total using exact arithmetic. Apply the discount to the subtotal and round the final total to cents, with half cents rounded up. Preserve order history through later catalogue changes and deletions.
-- Submission at or below 10% creates an approved order. Submission above 10% creates a pending order. An active manager can approve or reject a pending order. The submitting salesperson can fulfil their own approved order. Fulfilled and rejected orders are terminal.
+- Submission at or below the organisation’s threshold creates an approved order. Submission above it creates a pending order. Each order records the threshold used at submission. An active manager can approve or reject a pending order. The submitting salesperson can fulfil their own approved order. Fulfilled and rejected orders are terminal.
 - Salespeople can read their own orders and use limited customer and product selectors for entry. Managers can read all orders in their organisation and filter for pending decisions. Administrators retain their existing master-data permissions. Apply current membership and tenant checks on the server, including when resolving referenced records.
 - Record submission, automatic or manual approval, rejection and fulfilment with the applicable actor, timestamp and state change. Write history and state together. A repeated submission with the same request key and payload returns the original order. Competing decisions or fulfilment attempts must produce at most one transition and audit event for that step.
 - For M7, count fulfilled orders only. Attribute sales to the fulfilment timestamp. Net sales sum stored discounted totals, and product net sales allocate each order's discount across its lines so allocated cents reconcile to the stored order total. M7 owns reporting and the allocation implementation.
@@ -22,14 +22,29 @@
 
 ### 1. Add tenant-scoped order submission and read APIs
 
-[Issue #56](https://github.com/MingxuanHu/ai-sales-operations/issues/56)
+[Issue #56](https://github.com/MingxuanHu/ai-sales-operations/issues/56) · [PR #63](https://github.com/MingxuanHu/ai-sales-operations/pull/63)
 
 - **Goal.** Persist valid orders and the submission decision using organisation master data.
 - **In scope.** Add the Prisma migration, order and line snapshots, audit storage, limited selectors, scoped list and detail reads, and idempotent submission. Apply the discount rule at submission.
 - **Out of scope.** Manual decisions, fulfilment and React screens.
-- **Acceptance.** Orders at 10% are approved and orders at 10.01% are pending. Invalid quantities and discounts fail with actionable errors. Foreign IDs cannot be read or used to submit. Price edits and master-data deletions preserve prior order details. Identical concurrent submissions converge on one order and one history, and reuse of a key for different input returns a conflict.
+- **Acceptance.** With default settings, orders at 10% are approved and orders at 10.01% are pending. A configured threshold applies to new orders for that organisation. Invalid quantities and discounts fail with actionable errors. Foreign IDs cannot be read or used to submit. Price edits and master-data deletions preserve prior order details. Identical concurrent submissions converge on one order and one history, and reuse of a key for different input returns a conflict.
 - **Dependencies.** [M5 master data](M05-01-master-data.md) and the [identity and tenant authorisation rules](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Cover role and tenant scope, rounding and threshold boundaries, historical snapshots and concurrent retries in automated tests.
+
+The authenticated API uses `/api/organisations/:organisationId/orders`.
+
+| Method and path relative to that base | Behaviour |
+| --- | --- |
+| `POST` | A salesperson submits `{ requestId, customerId, discountPercent, lines: [{ productId, quantity }] }`. Use a new UUID for each order and reuse it for retries. The discount is a decimal string, and quantities are JSON integers. Returns the order detail with HTTP 201, including on a matching retry. A changed order with the same request ID returns HTTP 409. |
+| `GET` | Salespeople list their own orders. Managers list organisation orders and can use `?status=pending` for the approval queue. |
+| `GET /:id` | Returns a scoped order with customer and line snapshots and ordered audit history. |
+| `GET /selectors` | Returns customer IDs and names and product IDs, SKUs, names and prices for salesperson entry. |
+
+PostgreSQL stores organisation settings in the `organisations.settings` JSONB column.
+The optional `orderApprovalThresholdBasisPoints` key accepts integers from 0 through 10000,
+where 1000 represents 10%. An absent key uses 10%. Order responses include
+`approvalThresholdPercent` as a two-place decimal string, like the money and discount fields. A system approval
+has a null actor, and the submission event records the submitting user.
 
 ### 2. Add manager decisions and fulfilment APIs
 
