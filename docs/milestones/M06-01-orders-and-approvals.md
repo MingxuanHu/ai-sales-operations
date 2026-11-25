@@ -48,7 +48,7 @@ has a null actor, and the submission event records the submitting user.
 
 ### 2. Add manager decisions and fulfilment APIs
 
-[Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57)
+[Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57) · [PR #64](https://github.com/MingxuanHu/ai-sales-operations/pull/64)
 
 - **Goal.** Enforce manual approval, rejection and fulfilment with a complete history.
 - **In scope.** Add decision and fulfilment commands using the existing organisation transaction policy. Expose the recorded history through the scoped order detail API.
@@ -56,6 +56,23 @@ has a null actor, and the submission event records the submitting user.
 - **Acceptance.** Only managers decide pending orders. Only the submitting salesperson fulfils an approved order. Stale or conflicting transitions return a conflict and leave history unchanged. Concurrent actions yield one recorded transition, and a failed audit write rolls back the state change.
 - **Dependencies.** Issue 1 and the [identity mutation policy](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Exercise the transition matrix, removed memberships, cross-tenant access, rollback and concurrency in API integration tests.
+
+The local Orders API base URL is
+`http://localhost:3000/api/organisations/:organisationId/orders`.
+Replace `:organisationId` with the organisation UUID and `:id` with the order UUID.
+Append the query or path from the table to that base URL. Each POST command takes
+no request body and returns HTTP 200 with the updated order detail and ordered history.
+
+| Method and relative URL | Access and behaviour |
+| --- | --- |
+| `GET ?status=pending` | An active manager lists the organisation's pending orders |
+| `POST /:id/approve` | Pending order, active manager |
+| `POST /:id/reject` | Pending order, active manager |
+| `POST /:id/fulfil` | Approved order, active salesperson who submitted it |
+
+Commands return HTTP 403 for an active member with the wrong role, HTTP 404
+when membership or the scoped order is unavailable, and HTTP 409 when the
+order is visible to the authorised actor but its status no longer allows the command.
 
 ### 3. Build the order entry and approval workflows in React
 

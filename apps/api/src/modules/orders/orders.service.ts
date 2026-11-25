@@ -99,6 +99,45 @@ export class OrdersService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
   }
 
+  // The union type limits callers to states that have a lifecycle command.
+  transition(organisationId: string, userId: string, id: string, status: 'approved' | 'rejected' | 'fulfilled') {
+    return this.database.client.$transaction(async (tx) => {
+      // Lock before reading membership and state so competing writes see the latest committed values.
+      await this.identity.lockOrganisation(tx, organisationId)
+      const fulfilling = status === 'fulfilled'
+      await this.identity.requireRole(tx, organisationId, userId, fulfilling ? 'salesperson' : 'manager')
+      const where = { id, organisationId, ...(fulfilling && { submittedByUserId: userId }) }
+      const current = await tx.salesOrder.findUnique({
+        where,
+        select: { status: true, history: { select: { position: true }, orderBy: { position: 'desc' }, take: 1 } },
+      })
+      if (!current) throw new NotFoundException('Order not found.')
+      const fromStatus = fulfilling ? 'approved' : 'pending'
+      if (current.status !== fromStatus) {
+        throw new ConflictException(`Order must be ${fromStatus} for this action.`)
+      }
+
+      // Prisma's nested write appends history with the state update, so an audit failure rolls back both.
+      const order = await tx.salesOrder.update({
+        where,
+        data: {
+          status,
+          history: {
+            create: {
+              position: (current.history[0]?.position ?? -1) + 1,
+              kind: status,
+              actorUserId: userId,
+              fromStatus,
+              toStatus: status,
+            },
+          },
+        },
+        include: details,
+      })
+      return detail(order)
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
+  }
+
   submit(organisationId: string, userId: string, body: unknown) {
     return this.database.client.$transaction(async (tx) => {
       // The shared tenant lock serializes retries, membership changes and master-data writes.

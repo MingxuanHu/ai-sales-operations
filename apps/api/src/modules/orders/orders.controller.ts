@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common'
 import { AccessTokenGuard, type AuthenticatedRequest } from '../identity/access-token.guard'
 import { OrdersService } from './orders.service'
 
@@ -35,5 +35,33 @@ export class OrdersController {
     @Body() body: unknown,
   ) {
     return this.orders.submit(organisationId, request.userId, body)
+  }
+
+  // @HttpCode overrides Nest's default POST response because these commands update an existing order.
+  @Post(':id/approve')
+  @HttpCode(200)
+  approve(
+    @Param('organisationId', ParseUUIDPipe) organisationId: string, @Req() request: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.orders.transition(organisationId, request.userId, id, 'approved')
+  }
+
+  @Post(':id/reject')
+  @HttpCode(200)
+  reject(
+    @Param('organisationId', ParseUUIDPipe) organisationId: string, @Req() request: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.orders.transition(organisationId, request.userId, id, 'rejected')
+  }
+
+  @Post(':id/fulfil')
+  @HttpCode(200)
+  fulfil(
+    @Param('organisationId', ParseUUIDPipe) organisationId: string, @Req() request: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.orders.transition(organisationId, request.userId, id, 'fulfilled')
   }
 }

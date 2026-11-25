@@ -8,7 +8,8 @@ export async function checkOrders(app) {
     const headers = { 'content-type': 'application/json' }
     if (token) headers.authorization = 'Bearer ' + token
     const response = await fetch(api + path, { method, headers, body: JSON.stringify(body) })
-    assert.equal(response.status, expected, method + ' ' + path)
+    if (Array.isArray(expected)) assert.ok(expected.includes(response.status), method + ' ' + path)
+    else assert.equal(response.status, expected, method + ' ' + path)
     assert.equal(response.headers.get('cache-control'), 'no-store')
     if (expected !== 204) return response.json()
   }
@@ -89,6 +90,7 @@ export async function checkOrders(app) {
   assert.deepEqual(multi.lines.map(({ productId }) => productId), [second.id, product.id])
 
   await request('GET', orders + '/' + approved.id, 'charlie', 404)
+  await request('POST', orders + '/' + approved.id + '/fulfil', 'charlie', 404)
   assert.deepEqual(await request('GET', orders, 'charlie', 200), { orders: [] })
   await request('GET', b + '/orders/' + approved.id, 'charlie', 404)
   await request('GET', orders + '?status=unknown', 'bob', 400)
@@ -132,7 +134,76 @@ export async function checkOrders(app) {
   await request('DELETE', a + '/products/' + product.id, 'alice', 204)
   await request('DELETE', a + '/customers/' + customer.id, 'alice', 204)
   assert.deepEqual(await request('POST', orders, 'bob', 201, input), approved)
+
+  // Reuse the order detail route to check that denied and stale commands preserve history.
+  const command = (order, action, token, expected, base = orders) => (
+    request('POST', base + '/' + order.id + '/' + action, token, expected)
+  )
+  await command(pending, 'approve', undefined, 401)
+  await command(pending, 'approve', 'bob', 403)
+  await command(pending, 'reject', 'alice', 403)
+  await command(pending, 'approve', 'charlie', 404, b + '/orders')
+  await command(pending, 'fulfil', 'bob', 409)
+  await command(approved, 'fulfil', 'charlie', 403)
+  await command(approved, 'approve', 'charlie', 409)
+  await command(approved, 'reject', 'charlie', 409)
+  assert.deepEqual(await request('GET', orders + '/' + pending.id, 'bob', 200), pending)
+  assert.deepEqual(await request('GET', orders + '/' + approved.id, 'bob', 200), approved)
+
+  // A temporary database constraint forces the real audit insert to fail.
+  await database.$executeRaw`ALTER TABLE order_events ADD CONSTRAINT test_audit_failure CHECK (kind <> 'approved') NOT VALID`
+  try {
+    await command(pending, 'approve', 'charlie', 500)
+    assert.deepEqual(await request('GET', orders + '/' + pending.id, 'bob', 200), pending)
+  } finally {
+    await database.$executeRaw`ALTER TABLE order_events DROP CONSTRAINT test_audit_failure`
+  }
+
+  function assertTransition(before, after, kind, actorUserId) {
+    assert.equal(after.status, kind)
+    assert.deepEqual(after.history.slice(0, -1), before.history)
+    const { createdAt, ...event } = after.history.at(-1)
+    assert.ok(Number.isFinite(Date.parse(createdAt)))
+    assert.deepEqual(event, { kind, actorUserId, fromStatus: before.status, toStatus: kind })
+  }
+
+  const decisions = await Promise.all([
+    command(pending, 'approve', 'charlie', [200, 409]),
+    command(pending, 'reject', 'charlie', [200, 409]),
+  ])
+  assert.equal(decisions.filter(({ statusCode }) => statusCode === 409).length, 1)
+  const decided = decisions.find(({ id }) => id === pending.id)
+  assert.ok(decided.status === 'approved' || decided.status === 'rejected')
+  assertTransition(pending, decided, decided.status, charlie)
+  await command(pending, 'approve', 'charlie', 409)
+  await command(pending, 'reject', 'charlie', 409)
+  assert.deepEqual(await request('GET', orders + '/' + pending.id, 'bob', 200), decided)
+
+  const rejected = await command(aboveCustom, 'reject', 'charlie', 200)
+  assertTransition(aboveCustom, rejected, 'rejected', charlie)
+  await command(rejected, 'fulfil', 'bob', 409)
+  assert.deepEqual(await request('GET', orders + '/' + rejected.id, 'bob', 200), rejected)
+
+  const manuallyApproved = await command(zeroThreshold, 'approve', 'charlie', 200)
+  assertTransition(zeroThreshold, manuallyApproved, 'approved', charlie)
+  const fulfilled = await command(manuallyApproved, 'fulfil', 'bob', 200)
+  assertTransition(manuallyApproved, fulfilled, 'fulfilled', bob)
+
+  const fulfilments = await Promise.all([
+    command(approved, 'fulfil', 'bob', [200, 409]),
+    command(approved, 'fulfil', 'bob', [200, 409]),
+  ])
+  assert.equal(fulfilments.filter(({ statusCode }) => statusCode === 409).length, 1)
+  const automaticallyFulfilled = fulfilments.find(({ id }) => id === approved.id)
+  assertTransition(approved, automaticallyFulfilled, 'fulfilled', bob)
+  await command(approved, 'approve', 'charlie', 409)
+  await command(approved, 'reject', 'charlie', 409)
+  assert.deepEqual(await request('GET', orders + '/' + approved.id, 'charlie', 200), automaticallyFulfilled)
+
+  await request('DELETE', a + '/memberships/' + charlie, 'alice', 204)
+  await command(pending, 'approve', 'charlie', 404)
   await request('DELETE', a + '/memberships/' + bob, 'alice', 204)
+  await command(custom, 'fulfil', 'bob', 404)
   await request('POST', orders, 'bob', 404, input)
   await request('GET', orders + '/' + approved.id, 'bob', 404)
 }
