@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, Checkbox, Group, Paper, Stack, Table, Text, Title } from '@mantine/core'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../api/orders'
@@ -16,6 +16,14 @@ export function OrdersPage({ api, organisationId, role, userId }: {
   const [orders, setOrders] = useState<LoadResult<OrderSummary[]>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ id: string; submitted?: Order }>()
+
+  const detailTrigger = useRef<HTMLButtonElement | null>(null)
+  // Restore keyboard focus to the row button after the dialog is removed.
+  useLayoutEffect(() => {
+    if (selection) return
+    detailTrigger.current?.focus({ preventScroll: true })
+    detailTrigger.current = null
+  }, [selection])
 
   // The organisation route remounts this page on tenant switch, and cleanup cancels the list request.
   useEffect(() => {
@@ -36,14 +44,6 @@ export function OrdersPage({ api, organisationId, role, userId }: {
   return (
     <Stack>
       <Title order={1} size="h2">Orders</Title>
-      {role === 'salesperson' && <OrderEntry api={api} organisationId={organisationId} onSubmitted={(order) => {
-        setSelection({ id: order.id, submitted: order })
-        refreshList()
-      }} />}
-      {/* The key resets detail state and cancels its requests when the selected order changes. */}
-      {selection && <OrderDetail key={selection.id} api={api} organisationId={organisationId} id={selection.id}
-        submitted={selection.submitted} role={role} userId={userId} onChanged={refreshList}
-        onClose={() => setSelection(undefined)} />}
       <Paper withBorder p="lg">
         <Stack>
           <Group justify="space-between">
@@ -72,8 +72,11 @@ export function OrdersPage({ api, organisationId, role, userId }: {
                       <Table.Td>{new Date(order.createdAt).toLocaleString()}</Table.Td>
                       <Table.Td><Badge variant="light">{statusLabels[order.status]}</Badge></Table.Td>
                       <Table.Td>{order.total}</Table.Td>
-                      <Table.Td><Button size="xs" variant="subtle" aria-expanded={selection?.id === order.id}
-                        onClick={() => setSelection((current) => current?.id === order.id ? current : { id: order.id })}>View order</Button></Table.Td>
+                      <Table.Td><Button size="xs" variant="subtle" aria-haspopup="dialog"
+                        onClick={(event) => {
+                          detailTrigger.current = event.currentTarget
+                          setSelection({ id: order.id })
+                        }}>View order</Button></Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -81,6 +84,14 @@ export function OrdersPage({ api, organisationId, role, userId }: {
             </Table.ScrollContainer>)}
         </Stack>
       </Paper>
+      {role === 'salesperson' && <OrderEntry api={api} organisationId={organisationId} onSubmitted={(order) => {
+        setSelection({ id: order.id, submitted: order })
+        refreshList()
+      }} />}
+      {/* The modal stays outside the table layout. Its key resets detail state when another order opens. */}
+      {selection && <OrderDetail key={selection.id} api={api} organisationId={organisationId} id={selection.id}
+        submitted={selection.submitted} role={role} userId={userId} onChanged={refreshList}
+        onClose={() => setSelection(undefined)} />}
     </Stack>
   )
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CognitoCallbackError, type CognitoSession } from '../features/auth/api/cognito-session'
 import { App } from './App'
@@ -495,11 +495,18 @@ describe('order workflows', () => {
     render(<App session={mockSession('/organisations/first')} />)
     fireEvent.click(await screen.findByRole('link', { name: 'Orders' }))
     await screen.findByRole('heading', { name: 'Organisation orders' })
-    fireEvent.click(await screen.findByRole('button', { name: 'View order' }))
-    expect(await screen.findByText(/· System/)).toBeTruthy()
+    const viewOrder = await screen.findByRole('button', { name: 'View order' })
+    fireEvent.click(viewOrder)
+    const dialog = await screen.findByRole('dialog', { name: 'Order details' })
+    expect(await within(dialog).findByText(/· System/)).toBeTruthy()
     for (const name of ['Submit order', 'Approve', 'Reject', 'Fulfil']) {
-      expect(screen.queryByRole('button', { name })).toBeNull()
+      expect(within(dialog).queryByRole('button', { name })).toBeNull()
     }
+    expect(viewOrder.closest('table')?.contains(dialog)).toBe(false)
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('button', { name: 'View order' })).toBe(viewOrder)
+    expect(document.activeElement).toBe(viewOrder)
   })
 
   it('retries the same submission and fulfils the returned approved order', async () => {

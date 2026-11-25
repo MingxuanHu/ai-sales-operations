@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
+import { Alert, Badge, Button, Group, List, Modal, Stack, Table, Text, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, type Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
@@ -80,12 +80,11 @@ export function OrderDetail({ api, organisationId, id, submitted, role, userId, 
   }
 
   return (
-    <Paper withBorder p="lg" component="section" aria-label="Order details">
+    // Keep the dialog open while an order action is saving, including when Escape is pressed.
+    <Modal opened onClose={onClose} title="Order details" size="xl" centered
+      closeOnEscape={!saving} closeOnClickOutside={!saving}
+      closeButtonProps={{ 'aria-label': 'Close details', disabled: Boolean(saving) }}>
       <Stack>
-        <Group justify="space-between">
-          <Title order={2} size="h3">Order details</Title>
-          <Button variant="subtle" disabled={Boolean(saving)} onClick={onClose}>Close details</Button>
-        </Group>
         {error && <Alert role="alert" color="red">{error}</Alert>}
         {result.status === 'loading' && <Loading>Loading order details…</Loading>}
         {result.status === 'failed' && <Alert role="alert" color="red" title="Could not load order details">
@@ -98,7 +97,7 @@ export function OrderDetail({ api, organisationId, id, submitted, role, userId, 
           if (role === 'manager' && order.status === 'pending') actions.push('approve', 'reject')
           if (role === 'salesperson' && order.status === 'approved' && order.submittedByUserId === userId) actions.push('fulfil')
           return <>
-            <Group><Title order={3} size="h4">{order.customerName}</Title><Badge>{statusLabels[order.status]}</Badge></Group>
+            <Group><Title order={2} size="h4">{order.customerName}</Title><Badge>{statusLabels[order.status]}</Badge></Group>
             <Text size="sm" c="dimmed">Order {order.id} · Submitted {new Date(order.createdAt).toLocaleString()}</Text>
             <Table.ScrollContainer minWidth={400}>
               <Table>
@@ -125,7 +124,7 @@ export function OrderDetail({ api, organisationId, id, submitted, role, userId, 
                 {actionLabels[action]}
               </Button>)}
             </Group>}
-            <Title order={3} size="h4">Order history</Title>
+            <Title order={2} size="h4">Order history</Title>
             <List type="ordered">
               {order.history.map((event, index) => <List.Item key={index}>
                 <Text span fw={600}>{eventLabels[event.kind] ?? event.kind}</Text>
@@ -137,6 +136,6 @@ export function OrderDetail({ api, organisationId, id, submitted, role, userId, 
           </>
         })()}
       </Stack>
-    </Paper>
+    </Modal>
   )
 }
