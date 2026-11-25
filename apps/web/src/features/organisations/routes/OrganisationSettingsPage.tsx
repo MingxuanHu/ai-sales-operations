@@ -60,6 +60,7 @@ export function OrganisationSettingsPage({ membership, api, onDeleted }: {
   return (
     <Stack>
       <Title order={1} size="h2">Settings</Title>
+      <StaffInvitation api={api} organisationId={organisationId} />
       <Paper withBorder p="lg">
         <Stack>
           <Title order={2} size="h4">Order approval</Title>
@@ -86,7 +87,6 @@ export function OrganisationSettingsPage({ membership, api, onDeleted }: {
           )}
         </Stack>
       </Paper>
-      <StaffInvitation api={api} organisationId={organisationId} />
       {membership.isDemo && <DeleteDemoPanel membership={membership} api={api} onDeleted={onDeleted} />}
     </Stack>
   )
