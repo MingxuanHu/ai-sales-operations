@@ -2,9 +2,13 @@
 
 A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
-[Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
-
 > **Status:** [Milestone 7 kickoff — Dashboard](docs/milestones/M07-01-dashboard.md). The proposed scope covers fulfilled sales totals, product and customer rankings, and a date-filtered dashboard.
+
+## Try the live demo
+
+**[Launch the public demo ↗](https://d3finwpuxpr8bj.cloudfront.net)**
+
+Create an account to open a sample wholesale organisation with synthetic customers, products, and orders. If you already have an account, sign in and choose **Create demo organisation** to start with fresh sample data.
 
 ## Product
 
