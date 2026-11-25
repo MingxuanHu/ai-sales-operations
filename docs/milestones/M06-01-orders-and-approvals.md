@@ -57,11 +57,15 @@ has a null actor, and the submission event records the submitting user.
 - **Dependencies.** Issue 1 and the [identity mutation policy](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Exercise the transition matrix, removed memberships, cross-tenant access, rollback and concurrency in API integration tests.
 
-The following commands use the same base path as the submission API. Each takes
+The local Orders API base URL is
+`http://localhost:3000/api/organisations/:organisationId/orders`.
+Replace `:organisationId` with the organisation UUID and `:id` with the order UUID.
+Append the query or path from the table to that base URL. Each POST command takes
 no request body and returns HTTP 200 with the updated order detail and ordered history.
 
-| Method and relative path | Required status and actor |
+| Method and relative URL | Access and behaviour |
 | --- | --- |
+| `GET ?status=pending` | An active manager lists the organisation's pending orders |
 | `POST /:id/approve` | Pending order, active manager |
 | `POST /:id/reject` | Pending order, active manager |
 | `POST /:id/fulfil` | Approved order, active salesperson who submitted it |
