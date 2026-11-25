@@ -57,6 +57,19 @@ has a null actor, and the submission event records the submitting user.
 - **Dependencies.** Issue 1 and the [identity mutation policy](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Exercise the transition matrix, removed memberships, cross-tenant access, rollback and concurrency in API integration tests.
 
+The following commands use the same base path as the submission API. Each takes
+no request body and returns HTTP 200 with the updated order detail and ordered history.
+
+| Method and relative path | Required status and actor |
+| --- | --- |
+| `POST /:id/approve` | Pending order, active manager |
+| `POST /:id/reject` | Pending order, active manager |
+| `POST /:id/fulfil` | Approved order, active salesperson who submitted it |
+
+Commands return HTTP 403 for an active member with the wrong role, HTTP 404
+when membership or the scoped order is unavailable, and HTTP 409 when the
+order is visible to the authorised actor but its status no longer allows the command.
+
 ### 3. Build the order entry and approval workflows in React
 
 [Issue #58](https://github.com/MingxuanHu/ai-sales-operations/issues/58)
