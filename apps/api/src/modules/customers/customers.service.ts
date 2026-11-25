@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { isForeignKeyViolation } from '../../database/prisma-errors'
 import { PrismaService } from '../../database/prisma.service'
 import { Prisma } from '../../generated/prisma/client'
 import { IdentityService } from '../identity/identity.service'
@@ -61,10 +62,18 @@ export class CustomersService {
     })
   }
 
-  remove(organisationId: string, userId: string, id: string) {
-    return this.asAdmin(organisationId, userId, true, async (tx) => {
-      const { count } = await tx.customer.deleteMany({ where: { id, organisationId } })
-      if (count === 0) throw new NotFoundException('Customer not found.')
-    })
+  async remove(organisationId: string, userId: string, id: string) {
+    try {
+      await this.asAdmin(organisationId, userId, true, async (tx) => {
+        const { count } = await tx.customer.deleteMany({ where: { id, organisationId } })
+        if (count === 0) throw new NotFoundException('Customer not found.')
+      })
+    } catch (error) {
+      // PostgreSQL rejects deletion when an order references this record.
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException('This customer cannot be deleted because it is used in an order.')
+      }
+      throw error
+    }
   }
 }

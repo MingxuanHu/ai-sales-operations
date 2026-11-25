@@ -16,6 +16,7 @@ import { AppModule } from '../dist/app.module.js'
 import { AccessTokenVerifier } from '../dist/modules/identity/access-token.verifier.js'
 import { checkIdentity } from './identity.mjs'
 import { checkCustomers } from './customers.mjs'
+import { checkDemos } from './demo-organisations.mjs'
 import { checkOrders } from './orders.mjs'
 import { checkProducts } from './products.mjs'
 import { PrismaService } from '../dist/database/prisma.service.js'
@@ -87,7 +88,7 @@ test('API identity and health use the isolated PostgreSQL instance', async (cont
   app = await NestFactory.create(AppModule, { logger: false, abortOnError: false })
   app.get(AccessTokenVerifier).verify = async (token) => {
     // Replace only the external identity boundary. Requests use the real guards and database.
-    if (!['alice', 'bob', 'charlie'].includes(token)) throw new Error('Invalid test token')
+    if (!['alice', 'bob', 'charlie', 'legacy', 'new-user'].includes(token)) throw new Error('Invalid test token')
     return 'synthetic-' + token
   }
   app.setGlobalPrefix('api')
@@ -142,6 +143,8 @@ test('API identity and health use the isolated PostgreSQL instance', async (cont
   await context.test('Customer CRUD validates input and enforces tenant roles', () => checkCustomers(app))
 
   await context.test('Orders enforce tenant scope and preserve submission history', () => checkOrders(app))
+
+  await context.test('Demo provisioning is atomic and produces reproducible sales fixtures', () => checkDemos(app))
 
   await compose('stop', 'salesOpDb')
   const unavailable = await fetch(healthUrl)

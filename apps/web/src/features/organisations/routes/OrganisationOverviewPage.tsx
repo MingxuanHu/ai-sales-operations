@@ -5,7 +5,7 @@ export function OrganisationOverviewPage({ membership }: { membership: Membershi
   return (
     <Paper withBorder p="lg">
       <Stack align="start" gap="sm">
-        <Title order={1} size="h2">{membership.name}</Title>
+        <Title order={1} size="h2" style={{ overflowWrap: 'anywhere' }}>{membership.name}</Title>
         <Group gap="xs">
           <Text size="sm" c="dimmed">Your role</Text>
           <Badge variant="light" tt="capitalize">{membership.role}</Badge>

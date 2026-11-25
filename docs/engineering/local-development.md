@@ -109,14 +109,14 @@ Prisma applies both migrations in order through the same command.
    `http://localhost:5173/` so the browser uses the origin registered in Cognito.
 2. Select **Continue to sign in**. In Managed Login, register a synthetic native
    account using a test inbox you control, verify the email, and sign in.
-   Confirm the app opens **Invitations** and exposes the user ID.
-   Select **Create organisation** in the workspace navigation, create an
+   Confirm the app opens the starter demo and **Messages** shows the user ID.
+   In **Create organisation**, create an
    organisation, and verify that its overview shows the **admin** role.
 3. Open a separate browser session and sign in with the configured synthetic
-   Google test account. Copy its application user ID from **Invitations**.
-   In the administrator's organisation workspace, select **Invitations**.
+   Google test account. Copy its application user ID from **Messages**.
+   In the administrator's organisation workspace, select **Settings**.
    Enter that ID under **Invite staff**, select a role, and send the invitation. Check the role and
-   expiry in the confirmation. Refresh the Google account's invitation inbox
+   expiry in the confirmation. Check that **Messages** in the Google account shows a badge for the pending invitation. Refresh that inbox
    and leave that view open. Revoke the invitation as the administrator, then
    try to accept the stale invitation in the Google account's view. Confirm
    that acceptance fails and refreshing removes the invitation. Send a fresh

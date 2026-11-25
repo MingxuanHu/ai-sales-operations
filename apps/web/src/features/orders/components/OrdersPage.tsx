@@ -1,20 +1,30 @@
-import { Alert, Badge, Button, Checkbox, Group, Paper, Stack, Table, Text, Title } from '@mantine/core'
-import { useEffect, useState } from 'react'
+import { Alert, Badge, Button, Checkbox, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../api/orders'
 import { OrderDetail } from './OrderDetail'
 import { OrderEntry } from './OrderEntry'
 
-export function OrdersPage({ api, organisationId, role, userId }: {
+export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
   api: OrdersApi
   organisationId: string
-  role: 'salesperson' | 'manager'
+  role: Role
   userId: string
+  isDemo: boolean
 }) {
   const [pending, setPending] = useState(role === 'manager')
   const [orders, setOrders] = useState<LoadResult<OrderSummary[]>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ id: string; submitted?: Order }>()
+
+  const detailTrigger = useRef<HTMLButtonElement | null>(null)
+  // Restore keyboard focus to the row button after the dialog is removed.
+  useLayoutEffect(() => {
+    if (selection) return
+    detailTrigger.current?.focus({ preventScroll: true })
+    detailTrigger.current = null
+  }, [selection])
 
   // The organisation route remounts this page on tenant switch, and cleanup cancels the list request.
   useEffect(() => {
@@ -39,14 +49,10 @@ export function OrdersPage({ api, organisationId, role, userId }: {
         setSelection({ id: order.id, submitted: order })
         refreshList()
       }} />}
-      {/* The key resets detail state and cancels its requests when the selected order changes. */}
-      {selection && <OrderDetail key={selection.id} api={api} organisationId={organisationId} id={selection.id}
-        submitted={selection.submitted} role={role} userId={userId} onChanged={refreshList}
-        onClose={() => setSelection(undefined)} />}
       <Paper withBorder p="lg">
         <Stack>
           <Group justify="space-between">
-            <Title order={2} size="h3">{role === 'manager' ? 'Organisation orders' : 'My orders'}</Title>
+            <Title order={2} size="h3">{role === 'salesperson' ? 'My orders' : 'Organisation orders'}</Title>
             {role === 'manager' && <Checkbox label="Pending only" checked={pending} onChange={(event) => {
               setOrders({ status: 'loading' })
               setPending(event.currentTarget.checked)
@@ -57,7 +63,19 @@ export function OrdersPage({ api, organisationId, role, userId }: {
             <Button variant="light" onClick={refreshList}>Retry orders</Button>
           </Alert>}
           {orders.status === 'ready' && (orders.data.length === 0
-            ? <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
+            ? <Stack gap="xs">
+              <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
+              {/* Administrators see setup guidance. Salespeople use the form above. */}
+              {role === 'admin' && !isDemo && <>
+                <Title order={3} size="h5">How to create an order</Title>
+                <List type="ordered" size="sm" spacing="xs">
+                  <List.Item><strong>Administrator</strong> — Add customers and products, then invite staff as salespeople or managers.</List.Item>
+                  <List.Item><strong>Salesperson</strong> — In Orders, choose a customer, add products and quantities, then submit the order.</List.Item>
+                  <List.Item><strong>Manager</strong> — Review, approve or reject orders above the discount threshold (10% by default). Orders at or below it are approved automatically.</List.Item>
+                  <List.Item><strong>Salesperson</strong> — Open your approved order and select Fulfil when it’s ready.</List.Item>
+                </List>
+              </>}
+            </Stack>
             : <Table.ScrollContainer minWidth={460}>
               <Table>
                 <Table.Thead>
@@ -71,8 +89,11 @@ export function OrdersPage({ api, organisationId, role, userId }: {
                       <Table.Td>{new Date(order.createdAt).toLocaleString()}</Table.Td>
                       <Table.Td><Badge variant="light">{statusLabels[order.status]}</Badge></Table.Td>
                       <Table.Td>{order.total}</Table.Td>
-                      <Table.Td><Button size="xs" variant="subtle" aria-expanded={selection?.id === order.id}
-                        onClick={() => setSelection((current) => current?.id === order.id ? current : { id: order.id })}>View order</Button></Table.Td>
+                      <Table.Td><Button size="xs" variant="subtle" aria-haspopup="dialog"
+                        onClick={(event) => {
+                          detailTrigger.current = event.currentTarget
+                          setSelection({ id: order.id })
+                        }}>View order</Button></Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -80,6 +101,10 @@ export function OrdersPage({ api, organisationId, role, userId }: {
             </Table.ScrollContainer>)}
         </Stack>
       </Paper>
+      {/* The modal stays outside the table layout. Its key resets detail state when another order opens. */}
+      {selection && <OrderDetail key={selection.id} api={api} organisationId={organisationId} id={selection.id}
+        submitted={selection.submitted} role={role} userId={userId} onChanged={refreshList}
+        onClose={() => setSelection(undefined)} />}
     </Stack>
   )
 }

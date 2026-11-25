@@ -26,7 +26,9 @@ export async function checkIdentity(app) {
     request('GET', '/me', 'alice', 200),
   ])
   assert.deepEqual(aliceProfile, concurrentAliceProfile)
-  assert.deepEqual(aliceProfile.memberships, [])
+  assert.equal(aliceProfile.memberships.length, 1)
+  assert.equal(aliceProfile.memberships[0].role, 'admin')
+  assert.match(aliceProfile.memberships[0].name, /^Demo · Fern & Finch Supply/)
   const bobProfile = await request('GET', '/me', 'bob', 200)
   const charlieProfile = await request('GET', '/me', 'charlie', 200)
 
@@ -50,7 +52,7 @@ export async function checkIdentity(app) {
 
   // The creator can enter Company A. The API returns 404 to callers without membership.
   const companyAPath = '/organisations/' + companyAId
-  assert.deepEqual(await request('GET', companyAPath, 'alice', 200), { organisationId: companyAId, name: 'Test Company A', role: 'admin' })
+  assert.deepEqual(await request('GET', companyAPath, 'alice', 200), { organisationId: companyAId, name: 'Test Company A', role: 'admin', isDemo: false })
   await request('GET', companyAPath, 'bob', 404)
   // A malformed UUID returns 400 before the service looks up the organisation.
   await request('GET', '/organisations/invalid', 'bob', 400)

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CognitoCallbackError, type CognitoSession } from '../features/auth/api/cognito-session'
 import { App } from './App'
@@ -64,7 +64,7 @@ describe('protected React shell', () => {
     const fetch = vi.fn(async (url: string) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: accepted ? [first] : [] })
       if (url === '/api/invitations') {
-        return Response.json({ invitations: [{ ...first, invitationId: 'invite', expiresAt: '2026-11-30' }] })
+        return Response.json({ invitations: accepted ? [] : [{ ...first, invitationId: 'invite', expiresAt: '2026-11-30' }] })
       }
       if (url === '/api/invitations/invite/accept') {
         accepted = true
@@ -75,9 +75,11 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession()} />)
-    expect(await screen.findByRole('heading', { name: 'Invitations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Create organisation' })).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Messages (1 pending invitation)' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
     expect(await screen.findByRole('heading', { name: first.name })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Messages' })).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith('/api/invitations/invite/accept', expect.objectContaining({ method: 'POST' }))
   })
 
@@ -105,7 +107,157 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
-  it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {
+  it('automatically opens the first organisation when the user has only demos', async () => {
+    const demos = [{ ...second, isDemo: true }, { ...first, isDemo: true }]
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: demos })
+      if (url === '/api/organisations/second') return Response.json(demos[0])
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession()} />)
+    await screen.findByRole('heading', { name: second.name })
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
+    expect(window.location.pathname).toBe('/organisations/second')
+  })
+
+  it('shows Overview only after choosing an organisation and groups it with organisation links', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first, second] })
+      if (url === '/api/organisations/first') return Response.json(first)
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/onboarding')} />)
+    await screen.findByRole('heading', { name: 'Create organisation' })
+    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(first.name))
+    const navigation = await screen.findByRole('navigation', { name: 'Selected organisation' })
+    expect(within(navigation).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
+    expect(within(navigation).getByRole('link', { name: 'Orders' })).toBeTruthy()
+    expect(within(navigation).queryByRole('link', { name: 'Invitations' })).toBeNull()
+  })
+
+  it('automatically opens the first organisation in the picker after sign-in', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second, first] })
+      if (url === '/api/organisations/second') return Response.json(second)
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession()} />)
+    await screen.findByRole('heading', { name: second.name })
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
+    expect(window.location.pathname).toBe('/organisations/second')
+  })
+
+  it('retries demo creation and selects each newly created demo', async () => {
+    const demoId = '20b6acc4-c4e8-41fd-901d-4a601880ded2'
+    const demos = [
+      { organisationId: demoId, name: `Demo · Fern & Finch Supply · ${demoId}`, role: 'admin' },
+      { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
+    ]
+    const requests: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
+      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/' + demoId) return Response.json(demos[0])
+      if (url === '/api/organisations/demo-2') return Response.json(demos[1])
+      if (url === '/api/organisations/demo') {
+        requests.push(JSON.parse(String(options.body)).requestId)
+        if (requests.length === 1) return new Response(null, { status: 503 })
+        return Response.json(demos[requests.length - 2], { status: 201 })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    await screen.findByRole('heading', { name: first.name })
+    expect(screen.queryByRole('button', { name: 'Create demo organisation' })).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
+    const create = await screen.findByRole('button', { name: 'Create demo organisation' })
+    fireEvent.click(create)
+    await screen.findByRole('dialog', { name: 'Could not create the demo' })
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    fireEvent.click(create)
+    await screen.findByRole('heading', { name: demos[0].name })
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    expect(picker).toHaveProperty('value', 'Demo · 20b6acc4')
+    expect(picker.getAttribute('title')).toBe(demos[0].name)
+    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Create demo organisation' }))
+    await screen.findByRole('heading', { name: demos[1].name })
+    expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
+    expect(requests[2]).not.toBe(requests[0])
+    expect(window.location.pathname).toBe('/organisations/demo-2')
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[1].name)
+    expect(screen.queryByText(/Demo ready/)).toBeNull()
+  })
+
+  it('requires the exact name to delete a demo and removes it from the picker', async () => {
+    const demo = { organisationId: 'demo', name: 'Demo · Fern & Finch', role: 'admin', isDemo: true }
+    const regular = { ...first, role: 'admin', isDemo: false }
+    let deleted = false
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: deleted ? [regular] : [demo, regular] })
+      if (url === '/api/organisations/demo/settings') return Response.json({ orderApprovalThresholdBasisPoints: 1000 })
+      if (url === '/api/organisations/first') return Response.json(regular)
+      if (url === '/api/organisations/demo' && options.method === 'DELETE') {
+        expect(JSON.parse(String(options.body))).toEqual({ confirmationName: demo.name })
+        deleted = true
+        return new Response(null, { status: 204 })
+      }
+      if (url === '/api/organisations/demo') return Response.json(demo)
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/demo')} />)
+    await screen.findByRole('heading', { name: demo.name })
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete demo organisation' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete demo organisation' })
+    const confirm = within(dialog).getByRole('button', { name: 'Delete permanently' })
+    const name = within(dialog).getByRole('textbox', { name: 'Organisation name' })
+    fireEvent.change(name, { target: { value: demo.name + ' ' } })
+    expect(confirm).toHaveProperty('disabled', true)
+    fireEvent.change(name, { target: { value: demo.name } })
+    expect(confirm).toHaveProperty('disabled', false)
+    fireEvent.click(confirm)
+    expect(await screen.findByRole('heading', { name: regular.name })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', regular.name)
+  })
+
+  it('loads and saves the organisation threshold from Settings', async () => {
+    const admin = { ...first, role: 'admin', isDemo: false }
+    const save = vi.fn()
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
+      if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === '/api/organisations/first/settings') {
+        if (options.method === 'PATCH') {
+          const body = JSON.parse(String(options.body))
+          save(body)
+          return Response.json(body)
+        }
+        return Response.json({ orderApprovalThresholdBasisPoints: 1000 })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
+    const input = await screen.findByRole('textbox', { name: 'Discount approval threshold (%)' })
+    expect(input).toHaveProperty('value', '10.00')
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
+    fireEvent.change(input, { target: { value: '12.35' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save threshold' }))
+    await screen.findByText('Threshold saved.')
+    expect(save).toHaveBeenCalledWith({ orderApprovalThresholdBasisPoints: 1235 })
+  })
+
+  it('aborts a pending acceptance when closing Messages and ignores its late response', async () => {
     let pendingSignal: AbortSignal | null = null
     let finishAcceptance: (response: Response) => void = () => {}
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
@@ -120,10 +272,11 @@ describe('protected React shell', () => {
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession()} />)
+    fireEvent.click(await screen.findByRole('button', { name: /^Messages/ }))
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
     await waitFor(() => expect(pendingSignal).not.toBeNull())
-    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
-    await screen.findByRole('heading', { name: 'Create organisation' })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Messages' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(pendingSignal).toHaveProperty('aborted', true)
     await act(async () => finishAcceptance(Response.json({ organisationId: first.organisationId })))
     expect(window.location.pathname).toBe('/onboarding')
@@ -159,10 +312,12 @@ describe('protected React shell', () => {
     // act lets React process any updates from the late response before we check the screen.
     await act(async () => finishPrevious(Response.json(first)))
     expect(screen.queryByRole('heading', { name: first.name })).toBeNull()
-    fireEvent.click(screen.getByRole('link', { name: 'Invitations' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Messages' }))
     await screen.findByRole('heading', { name: 'Received invitations' })
     expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
 
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Messages' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeTruthy()
     expect(session.signOut).toHaveBeenCalledOnce()
@@ -176,7 +331,7 @@ describe('protected React shell', () => {
     let issued = false
     let revokeAttempts = 0
     const fetch = vi.fn(async (url: string, options: RequestInit) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
       if (url === '/api/organisations/first') return Response.json(admin)
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       if (url === path) {
@@ -201,10 +356,8 @@ describe('protected React shell', () => {
     render(<App session={mockSession('/organisations/first')} />)
     await screen.findByRole('heading', { name: first.name })
     expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
-    const invitations = screen.getByRole('link', { name: 'Invitations' })
-    fireEvent.click(invitations)
-    expect(await screen.findByRole('heading', { name: 'Received invitations' })).toBeTruthy()
-    expect(invitations.getAttribute('aria-current')).toBe('page')
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    expect(await screen.findByRole('heading', { name: 'Invite staff' })).toBeTruthy()
     fireEvent.change(await screen.findByRole('textbox', { name: 'Recipient user ID' }), { target: { value: ' ' + recipient + ' ' } })
     const picker = screen.getByRole('combobox', { name: 'Role' })
     const send = screen.getByRole('button', { name: 'Send invitation' })
@@ -242,7 +395,7 @@ describe('protected React shell', () => {
       if (organisation) return Response.json(organisation)
       throw new Error('Unexpected API request')
     }))
-    render(<App session={mockSession('/organisations/first/invitations')} />)
+    render(<App session={mockSession('/organisations/first/settings')} />)
     fireEvent.change(await screen.findByRole('textbox', { name: 'Recipient user ID' }), { target: { value: 'abcc5d8a-ead7-4f6a-a7ce-d149103edd80' } })
     fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'salesperson' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invitation' }))
@@ -251,8 +404,8 @@ describe('protected React shell', () => {
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'Enter', code: 'Enter' })
-    await screen.findByText(second.name)
-    expect(window.location.pathname).toBe('/organisations/second/invitations')
+    await screen.findByRole('heading', { name: 'Invite staff' })
+    expect(window.location.pathname).toBe('/organisations/second/settings')
     expect(previousSignal).toHaveProperty('aborted', true)
     await act(async () => finishPrevious(Response.json({ invitationId: 'stale', role: 'salesperson', expiresAt: '2026-11-30' })))
     expect(screen.getByRole('textbox', { name: 'Recipient user ID' })).toHaveProperty('value', '')
@@ -264,7 +417,7 @@ describe('protected React shell', () => {
       ? Response.json({ userId: 'synthetic-user', memberships: [first] })
       : new Response(null, { status: 404 }))
     vi.stubGlobal('fetch', fetch)
-    render(<App session={mockSession('/organisations/foreign/invitations')} />)
+    render(<App session={mockSession('/organisations/foreign/settings')} />)
     expect(await screen.findByText('Access denied')).toBeTruthy()
     expect(screen.queryByRole('heading', { name: first.name })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
@@ -342,7 +495,7 @@ describe('product catalogue', () => {
     expect(await screen.findByText('Only organisation administrators can manage products.')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Products' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add product' })).toBeNull()
-    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/me', '/api/organisations/second'])
+    expect(fetch.mock.calls.map(([url]) => url).filter((url) => url !== '/api/invitations')).toEqual(['/api/me', '/api/organisations/second'])
   })
 })
 
@@ -407,7 +560,7 @@ describe('customer directory', () => {
     expect(await screen.findByText('Only organisation administrators can manage customers.')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Customers' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add customer' })).toBeNull()
-    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/me', '/api/organisations/second'])
+    expect(fetch.mock.calls.map(([url]) => url).filter((url) => url !== '/api/invitations')).toEqual(['/api/me', '/api/organisations/second'])
   })
 })
 
@@ -441,6 +594,75 @@ describe('order workflows', () => {
     fireEvent.change(screen.getByLabelText(/^Quantity 1/), { target: { value: '2' } })
     fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '10' } })
   }
+
+  it('shows the salesperson form and enables it when missing setup is refreshed', async () => {
+    let ready = false
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === ordersPath('first')) return Response.json({ orders: [] })
+      if (url === ordersPath('first') + '/selectors') {
+        return ready ? selectors() : Response.json({
+          customers: [{ id: 'customer-1', name: order.customerName }], products: [],
+        })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    expect(await screen.findByText('Ask an administrator to add a product to this organisation.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'How to create an order' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Submit order' }).closest('fieldset')).toHaveProperty('disabled', true)
+    ready = true
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh customers and products' }))
+    const submit = await screen.findByRole('button', { name: 'Submit order' })
+    expect(submit.closest('fieldset')).toHaveProperty('disabled', false)
+    expect(await screen.findByRole('option', { name: /Fixture box/ })).toBeTruthy()
+  })
+
+  it('explains who can submit and approve orders in an empty regular organisation', async () => {
+    const regular = { ...first, role: 'admin', isDemo: false }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [regular] })
+      if (url === '/api/organisations/first') return Response.json(regular)
+      if (url === ordersPath('first')) return Response.json({ orders: [] })
+      throw new Error('Unexpected request')
+    }))
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    expect(await screen.findByRole('heading', { name: 'How to create an order' })).toBeTruthy()
+    expect(screen.getByText(/choose a customer, add products and quantities/)).toBeTruthy()
+    expect(screen.getByText(/approve or reject orders above the discount threshold/)).toBeTruthy()
+  })
+
+  it('lets an administrator open orders and see history without order actions', async () => {
+    const admin = { ...first, role: 'admin' }
+    const path = ordersPath(admin.organisationId)
+    const pending = { ...order, status: 'pending', history: [{
+      kind: 'submitted', actorUserId: null, fromStatus: null, toStatus: 'pending', createdAt,
+    }] }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
+      if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === path) return Response.json({ orders: [pending] })
+      if (url === path + '/order-1') return Response.json(pending)
+      throw new Error('Unexpected request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Orders' }))
+    await screen.findByRole('heading', { name: 'Organisation orders' })
+    const viewOrder = await screen.findByRole('button', { name: 'View order' })
+    fireEvent.click(viewOrder)
+    const dialog = await screen.findByRole('dialog', { name: 'Order details' })
+    expect(await within(dialog).findByText(/· System/)).toBeTruthy()
+    for (const name of ['Submit order', 'Approve', 'Reject', 'Fulfil']) {
+      expect(within(dialog).queryByRole('button', { name })).toBeNull()
+    }
+    expect(viewOrder.closest('table')?.contains(dialog)).toBe(false)
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('button', { name: 'View order' })).toBe(viewOrder)
+    expect(document.activeElement).toBe(viewOrder)
+  })
 
   it('retries the same submission and fulfils the returned approved order', async () => {
     const path = ordersPath('first')

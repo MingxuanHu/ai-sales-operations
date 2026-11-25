@@ -1,20 +1,21 @@
-import { Alert, Button, Paper, Text, Title } from '@mantine/core'
+import { Alert, Button } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { CustomersPage } from '../../customers/components/CustomersPage'
 import { OrdersPage } from '../../orders/components/OrdersPage'
 import { ProductsPage } from '../../products/components/ProductsPage'
 import { Navigate, Route, Routes, useNavigate } from 'react-router'
-import type { OrganisationsApi, Profile } from '../api/organisations'
+import type { Membership, OrganisationsApi, Profile } from '../api/organisations'
 import { Loading, type LoadResult } from '../components/Loading'
 import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { CreateOrganisationPage } from './CreateOrganisationPage'
-import { InvitationsPage } from './InvitationsPage'
+import { InvitationInbox } from '../components/invitations/InvitationInbox'
 import { OrganisationAccess } from './OrganisationAccess'
+import { OrganisationSettingsPage } from './OrganisationSettingsPage'
 import { OrganisationOverviewPage } from './OrganisationOverviewPage'
 import { organisationPath } from './workspacePaths'
 import styles from './OrganisationWorkspace.module.css'
 
-export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
+export function OrganisationWorkspace({ api, messagesTarget }: { api: OrganisationsApi; messagesTarget: HTMLElement | null }) {
   const [profile, setProfile] = useState<LoadResult<Profile>>({ status: 'loading' })
   // Changing this counter asks the effect to fetch again, even when the API client is the same.
   const [revision, setRevision] = useState(0)
@@ -42,6 +43,17 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
     void navigate(organisationPath(id))
   }
 
+  function openDemo(membership: Membership) {
+    // Add the demo before navigating so the route and picker resolve to the same organisation.
+    setProfile((current) => {
+      if (current.status !== 'ready' || current.data.memberships.some((item) => item.organisationId === membership.organisationId)) {
+        return current
+      }
+      return { status: 'ready', data: { ...current.data, memberships: [...current.data.memberships, membership] } }
+    })
+    void navigate(organisationPath(membership.organisationId))
+  }
+
   if (profile.status === 'loading') return <Loading>Loading your organisations…</Loading>
   if (profile.status === 'failed') {
     return <Alert role="alert" color="red" title="Could not load your organisations">
@@ -53,26 +65,29 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   return (
     <div className={styles.workspace}>
       <WorkspaceNavigation memberships={memberships} />
+      {messagesTarget && <InvitationInbox target={messagesTarget} api={api} userId={userId} onJoined={onJoined} />}
       <div className={styles.content}>
         <Routes>
-          <Route index element={memberships.length === 1 ? (
-            <Navigate replace to={organisationPath(memberships[0].organisationId)} />
-          ) : memberships.length ? (
-            <Paper withBorder p="lg">
-              <Title order={1} size="h2">Choose an organisation</Title>
-              <Text c="dimmed">Select an organisation to open its workspace.</Text>
-            </Paper>
-          ) : <Navigate replace to="/invitations" />} />
-          <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} />} />
-          <Route path="/invitations" element={<InvitationsPage api={api} userId={userId} onJoined={onJoined} />} />
+          {/* The picker and default route use the same membership order from the profile. */}
+          <Route index element={<Navigate replace to={memberships.length > 0
+            ? organisationPath(memberships[0].organisationId)
+            : '/onboarding'} />} />
+          <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
               {(membership) => <OrganisationOverviewPage membership={membership} />}
             </OrganisationAccess>
           } />
-          <Route path="/organisations/:organisationId/invitations" element={
+          <Route path="/organisations/:organisationId/settings" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <InvitationsPage api={api} userId={userId} onJoined={onJoined} membership={membership} />}
+              {(membership) => membership.role === 'admin' ? (
+                <OrganisationSettingsPage membership={membership} api={api} onDeleted={() => {
+                  reloadProfile()
+                  void navigate('/', { replace: true })
+                }} />
+              ) : <Alert role="alert" color="red" title="Access denied">
+                Only organisation administrators can manage settings.
+              </Alert>}
             </OrganisationAccess>
           } />
           <Route path="/organisations/:organisationId/products" element={
@@ -95,11 +110,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           } />
           <Route path="/organisations/:organisationId/orders" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => membership.role === 'admin'
-                ? <Alert role="alert" color="red" title="Access denied">
-                  Only salespeople and managers can access orders.
-                </Alert>
-                : <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} />}
+              {(membership) => <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} isDemo={membership.isDemo === true} />}
             </OrganisationAccess>
           } />
           <Route path="*" element={<Navigate replace to="/" />} />

@@ -38,6 +38,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
   const [error, setError] = useState('')
   // A ref remembers whether the one-time callback started without triggering another render.
   const callbackStarted = useRef(false)
+  const [messagesTarget, setMessagesTarget] = useState<HTMLDivElement | null>(null)
   const [requests, setRequests] = useState<AbortController>()
 
   // An effect runs after React renders. This one exchanges the code when the browser returns from Cognito.
@@ -119,7 +120,11 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
         <Container size="lg" h="100%">
           <Group justify="space-between" h="100%" wrap="nowrap">
             <Text fw={750} fz={{ base: 'sm', sm: 'md' }}>AI Sales Operations</Text>
-            {api && <Button variant="subtle" onClick={signOut}>Sign out</Button>}
+            <Group gap="sm" wrap="nowrap">
+              {/* The workspace renders its signed-in Messages control into this header slot. */}
+              <div ref={setMessagesTarget} />
+              {api && <Button variant="subtle" onClick={signOut}>Sign out</Button>}
+            </Group>
           </Group>
         </Container>
       </AppShell.Header>
@@ -128,7 +133,7 @@ function SalesOperations({ session }: { session?: CognitoSession }) {
           {/* JSX conditions choose the workspace, a progress message, or the sign-in form. */}
           {status === 'signed-in' && api ? (
             <Suspense fallback={<Text role="status">Loading workspace…</Text>}>
-              <OrganisationWorkspace api={api} />
+              <OrganisationWorkspace api={api} messagesTarget={messagesTarget} />
             </Suspense>
           ) :
             status === 'callback' || status === 'signing-out' ? (

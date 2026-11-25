@@ -2,9 +2,60 @@
   background: var(--mantine-color-body);
 }
 
+.pickerInput {
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.pickerDropdown {
+  padding: 0.25rem;
+}
+
+.pickerOption[aria-selected='true'] {
+  background: var(--mantine-primary-color-light);
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.optionText {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.optionName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+.demoCode,
+.optionRole {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.optionCheck {
+  flex: none;
+  color: var(--mantine-primary-color-light-color);
+}
+
 .navigation {
   display: grid;
   gap: 0.25rem;
+}
+
+.organisationNavigation {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding-bottom: var(--mantine-spacing-sm);
 }
 
 .navigation a {

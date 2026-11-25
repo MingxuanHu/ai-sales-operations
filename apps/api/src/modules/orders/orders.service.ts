@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { OrderStatus, Prisma, type SalesOrder } from '../../generated/prisma/client'
+import { approvalThreshold } from '../identity/organisation-settings'
 import { IdentityService } from '../identity/identity.service'
 import { orderInput } from './order-input'
+import { money, orderAmounts } from './order-money'
 
 // Positions keep nested rows in submission order even when timestamps match.
 const details = {
@@ -34,23 +36,6 @@ function detail(order: Prisma.SalesOrderGetPayload<{ include: typeof details }>)
   }
 }
 
-// Format nonnegative integer cents as a decimal string for Prisma.
-function money(cents: bigint) {
-  return `${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`
-}
-
-function approvalThreshold(settings: Prisma.JsonValue) {
-  // Settings values are JSON, so narrow the value before using it in the approval rule.
-  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
-    const threshold = settings.orderApprovalThresholdBasisPoints
-    if (threshold === undefined) return 1_000 // 1,000 hundredths of a percent is 10%.
-    if (typeof threshold === 'number' && Number.isInteger(threshold) && threshold >= 0 && threshold <= 10_000) {
-      return threshold
-    }
-  }
-  throw new InternalServerErrorException('Invalid organisation order approval settings.')
-}
-
 @Injectable()
 export class OrdersService {
   // Nest injects the shared database and identity services into this constructor.
@@ -59,7 +44,7 @@ export class OrdersService {
   private async readScope(tx: Prisma.TransactionClient, organisationId: string, userId: string) {
     const member = await tx.membership.findUnique({ where: { organisationId_userId: { organisationId, userId } } })
     if (member?.status !== 'active') throw new NotFoundException()
-    if (member.role === 'admin') throw new ForbiddenException()
+    // Administrators and managers can read every order inside their own organisation.
     return member.role === 'salesperson' ? { organisationId, submittedByUserId: userId } : { organisationId }
   }
 
@@ -164,11 +149,7 @@ export class OrdersService {
         const { sku, name, unitPrice } = product
         return { position, productId, sku, name, unitPrice, quantity }
       })
-      // BigInt keeps large quantities exact. Add half the divisor before truncating to round half up.
-      const subtotal = snapshots.reduce((sum, line) => (
-        sum + BigInt(line.unitPrice.toFixed(2).replace('.', '')) * BigInt(line.quantity)
-      ), 0n)
-      const total = (subtotal * BigInt(10_000 - discount) + 5_000n) / 10_000n
+      const { subtotal, total } = orderAmounts(snapshots, discount)
       // Read the policy under the organisation lock after checking for a matching retry.
       const { settings } = await tx.organisation.findUniqueOrThrow({ where: { id: organisationId }, select: { settings: true } })
       const threshold = approvalThreshold(settings)
@@ -184,7 +165,7 @@ export class OrdersService {
         data: {
           organisationId, submittedByUserId: userId, requestId, requestHash, customerId,
           customerName: customer.name, status, discountPercent: money(BigInt(discount)),
-          approvalThresholdPercent: money(BigInt(threshold)), subtotal: money(subtotal), total: money(total),
+          approvalThresholdPercent: money(BigInt(threshold)), subtotal, total,
           lines: { create: snapshots }, history: { create: history },
         },
         include: details,

@@ -50,6 +50,21 @@ export class IdentityController {
     return { organisationId }
   }
 
+  @Post('organisations/demo')
+  async createDemo(
+    @Req() request: AuthenticatedRequest, @Body() body: unknown,
+    @Res({ passthrough: true }) response: StatusResponse,
+  ) {
+    const { requestId } = payload(body)
+    if (typeof requestId !== 'string') throw new BadRequestException('Invalid request ID')
+    const id = await new ParseUUIDPipe().transform(requestId, { type: 'body' })
+    if (!id) throw new BadRequestException('Missing request ID')
+    const { organisationId, created } = await this.identity.createDemo(request.userId, id)
+    response.status(created ? HttpStatus.CREATED : HttpStatus.OK)
+    // Resolve the membership so the web picker can update without switching workspaces.
+    return this.identity.overview(organisationId, request.userId)
+  }
+
   // ParseUUIDPipe rejects malformed path IDs before the service queries PostgreSQL.
   @Get('organisations/:organisationId')
   getOrganisationOverview(
@@ -57,6 +72,38 @@ export class IdentityController {
     @Param('organisationId', ParseUUIDPipe) organisationId: string
   ) {
     return this.identity.overview(organisationId, request.userId)
+  }
+
+  @Get('organisations/:organisationId/settings')
+  getOrganisationSettings(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+  ) {
+    return this.identity.organisationSettings(organisationId, request.userId)
+  }
+
+  @Patch('organisations/:organisationId/settings')
+  updateOrganisationSettings(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+    @Body() body: unknown,
+  ) {
+    const { orderApprovalThresholdBasisPoints: threshold } = payload(body)
+    if (typeof threshold !== 'number' || !Number.isInteger(threshold) || threshold < 0 || threshold > 10_000) {
+      throw new BadRequestException('Use a threshold from 0% to 100% with up to two decimal places.')
+    }
+    return this.identity.updateApprovalThreshold(organisationId, request.userId, threshold)
+  }
+
+  @Delete('organisations/:organisationId')
+  @HttpCode(204)
+  deleteDemo(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+    @Body() body: unknown,
+  ) {
+    const { confirmationName } = payload(body)
+    if (typeof confirmationName !== 'string' || !confirmationName || [...confirmationName].length > 120) {
+      throw new BadRequestException('Invalid organisation name')
+    }
+    return this.identity.deleteDemo(organisationId, request.userId, confirmationName)
   }
 
   @Post('organisations/:organisationId/invitations')

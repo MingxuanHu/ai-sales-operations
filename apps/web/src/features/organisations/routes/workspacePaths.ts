@@ -3,10 +3,6 @@ export function organisationPath(id: string) {
   return `/organisations/${encodeURIComponent(id)}`
 }
 
-export function invitationsPath(id?: string) {
-  return id ? organisationPath(id) + '/invitations' : '/invitations'
-}
-
 export function productsPath(id: string) {
   return organisationPath(id) + '/products'
 }
@@ -17,4 +13,8 @@ export function customersPath(id: string) {
 
 export function ordersPath(id: string) {
   return organisationPath(id) + '/orders'
+}
+
+export function settingsPath(id: string) {
+  return organisationPath(id) + '/settings'
 }

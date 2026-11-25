@@ -45,7 +45,8 @@ export async function checkOrders(app) {
   assert.deepEqual(await request('GET', orders + '/selectors', 'bob', 200), {
     customers: [customer], products: [product, second],
   })
-  await request('GET', orders, 'alice', 403)
+  assert.deepEqual(await request('GET', orders, 'alice', 200), { orders: [] })
+  await request('GET', b + '/orders', 'alice', 404)
   await request('POST', orders, 'alice', 403, input)
   await request('GET', orders, undefined, 401)
   await request('POST', orders, 'bob', 404, { ...input, customerId: foreignCustomer.id })
@@ -98,18 +99,32 @@ export async function checkOrders(app) {
   await request('GET', orders + '/selectors', 'charlie', 403)
   await request('POST', orders, 'charlie', 403, input)
   assert.deepEqual(await request('GET', orders + '/' + approved.id, 'charlie', 200), approved)
+  assert.deepEqual(await request('GET', orders + '/' + approved.id, 'alice', 200), approved)
+  await request('GET', b + '/orders/' + approved.id, 'alice', 404)
   const { orders: all } = await request('GET', orders, 'charlie', 200)
+  assert.deepEqual(await request('GET', orders, 'alice', 200), { orders: all })
   assert.deepEqual(new Set(all.map(({ id }) => id)), new Set([approved.id, pending.id, multi.id]))
   const { orders: queue } = await request('GET', orders + '?status=pending', 'charlie', 200)
   assert.deepEqual(queue.map(({ id }) => id), [pending.id])
 
   const database = app.get(PrismaService).client
-  // Set the policy directly because the feature currently reads settings from PostgreSQL.
+  // Seed an unrelated setting and later inject malformed legacy data.
   const setThreshold = (organisationId, value) => database.organisation.update({
     where: { id: organisationId },
     data: { settings: { orderApprovalThresholdBasisPoints: value, otherSetting: true } },
   })
-  await setThreshold(alpha, 1_001)
+  const settingsPath = a + '/settings'
+  const policy = { orderApprovalThresholdBasisPoints: 1_001 }
+  assert.deepEqual(await request('GET', settingsPath, 'alice', 200), { orderApprovalThresholdBasisPoints: 1_000 })
+  await setThreshold(alpha, 1_000)
+  await request('GET', settingsPath, 'bob', 403)
+  await request('PATCH', settingsPath, 'charlie', 403, policy)
+  await request('PATCH', b + '/settings', 'alice', 404, policy)
+  await request('PATCH', settingsPath, 'alice', 400, { orderApprovalThresholdBasisPoints: 10_001 })
+  await request('PATCH', settingsPath, 'alice', 400, { orderApprovalThresholdBasisPoints: 1.5 })
+  assert.deepEqual(await request('PATCH', settingsPath, 'alice', 200, policy), policy)
+  assert.deepEqual(await request('GET', settingsPath, 'alice', 200), policy)
+  assert.deepEqual((await database.organisation.findUnique({ where: { id: alpha } })).settings, { ...policy, otherSetting: true })
   const customInput = { ...input, requestId: randomUUID(), discountPercent: '10.01' }
   const custom = await request('POST', orders, 'bob', 201, customInput)
   assert.equal(custom.status, 'approved')
@@ -123,7 +138,7 @@ export async function checkOrders(app) {
   const newRequest = { ...customInput, requestId: randomUUID() }
   await request('POST', orders, 'bob', 500, newRequest)
   assert.deepEqual(await request('POST', orders, 'bob', 201, customInput), custom)
-  await setThreshold(alpha, 0)
+  await request('PATCH', settingsPath, 'alice', 200, { orderApprovalThresholdBasisPoints: 0 })
   const zeroThreshold = await request('POST', orders, 'bob', 201, newRequest)
   assert.equal(zeroThreshold.status, 'pending')
   assert.equal(zeroThreshold.approvalThresholdPercent, '0.00')
@@ -131,8 +146,27 @@ export async function checkOrders(app) {
   await request('PUT', a + '/products/' + product.id, 'alice', 200, { ...product, unitPrice: '14.00' })
   await request('PUT', a + '/customers/' + customer.id, 'alice', 200, { name: 'Renamed' })
   assert.deepEqual(await request('GET', orders + '/' + approved.id, 'bob', 200), approved)
-  await request('DELETE', a + '/products/' + product.id, 'alice', 204)
-  await request('DELETE', a + '/customers/' + customer.id, 'alice', 204)
+  const referencedProduct = a + '/products/' + product.id
+  const deletion = await request('DELETE', referencedProduct, 'alice', 409)
+  assert.equal(deletion.message, 'This product cannot be deleted because it is used in an order.')
+  assert.equal((await request('GET', referencedProduct, 'alice', 200)).unitPrice, '14.00')
+  await request('DELETE', b + '/products/' + product.id, 'bob', 404)
+  await request('DELETE', b + '/products/' + foreignProduct.id, 'bob', 204)
+  const referencedCustomer = a + '/customers/' + customer.id
+  const customerDeletion = await request('DELETE', referencedCustomer, 'alice', 409)
+  assert.equal(customerDeletion.message, 'This customer cannot be deleted because it is used in an order.')
+  assert.equal((await request('GET', referencedCustomer, 'alice', 200)).name, 'Renamed')
+  await request('DELETE', b + '/customers/' + foreignCustomer.id, 'bob', 204)
+
+  // Direct database writes bypass the API and still have to satisfy both foreign keys.
+  await assert.rejects(database.product.delete({ where: { id: product.id } }), { code: 'P2003' })
+  await assert.rejects(database.customer.delete({ where: { id: customer.id } }), { code: 'P2003' })
+  await assert.rejects(database.salesOrder.update({
+    where: { id: approved.id }, data: { customerId: randomUUID() },
+  }), { code: 'P2003' })
+  await assert.rejects(database.orderLine.update({
+    where: { orderId_position: { orderId: approved.id, position: 0 } }, data: { productId: randomUUID() },
+  }), { code: 'P2003' })
   assert.deepEqual(await request('POST', orders, 'bob', 201, input), approved)
 
   // Reuse the order detail route to check that denied and stale commands preserve history.
