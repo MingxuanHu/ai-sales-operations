@@ -123,8 +123,9 @@ above 10% have a manual approval in their system-generated history. The approved
 pending and rejected examples are excluded from sales totals.
 
 First verified sign-in provisions the application user and demo in one transaction.
-Existing application users can create one through **Create demo organisation** in the
-workspace navigation. That action uses `POST /api/organisations/demo` with
+Existing application users can create one through **Create demo organisation** on the
+Create organisation page. Users with no regular organisation memberships land on
+that page by default. Demo creation uses `POST /api/organisations/demo` with
 `{ requestId }` and returns the new picker entry. Reusing a successful request ID
 returns the same entry. System-generated orders have a null submitter and null audit
 actors. Live commands continue to require real tenant memberships and the applicable

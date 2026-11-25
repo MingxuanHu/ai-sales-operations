@@ -41,8 +41,8 @@ export class IdentityService {
     const [memberships] = await this.database.client.$transaction(
       [this.database.client.membership.findMany({
         where: { userId, status: 'active' },
-        // true includes that field in the result. The inner select includes only the organisation name.
-        select: { organisationId: true, role: true, organisation: { select: { name: true } } },
+        // true includes that field in the result. The inner select includes the fields needed by the picker and onboarding.
+        select: { organisationId: true, role: true, organisation: { select: { name: true, settings: true } } },
         orderBy: { organisationId: 'asc' },
       })],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -50,7 +50,7 @@ export class IdentityService {
     return {
       userId,
       memberships: memberships.map(({ organisationId, role, organisation }) => ({
-        organisationId, role, name: organisation.name,
+        organisationId, role, name: organisation.name, isDemo: isDemoOrganisation(organisation.settings),
       })),
     }
   }

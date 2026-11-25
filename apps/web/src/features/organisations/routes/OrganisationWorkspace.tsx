@@ -63,18 +63,20 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   const { memberships, userId } = profile.data
   return (
     <div className={styles.workspace}>
-      <WorkspaceNavigation memberships={memberships} api={api} onDemoCreated={openDemo} />
+      <WorkspaceNavigation memberships={memberships} />
       <div className={styles.content}>
         <Routes>
-          <Route index element={memberships.length === 1 ? (
+          <Route index element={memberships.every((membership) => membership.isDemo === true) ? (
+            <Navigate replace to="/onboarding" />
+          ) : memberships.length === 1 ? (
             <Navigate replace to={organisationPath(memberships[0].organisationId)} />
-          ) : memberships.length ? (
+          ) : (
             <Paper withBorder p="lg">
               <Title order={1} size="h2">Choose an organisation</Title>
               <Text c="dimmed">Select an organisation to open its workspace.</Text>
             </Paper>
-          ) : <Navigate replace to="/invitations" />} />
-          <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} />} />
+          )} />
+          <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
           <Route path="/invitations" element={<InvitationsPage api={api} userId={userId} onJoined={onJoined} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>

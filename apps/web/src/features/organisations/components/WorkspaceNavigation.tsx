@@ -1,17 +1,12 @@
-import { Button, Modal, NavLink, Paper, Select, Stack, Text } from '@mantine/core'
-import { useEffect, useRef, useState } from 'react'
+import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
-import type { Membership, OrganisationsApi } from '../api/organisations'
+import type { Membership } from '../api/organisations'
 import { customersPath, invitationsPath, organisationPath, ordersPath, productsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
 const roleLabels = { admin: 'Administrator', manager: 'Manager', salesperson: 'Salesperson' }
 
-export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
-  memberships: Membership[]
-  api: OrganisationsApi
-  onDemoCreated: (membership: Membership) => void
-}) {
+export function WorkspaceNavigation({ memberships }: { memberships: Membership[] }) {
   const navigate = useNavigate()
   // Match the same paths as the routes so the links and organisation picker follow the URL.
   const invitationRoute = useMatch('/organisations/:organisationId/invitations')
@@ -36,31 +31,6 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
     }]
   }))
   const isInvitations = Boolean(invitationRoute ?? inboxRoute)
-
-  const requestId = useRef<string | undefined>(undefined)
-  const pending = useRef<AbortController | null>(null)
-  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
-  useEffect(() => () => pending.current?.abort(), [])
-
-  async function createDemo() {
-    if (pending.current) return
-    const request = new AbortController()
-    pending.current = request
-    // Keep the same ID after a failed response. A successful creation clears it for the next click.
-    const id = requestId.current ??= crypto.randomUUID()
-    setState('loading')
-    try {
-      const membership = await api.createDemo(id, request.signal)
-      if (request.signal.aborted) return
-      requestId.current = undefined
-      onDemoCreated(membership)
-      setState('idle')
-    } catch {
-      if (!request.signal.aborted) setState('error')
-    } finally {
-      pending.current = null
-    }
-  }
 
   return (
     <Paper withBorder p="md" className={styles.sidebar}>
@@ -123,25 +93,13 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
               <RouterNavLink {...props} to={ordersPath(selected.organisationId)} end />
             )} />
           )}
-          <NavLink label="Invitations" renderRoot={(props) => (
-            <RouterNavLink {...props} to={invitationsPath(selectedId)} end />
-          )} />
           <NavLink label="Create organisation" renderRoot={(props) => (
             <RouterNavLink {...props} to="/onboarding" end />
           )} />
+          <NavLink label="Invitations" renderRoot={(props) => (
+            <RouterNavLink {...props} to={invitationsPath(selectedId)} end />
+          )} />
         </nav>
-        {/* classNames styles the button and its inner label separately so the text can wrap in the sidebar. */}
-        <Button
-          variant="light"
-          classNames={{ root: styles.demoButton, label: styles.demoButtonLabel }}
-          loading={state === 'loading'}
-          onClick={() => void createDemo()}
-        >
-          Create demo organisation
-        </Button>
-        <Modal opened={state === 'error'} onClose={() => setState('idle')} title="Could not create the demo">
-          <Text>Try again.</Text>
-        </Modal>
       </Stack>
     </Paper>
   )

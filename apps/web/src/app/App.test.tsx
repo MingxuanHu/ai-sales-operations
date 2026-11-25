@@ -75,7 +75,8 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession()} />)
-    expect(await screen.findByRole('heading', { name: 'Invitations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Create organisation' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Invitations' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
     expect(await screen.findByRole('heading', { name: first.name })).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith('/api/invitations/invite/accept', expect.objectContaining({ method: 'POST' }))
@@ -105,6 +106,17 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
+  it('opens organisation setup on sign-in for a user with only the starter demo', async () => {
+    const demo = { ...first, role: 'admin', isDemo: true }
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ userId: 'synthetic-user', memberships: [demo] })))
+    render(<App session={mockSession()} />)
+    expect(await screen.findByRole('heading', { name: 'Set up your organisation' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Explore a demo' })).toBeTruthy()
+    const links = within(screen.getByRole('navigation', { name: 'Workspace' })).getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual(['Overview', 'Create organisation', 'Invitations'])
+    expect(window.location.pathname).toBe('/onboarding')
+  })
+
   it('retries demo creation and selects each newly created demo', async () => {
     const demoId = '20b6acc4-c4e8-41fd-901d-4a601880ded2'
     const demos = [
@@ -126,7 +138,9 @@ describe('protected React shell', () => {
     }))
     render(<App session={mockSession('/organisations/first')} />)
     await screen.findByRole('heading', { name: first.name })
-    const create = screen.getByRole('button', { name: 'Create demo organisation' })
+    expect(screen.queryByRole('button', { name: 'Create demo organisation' })).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
+    const create = await screen.findByRole('button', { name: 'Create demo organisation' })
     fireEvent.click(create)
     await screen.findByRole('dialog', { name: 'Could not create the demo' })
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
@@ -136,7 +150,8 @@ describe('protected React shell', () => {
     const picker = screen.getByRole('combobox', { name: 'Organisation' })
     expect(picker).toHaveProperty('value', 'Demo · 20b6acc4')
     expect(picker.getAttribute('title')).toBe(demos[0].name)
-    fireEvent.click(create)
+    fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Create demo organisation' }))
     await screen.findByRole('heading', { name: demos[1].name })
     expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
     expect(requests[2]).not.toBe(requests[0])
@@ -190,7 +205,7 @@ describe('protected React shell', () => {
       }
       throw new Error('Unexpected API request')
     }))
-    render(<App session={mockSession()} />)
+    render(<App session={mockSession('/invitations')} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
     await waitFor(() => expect(pendingSignal).not.toBeNull())
     fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))

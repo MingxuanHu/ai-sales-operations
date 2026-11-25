@@ -26,7 +26,7 @@ export async function checkDemos(app) {
     return response.json()
   }
   assert.deepEqual((await profile('legacy')).memberships, [
-    { organisationId: regular.id, name: regular.name, role: 'admin' },
+    { organisationId: regular.id, name: regular.name, role: 'admin', isDemo: false },
   ])
   assert.equal((await create(regular.creationRequestId)).status, 409)
   assert.equal((await create('invalid')).status, 400)
