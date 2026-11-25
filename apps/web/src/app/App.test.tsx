@@ -479,6 +479,29 @@ describe('order workflows', () => {
     fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '10' } })
   }
 
+  it('lets an administrator open orders and see history without order actions', async () => {
+    const admin = { ...first, role: 'admin' }
+    const path = ordersPath(admin.organisationId)
+    const pending = { ...order, status: 'pending', history: [{
+      kind: 'submitted', actorUserId: null, fromStatus: null, toStatus: 'pending', createdAt,
+    }] }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [admin] })
+      if (url === '/api/organisations/first') return Response.json(admin)
+      if (url === path) return Response.json({ orders: [pending] })
+      if (url === path + '/order-1') return Response.json(pending)
+      throw new Error('Unexpected request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Orders' }))
+    await screen.findByRole('heading', { name: 'Organisation orders' })
+    fireEvent.click(await screen.findByRole('button', { name: 'View order' }))
+    expect(await screen.findByText(/· System/)).toBeTruthy()
+    for (const name of ['Submit order', 'Approve', 'Reject', 'Fulfil']) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    }
+  })
+
   it('retries the same submission and fulfils the returned approved order', async () => {
     const path = ordersPath('first')
     const submissions: unknown[] = []

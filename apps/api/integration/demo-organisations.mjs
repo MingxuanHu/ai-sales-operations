@@ -59,7 +59,15 @@ export async function checkDemos(app) {
   assert.notEqual(first.organisationId, second.organisationId)
   assert.equal((await profile('legacy')).memberships.length, 3)
   assert.equal((await get('/organisations/' + first.organisationId + '/products', 'alice')).status, 404)
-  assert.equal((await get('/organisations/' + first.organisationId + '/orders', 'legacy')).status, 403)
+  const demoOrdersPath = '/organisations/' + first.organisationId + '/orders'
+  assert.equal((await get(demoOrdersPath, 'alice')).status, 404)
+  const demoOrders = await get(demoOrdersPath, 'legacy')
+  assert.equal(demoOrders.status, 200)
+  const { orders } = await demoOrders.json()
+  assert.equal(orders.length, 24)
+  const detail = await get(demoOrdersPath + '/' + orders[0].id, 'legacy')
+  assert.equal(detail.status, 200)
+  assert.ok((await detail.json()).history.length >= 1)
   assert.deepEqual(await db.organisation.findUnique({
     where: { id: regular.id }, include: { customers: true, products: true, orders: true },
   }), regular)

@@ -1,5 +1,6 @@
 import { Alert, Badge, Button, Checkbox, Group, Paper, Stack, Table, Text, Title } from '@mantine/core'
 import { useEffect, useState } from 'react'
+import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../api/orders'
 import { OrderDetail } from './OrderDetail'
@@ -8,7 +9,7 @@ import { OrderEntry } from './OrderEntry'
 export function OrdersPage({ api, organisationId, role, userId }: {
   api: OrdersApi
   organisationId: string
-  role: 'salesperson' | 'manager'
+  role: Role
   userId: string
 }) {
   const [pending, setPending] = useState(role === 'manager')
@@ -46,7 +47,7 @@ export function OrdersPage({ api, organisationId, role, userId }: {
       <Paper withBorder p="lg">
         <Stack>
           <Group justify="space-between">
-            <Title order={2} size="h3">{role === 'manager' ? 'Organisation orders' : 'My orders'}</Title>
+            <Title order={2} size="h3">{role === 'salesperson' ? 'My orders' : 'Organisation orders'}</Title>
             {role === 'manager' && <Checkbox label="Pending only" checked={pending} onChange={(event) => {
               setOrders({ status: 'loading' })
               setPending(event.currentTarget.checked)

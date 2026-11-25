@@ -1,6 +1,6 @@
 import { Alert, Badge, Button, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
-import { ApiError } from '../../organisations/api/organisations'
+import { ApiError, type Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrderAction, type OrdersApi } from '../api/orders'
 
@@ -19,7 +19,7 @@ export function OrderDetail({ api, organisationId, id, submitted, role, userId, 
   organisationId: string
   id: string
   submitted?: Order
-  role: 'salesperson' | 'manager'
+  role: Role
   userId: string
   onChanged: () => void
   onClose: () => void

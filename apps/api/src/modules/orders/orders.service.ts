@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { OrderStatus, Prisma, type SalesOrder } from '../../generated/prisma/client'
 import { IdentityService } from '../identity/identity.service'
@@ -55,7 +55,7 @@ export class OrdersService {
   private async readScope(tx: Prisma.TransactionClient, organisationId: string, userId: string) {
     const member = await tx.membership.findUnique({ where: { organisationId_userId: { organisationId, userId } } })
     if (member?.status !== 'active') throw new NotFoundException()
-    if (member.role === 'admin') throw new ForbiddenException()
+    // Administrators and managers can read every order inside their own organisation.
     return member.role === 'salesperson' ? { organisationId, submittedByUserId: userId } : { organisationId }
   }
 

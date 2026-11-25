@@ -64,7 +64,7 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
               const next = memberships.find(({ organisationId }) => organisationId === id)
               if (productsRoute && next?.role === 'admin') void navigate(productsPath(id))
               else if (customersRoute && next?.role === 'admin') void navigate(customersPath(id))
-              else if (ordersRoute && next && next.role !== 'admin') void navigate(ordersPath(id))
+              else if (ordersRoute && next) void navigate(ordersPath(id))
               else void navigate(isInvitations ? invitationsPath(id) : organisationPath(id))
             }}
           />
@@ -86,7 +86,7 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
               <RouterNavLink {...props} to={customersPath(selected.organisationId)} end />
             )} />
           )}
-          {(selected?.role === 'salesperson' || selected?.role === 'manager') && (
+          {selected && (
             <NavLink label="Orders" renderRoot={(props) => (
               <RouterNavLink {...props} to={ordersPath(selected.organisationId)} end />
             )} />

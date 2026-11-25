@@ -12,7 +12,7 @@
 
 - An active salesperson submits an order for one customer with at least one line item, positive whole quantities and a single order-wide discount from 0% to 100% with up to two decimal places. The server resolves customer and product IDs within the organisation, snapshots the customer name and product SKU, name and unit price, and calculates the subtotal and discounted total using exact arithmetic. Apply the discount to the subtotal and round the final total to cents, with half cents rounded up. Preserve order history through later catalogue changes and deletions.
 - Submission at or below the organisation’s threshold creates an approved order. Submission above it creates a pending order. Each order records the threshold used at submission. An active manager can approve or reject a pending order. The submitting salesperson can fulfil their own approved order. Fulfilled and rejected orders are terminal.
-- Salespeople can read their own orders and use limited customer and product selectors for entry. Managers can read all orders in their organisation and filter for pending decisions. Administrators retain their existing master-data permissions. Apply current membership and tenant checks on the server, including when resolving referenced records.
+- Salespeople can read their own orders and use limited customer and product selectors for entry. Managers and administrators can read all orders in their organisation. Managers can filter for pending decisions. Administrators also manage master data. Apply current membership and tenant checks on the server, including when resolving referenced records.
 - Record submission, automatic or manual approval, rejection and fulfilment with the applicable actor, timestamp and state change. Write history and state together. A repeated submission with the same request key and payload returns the original order. Competing decisions or fulfilment attempts must produce at most one transition and audit event for that step.
 - For M7, count fulfilled orders only. Attribute sales to the fulfilment timestamp. Net sales sum stored discounted totals, and product net sales allocate each order's discount across its lines so allocated cents reconcile to the stored order total. M7 owns reporting and the allocation implementation.
 
@@ -36,7 +36,7 @@ The authenticated API uses `/api/organisations/:organisationId/orders`.
 | Method and path relative to that base | Behaviour |
 | --- | --- |
 | `POST` | A salesperson submits `{ requestId, customerId, discountPercent, lines: [{ productId, quantity }] }`. Use a new UUID for each order and reuse it for retries. The discount is a decimal string, and quantities are JSON integers. Returns the order detail with HTTP 201, including on a matching retry. A changed order with the same request ID returns HTTP 409. |
-| `GET` | Salespeople list their own orders. Managers list organisation orders and can use `?status=pending` for the approval queue. |
+| `GET` | Salespeople list their own orders. Managers and administrators list all organisation orders. Managers use `?status=pending` for the approval queue. |
 | `GET /:id` | Returns a scoped order with customer and line snapshots and ordered audit history. |
 | `GET /selectors` | Returns customer IDs and names and product IDs, SKUs, names and prices for salesperson entry. |
 

@@ -45,7 +45,8 @@ export async function checkOrders(app) {
   assert.deepEqual(await request('GET', orders + '/selectors', 'bob', 200), {
     customers: [customer], products: [product, second],
   })
-  await request('GET', orders, 'alice', 403)
+  assert.deepEqual(await request('GET', orders, 'alice', 200), { orders: [] })
+  await request('GET', b + '/orders', 'alice', 404)
   await request('POST', orders, 'alice', 403, input)
   await request('GET', orders, undefined, 401)
   await request('POST', orders, 'bob', 404, { ...input, customerId: foreignCustomer.id })
@@ -98,7 +99,10 @@ export async function checkOrders(app) {
   await request('GET', orders + '/selectors', 'charlie', 403)
   await request('POST', orders, 'charlie', 403, input)
   assert.deepEqual(await request('GET', orders + '/' + approved.id, 'charlie', 200), approved)
+  assert.deepEqual(await request('GET', orders + '/' + approved.id, 'alice', 200), approved)
+  await request('GET', b + '/orders/' + approved.id, 'alice', 404)
   const { orders: all } = await request('GET', orders, 'charlie', 200)
+  assert.deepEqual(await request('GET', orders, 'alice', 200), { orders: all })
   assert.deepEqual(new Set(all.map(({ id }) => id)), new Set([approved.id, pending.id, multi.id]))
   const { orders: queue } = await request('GET', orders + '?status=pending', 'charlie', 200)
   assert.deepEqual(queue.map(({ id }) => id), [pending.id])

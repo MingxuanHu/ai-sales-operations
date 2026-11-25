@@ -275,7 +275,7 @@ A user can be a `salesperson` in one organisation and a `manager` in another. Ne
 | Orders · create | `salesperson` | M6 |
 | Discount approvals · approve | `manager` | M6 |
 
-Permissions are explicit per action. Roles grant no inherited permissions. An administrator can manage staff, while creating orders and approving discounts require the respective business role in that organisation. M2 stores and assigns all three roles and enforces the M2 actions. M6 implements the proposed order actions and defines the remaining order permissions and state transitions.
+Permissions are explicit per action. Roles grant no inherited permissions. Administrators can manage staff and read all orders in their organisation. Creating orders and approving discounts require the respective business role in that organisation. M2 stores and assigns all three roles and enforces the M2 actions. M6 implements the proposed order actions and defines the remaining order permissions and state transitions.
 
 For each resource action, NestJS checks active membership and the required permission, then scopes the resource and related records to that same organisation. Order creation validates that the customer and products belong to the organisation. Discount approval loads the order within that organisation and requires it to be pending discount approval. Check the current role and applicable resource state in the same transaction as the write. An active member without the action permission receives `403`. A resource outside the tenant scope receives `404` when looked up by an authorised caller.
 

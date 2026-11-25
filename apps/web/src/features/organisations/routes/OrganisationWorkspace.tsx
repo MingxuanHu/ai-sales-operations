@@ -106,11 +106,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           } />
           <Route path="/organisations/:organisationId/orders" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => membership.role === 'admin'
-                ? <Alert role="alert" color="red" title="Access denied">
-                  Only salespeople and managers can access orders.
-                </Alert>
-                : <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} />}
+              {(membership) => <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} />}
             </OrganisationAccess>
           } />
           <Route path="*" element={<Navigate replace to="/" />} />
