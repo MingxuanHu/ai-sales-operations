@@ -8,14 +8,14 @@ import type { Membership, OrganisationsApi, Profile } from '../api/organisations
 import { Loading, type LoadResult } from '../components/Loading'
 import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { CreateOrganisationPage } from './CreateOrganisationPage'
-import { InvitationsPage } from './InvitationsPage'
+import { InvitationInbox } from '../components/invitations/InvitationInbox'
 import { OrganisationAccess } from './OrganisationAccess'
 import { OrganisationSettingsPage } from './OrganisationSettingsPage'
 import { OrganisationOverviewPage } from './OrganisationOverviewPage'
 import { organisationPath } from './workspacePaths'
 import styles from './OrganisationWorkspace.module.css'
 
-export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
+export function OrganisationWorkspace({ api, messagesTarget }: { api: OrganisationsApi; messagesTarget: HTMLElement | null }) {
   const [profile, setProfile] = useState<LoadResult<Profile>>({ status: 'loading' })
   // Changing this counter asks the effect to fetch again, even when the API client is the same.
   const [revision, setRevision] = useState(0)
@@ -65,6 +65,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   return (
     <div className={styles.workspace}>
       <WorkspaceNavigation memberships={memberships} />
+      {messagesTarget && <InvitationInbox target={messagesTarget} api={api} userId={userId} onJoined={onJoined} />}
       <div className={styles.content}>
         <Routes>
           <Route index element={memberships.every((membership) => membership.isDemo === true) ? (
@@ -78,7 +79,6 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
             </Paper>
           )} />
           <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
-          <Route path="/invitations" element={<InvitationsPage api={api} userId={userId} onJoined={onJoined} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
               {(membership) => <OrganisationOverviewPage membership={membership} />}
@@ -94,11 +94,6 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
               ) : <Alert role="alert" color="red" title="Access denied">
                 Only organisation administrators can manage settings.
               </Alert>}
-            </OrganisationAccess>
-          } />
-          <Route path="/organisations/:organisationId/invitations" element={
-            <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <InvitationsPage api={api} userId={userId} onJoined={onJoined} membership={membership} />}
             </OrganisationAccess>
           } />
           <Route path="/organisations/:organisationId/products" element={

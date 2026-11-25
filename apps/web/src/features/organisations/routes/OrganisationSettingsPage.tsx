@@ -1,6 +1,7 @@
 import { Alert, Button, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import type { Membership, OrganisationsApi } from '../api/organisations'
+import { StaffInvitation } from '../components/invitations/StaffInvitation'
 import { Loading } from '../components/Loading'
 import { DeleteDemoPanel } from './DeleteDemoPanel'
 
@@ -85,6 +86,7 @@ export function OrganisationSettingsPage({ membership, api, onDeleted }: {
           )}
         </Stack>
       </Paper>
+      <StaffInvitation api={api} organisationId={organisationId} />
       {membership.isDemo && <DeleteDemoPanel membership={membership} api={api} onDeleted={onDeleted} />}
     </Stack>
   )

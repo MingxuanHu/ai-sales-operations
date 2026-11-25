@@ -95,7 +95,7 @@ export function StaffInvitation({ api, organisationId }: { api: OrganisationsApi
           <Stack gap="md">
             <TextInput
               label="Recipient user ID"
-              description="Ask the recipient to copy their user ID from the Invitations page."
+              description="Ask the recipient to copy their user ID from Messages."
               required
               disabled={Boolean(busy)}
               value={recipient}
