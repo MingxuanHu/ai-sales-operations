@@ -134,6 +134,7 @@ model Product {
   name           String       @db.VarChar(120)
   unitPrice      Decimal      @map("unit_price") @db.Decimal(12, 2)
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  orderLines     OrderLine[]
 
   // The same SKU can belong to different organisations.
   @@unique([organisationId, sku])
@@ -146,12 +147,13 @@ model Customer {
   organisationId String       @map("organisation_id") @db.Uuid
   name           String       @db.VarChar(120)
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  orders         SalesOrder[]
 
   @@index([organisationId, name, id])
   @@map("customers")
 }
 
-// Customer and product IDs are historical references. Snapshots survive master-data deletion.
+// Snapshots preserve the original order details when a customer or product changes.
 model SalesOrder {
   id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organisationId           String       @map("organisation_id") @db.Uuid
@@ -168,12 +170,14 @@ model SalesOrder {
   createdAt                DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   organisation             Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   submitter                Membership? @relation(fields: [organisationId, submittedByUserId], references: [organisationId, userId], onDelete: Restrict)
+  customer                 Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
   lines                    OrderLine[]
   history                  OrderEvent[]
 
   @@unique([organisationId, submittedByUserId, requestId])
   @@index([organisationId, createdAt, id])
   @@index([organisationId, status, createdAt, id])
+  @@index([customerId])
   @@map("sales_orders")
 }
 
@@ -186,8 +190,10 @@ model OrderLine {
   unitPrice Decimal    @map("unit_price") @db.Decimal(12, 2)
   quantity  Int
   order     SalesOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@id([orderId, position])
+  @@index([productId])
   @@map("order_lines")
 }
 

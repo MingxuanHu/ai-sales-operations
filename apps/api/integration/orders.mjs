@@ -152,7 +152,21 @@ export async function checkOrders(app) {
   assert.equal((await request('GET', referencedProduct, 'alice', 200)).unitPrice, '14.00')
   await request('DELETE', b + '/products/' + product.id, 'bob', 404)
   await request('DELETE', b + '/products/' + foreignProduct.id, 'bob', 204)
-  await request('DELETE', a + '/customers/' + customer.id, 'alice', 204)
+  const referencedCustomer = a + '/customers/' + customer.id
+  const customerDeletion = await request('DELETE', referencedCustomer, 'alice', 409)
+  assert.equal(customerDeletion.message, 'This customer cannot be deleted because it is used in an order.')
+  assert.equal((await request('GET', referencedCustomer, 'alice', 200)).name, 'Renamed')
+  await request('DELETE', b + '/customers/' + foreignCustomer.id, 'bob', 204)
+
+  // Direct database writes bypass the API and still have to satisfy both foreign keys.
+  await assert.rejects(database.product.delete({ where: { id: product.id } }), { code: 'P2003' })
+  await assert.rejects(database.customer.delete({ where: { id: customer.id } }), { code: 'P2003' })
+  await assert.rejects(database.salesOrder.update({
+    where: { id: approved.id }, data: { customerId: randomUUID() },
+  }), { code: 'P2003' })
+  await assert.rejects(database.orderLine.update({
+    where: { orderId_position: { orderId: approved.id, position: 0 } }, data: { productId: randomUUID() },
+  }), { code: 'P2003' })
   assert.deepEqual(await request('POST', orders, 'bob', 201, input), approved)
 
   // Reuse the order detail route to check that denied and stale commands preserve history.

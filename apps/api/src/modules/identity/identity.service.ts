@@ -148,7 +148,7 @@ export class IdentityService {
       if (!isDemoOrganisation(organisation.settings)) throw new ForbiddenException('Only demo organisations can be deleted')
       if (organisation.name !== confirmationName) throw new ConflictException('Type the exact organisation name')
 
-      // Remove dependent rows first to satisfy foreign keys. A failed delete rolls back every change.
+      // Delete orders before their customers and products so the foreign keys allow the teardown.
       await tx.orderEvent.deleteMany({ where: { order: { organisationId } } })
       await tx.orderLine.deleteMany({ where: { order: { organisationId } } })
       await tx.salesOrder.deleteMany({ where: { organisationId } })

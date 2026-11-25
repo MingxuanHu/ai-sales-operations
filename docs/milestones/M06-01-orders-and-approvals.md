@@ -10,7 +10,7 @@
 
 ### Proposed business rules
 
-- An active salesperson submits an order for one customer with at least one line item, positive whole quantities and a single order-wide discount from 0% to 100% with up to two decimal places. The server resolves customer and product IDs within the organisation, snapshots the customer name and product SKU, name and unit price, and calculates the subtotal and discounted total using exact arithmetic. Apply the discount to the subtotal and round the final total to cents, with half cents rounded up. Preserve order history through later catalogue edits and customer deletions. A product referenced by any order in the organisation cannot be deleted.
+- An active salesperson submits an order for one customer with at least one line item, positive whole quantities and a single order-wide discount from 0% to 100% with up to two decimal places. The server resolves customer and product IDs within the organisation, snapshots the customer name and product SKU, name and unit price, and calculates the subtotal and discounted total using exact arithmetic. Apply the discount to the subtotal and round the final total to cents, with half cents rounded up. Preserve order history through later catalogue and customer edits. PostgreSQL foreign keys block deletion of any customer or product referenced by an order.
 - Submission at or below the organisation’s threshold creates an approved order. Submission above it creates a pending order. Each order records the threshold used at submission. An active manager can approve or reject a pending order. The submitting salesperson can fulfil their own approved order. Fulfilled and rejected orders are terminal.
 - Salespeople can read their own orders and use limited customer and product selectors for entry. Managers and administrators can read all orders in their organisation. Managers can filter for pending decisions. Administrators also manage master data. Apply current membership and tenant checks on the server, including when resolving referenced records.
 - Record submission, automatic or manual approval, rejection and fulfilment with the applicable actor, timestamp and state change. Write history and state together. A repeated submission with the same request key and payload returns the original order. Competing decisions or fulfilment attempts must produce at most one transition and audit event for that step.
@@ -27,7 +27,7 @@
 - **Goal.** Persist valid orders and the submission decision using organisation master data.
 - **In scope.** Add the Prisma migration, order and line snapshots, audit storage, limited selectors, scoped list and detail reads, and idempotent submission. Apply the discount rule at submission.
 - **Out of scope.** Manual decisions, fulfilment and React screens.
-- **Acceptance.** With default settings, orders at 10% are approved and orders at 10.01% are pending. A configured threshold applies to new orders for that organisation. Invalid quantities and discounts fail with actionable errors. Foreign IDs cannot be read or used to submit. Price edits and customer deletions preserve prior order details. Deleting an order-linked product returns HTTP 409. Identical concurrent submissions converge on one order and one history, and reuse of a key for different input returns a conflict.
+- **Acceptance.** With default settings, orders at 10% are approved and orders at 10.01% are pending. A configured threshold applies to new orders for that organisation. Invalid quantities and discounts fail with actionable errors. Foreign IDs cannot be read or used to submit. Price and customer name edits preserve prior order details. Deleting an order-linked customer or product returns HTTP 409. Identical concurrent submissions converge on one order and one history, and reuse of a key for different input returns a conflict.
 - **Dependencies.** [M5 master data](M05-01-master-data.md) and the [identity and tenant authorisation rules](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Cover role and tenant scope, rounding and threshold boundaries, historical snapshots and concurrent retries in automated tests.
 
@@ -137,3 +137,8 @@ The Overview response exposes the demo flag from the organisation’s JSON setti
 The migration backfills `settings.isDemo` on existing demos. Demo administrators can send
 `DELETE /api/organisations/:organisationId` with `{ confirmationName }` to remove
 the demo and its tenant-owned records. Confirmation uses the exact stored name.
+
+The order foreign-key migration validates existing data. If a database has orders
+that refer to previously deleted customers or products, resolve those records before
+applying the migration. The migration itself never removes orders. Demo teardown
+deletes order history, lines and orders before deleting its catalogue and customers.
