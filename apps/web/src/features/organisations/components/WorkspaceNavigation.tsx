@@ -5,6 +5,8 @@ import type { Membership, OrganisationsApi } from '../api/organisations'
 import { customersPath, invitationsPath, organisationPath, ordersPath, productsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
+const roleLabels = { admin: 'Administrator', manager: 'Manager', salesperson: 'Salesperson' }
+
 export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
   memberships: Membership[]
   api: OrganisationsApi
@@ -20,6 +22,19 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
   const inboxRoute = useMatch('/invitations')
   const selectedId = (invitationRoute ?? productsRoute ?? customersRoute ?? ordersRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
+  const options = new Map(memberships.map(({ organisationId, name, role }) => {
+    // Match the generated demo name to its own ID so custom names keep their original labels.
+    const demo = name === `Demo · Fern & Finch Supply · ${organisationId}`
+    const code = organisationId.slice(0, 8)
+    return [organisationId, {
+      value: organisationId,
+      label: demo ? `Demo · ${code}` : name,
+      name: demo ? 'Fern & Finch Supply' : name,
+      detail: demo ? `Demo · ${code}` : '',
+      role: roleLabels[role],
+      fullName: name,
+    }]
+  }))
   const isInvitations = Boolean(invitationRoute ?? inboxRoute)
 
   const requestId = useRef<string | undefined>(undefined)
@@ -54,7 +69,24 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
           <Select
             label="Organisation"
             placeholder="Choose an organisation"
-            data={memberships.map(({ organisationId, name }) => ({ value: organisationId, label: name }))}
+            data={[...options.values()]}
+            title={selected?.name}
+            classNames={{ input: styles.pickerInput, dropdown: styles.pickerDropdown, option: styles.pickerOption }}
+            renderOption={({ option, checked }) => {
+              const entry = options.get(option.value)
+              if (!entry) return option.label
+              // Select supplies the keyboard interaction and selected state for each custom row.
+              return (
+                <div className={styles.optionRow} title={entry.fullName}>
+                  <div className={styles.optionText}>
+                    <span className={styles.optionName}>{entry.name}</span>
+                    {entry.detail && <span className={styles.demoCode}>{entry.detail}</span>}
+                    <span className={styles.optionRole}>{entry.role}</span>
+                  </div>
+                  {checked && <span className={styles.optionCheck} aria-hidden="true">✓</span>}
+                </div>
+              )
+            }}
             allowDeselect={false}
             maxDropdownHeight={240}
             value={selected?.organisationId ?? null}

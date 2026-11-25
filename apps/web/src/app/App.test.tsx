@@ -106,15 +106,16 @@ describe('protected React shell', () => {
   })
 
   it('retries demo creation and selects each newly created demo', async () => {
+    const demoId = '20b6acc4-c4e8-41fd-901d-4a601880ded2'
     const demos = [
-      { organisationId: 'demo-1', name: 'Fern & Finch Demo 1', role: 'admin' },
+      { organisationId: demoId, name: `Demo · Fern & Finch Supply · ${demoId}`, role: 'admin' },
       { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
     ]
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
       if (url === '/api/organisations/first') return Response.json(first)
-      if (url === '/api/organisations/demo-1') return Response.json(demos[0])
+      if (url === '/api/organisations/' + demoId) return Response.json(demos[0])
       if (url === '/api/organisations/demo-2') return Response.json(demos[1])
       if (url === '/api/organisations/demo') {
         requests.push(JSON.parse(String(options.body)).requestId)
@@ -132,7 +133,9 @@ describe('protected React shell', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     fireEvent.click(create)
     await screen.findByRole('heading', { name: demos[0].name })
-    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[0].name)
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    expect(picker).toHaveProperty('value', 'Demo · 20b6acc4')
+    expect(picker.getAttribute('title')).toBe(demos[0].name)
     fireEvent.click(create)
     await screen.findByRole('heading', { name: demos[1].name })
     expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
