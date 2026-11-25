@@ -6,7 +6,7 @@ import { isUniqueConstraintViolation } from '../../database/prisma-errors'
 import { PrismaService } from '../../database/prisma.service'
 import { Prisma } from '../../generated/prisma/client'
 import { MembershipRole } from '../../generated/prisma/enums'
-import { provisionDemo } from './demo-organisation'
+import { isDemoOrganisation, provisionDemo } from './demo-organisation'
 
 @Injectable()
 export class IdentityService {
@@ -78,7 +78,7 @@ export class IdentityService {
         where: { createdByUserId_creationRequestId: { createdByUserId: userId, creationRequestId: requestId } },
       })
       if (!existing) throw error
-      if (existing.isDemo || existing.name !== name) throw new ConflictException('Request ID already used')
+      if (isDemoOrganisation(existing.settings) || existing.name !== name) throw new ConflictException('Request ID already used')
       return { organisationId: existing.id, created: false }
     }
   }
@@ -95,7 +95,7 @@ export class IdentityService {
         where: { createdByUserId_creationRequestId: { createdByUserId: userId, creationRequestId: requestId } },
       })
       if (!existing) throw error
-      if (!existing.isDemo) throw new ConflictException('Request ID already used')
+      if (!isDemoOrganisation(existing.settings)) throw new ConflictException('Request ID already used')
       return { organisationId: existing.id, created: false }
     }
   }
@@ -106,13 +106,13 @@ export class IdentityService {
     const [membership] = await this.database.client.$transaction(
       [this.database.client.membership.findUnique({
         where: { organisationId_userId: { organisationId, userId }, status: 'active' },
-        select: { organisationId: true, role: true, organisation: { select: { name: true, isDemo: true } } },
+        select: { organisationId: true, role: true, organisation: { select: { name: true, settings: true } } },
       })],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     )
     if (!membership) throw new NotFoundException()
-    const { name, isDemo } = membership.organisation
-    return { organisationId: membership.organisationId, name, role: membership.role, isDemo }
+    const { name, settings } = membership.organisation
+    return { organisationId: membership.organisationId, name, role: membership.role, isDemo: isDemoOrganisation(settings) }
   }
 
   deleteDemo(organisationId: string, userId: string, confirmationName: string) {
@@ -122,7 +122,7 @@ export class IdentityService {
       await this.requireRole(tx, organisationId, userId, 'admin')
       const where = { id: organisationId }
       const organisation = await tx.organisation.findUniqueOrThrow({ where })
-      if (!organisation.isDemo) throw new ForbiddenException('Only demo organisations can be deleted')
+      if (!isDemoOrganisation(organisation.settings)) throw new ForbiddenException('Only demo organisations can be deleted')
       if (organisation.name !== confirmationName) throw new ConflictException('Type the exact organisation name')
 
       // Remove dependent rows first to satisfy foreign keys. A failed delete rolls back every change.

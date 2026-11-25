@@ -43,11 +43,18 @@ const outstanding: [OrderStatus, ...typeof sales[number]][] = [
   ['rejected', 2, 3, 2_500, [[1, 12], [2, 12]]],
 ]
 
+// Only the JSON boolean true marks a demo. Older regular organisations can omit the setting.
+export function isDemoOrganisation(settings: Prisma.JsonValue) {
+  return settings !== null && typeof settings === 'object' && !Array.isArray(settings) && settings.isDemo === true
+}
+
 export async function provisionDemo(tx: Prisma.TransactionClient, userId: string, requestId: string) {
   const id = randomUUID()
   const { createdAt } = await tx.organisation.create({
     data: {
-      id, name: `Demo · Fern & Finch Supply · ${id}`, isDemo: true,
+      id, name: `Demo · Fern & Finch Supply · ${id}`,
+      // Keep the previous column populated so the prior API build can still recognise new demos.
+      isDemo: true, settings: { isDemo: true },
       createdByUserId: userId, creationRequestId: requestId,
       memberships: { create: { userId, role: 'admin' } },
     },

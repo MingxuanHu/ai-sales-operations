@@ -51,7 +51,7 @@ model Organisation {
   products          Product[]
   customers         Customer[]
   orders            SalesOrder[]
-  // The creation retry distinguishes seeded demos from regular organisations.
+  // Legacy flag retained for compatibility with older API builds. New reads use settings.isDemo.
   isDemo            Boolean         @default(false) @map("is_demo")
   // JSONB lets organisations add settings without adding a column for each option.
   settings          Json            @default("{}") @db.JsonB

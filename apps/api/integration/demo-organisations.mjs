@@ -80,7 +80,7 @@ export async function checkDemos(app) {
         include: { lines: true, history: { orderBy: { position: 'asc' } } },
       } },
     })
-    assert.equal(demo.isDemo, true)
+    assert.equal(demo.settings.isDemo, true)
     assert.equal(demo.customers.length, 5)
     assert.equal(demo.products.length, 6)
     const counts = { fulfilled: 0, pending: 0, approved: 0, rejected: 0 }
@@ -145,6 +145,7 @@ export async function checkDemos(app) {
     role: 'salesperson', expiresAt: new Date(Date.now() + 60_000),
   } })
   const orderIds = orders.map(({ id }) => id)
+  await db.organisation.update({ where: { id: regular.id }, data: { settings: { isDemo: 'true' } } })
   assert.equal((await deleteDemo(regular.id, 'legacy', regular.name)).status, 403)
   assert.equal((await deleteDemo(organisationId, 'charlie', first.name)).status, 404)
   assert.equal((await deleteDemo(organisationId, 'alice', first.name)).status, 403)

@@ -130,6 +130,7 @@ returns the same entry. System-generated orders have a null submitter and null a
 actors. Live commands continue to require real tenant memberships and the applicable
 roles.
 
-The Overview response includes the stored demo flag. Demo administrators can send
+The Overview response exposes the demo flag from the organisation’s JSON settings.
+The migration backfills `settings.isDemo` on existing demos. Demo administrators can send
 `DELETE /api/organisations/:organisationId` with `{ confirmationName }` to remove
 the demo and its tenant-owned records. Confirmation uses the exact stored name.
