@@ -12,6 +12,18 @@
   font-weight: 600;
 }
 
+.demoButton {
+  height: auto;
+  min-height: var(--button-height);
+  padding: 0.5rem 0.75rem;
+}
+
+.demoButtonLabel {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
 @media (max-width: 48em) {
   .navigation {
     display: flex;

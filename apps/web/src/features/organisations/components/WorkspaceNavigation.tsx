@@ -98,7 +98,13 @@ export function WorkspaceNavigation({ memberships, api, onDemoCreated }: {
             <RouterNavLink {...props} to="/onboarding" end />
           )} />
         </nav>
-        <Button variant="light" loading={state === 'loading'} onClick={() => void createDemo()}>
+        {/* classNames styles the button and its inner label separately so the text can wrap in the sidebar. */}
+        <Button
+          variant="light"
+          classNames={{ root: styles.demoButton, label: styles.demoButtonLabel }}
+          loading={state === 'loading'}
+          onClick={() => void createDemo()}
+        >
           Create demo organisation
         </Button>
         {state === 'success' && <Alert role="status">Demo ready. Choose it from the organisation picker.</Alert>}
