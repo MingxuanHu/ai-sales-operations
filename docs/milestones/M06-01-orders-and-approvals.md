@@ -22,7 +22,7 @@
 
 ### 1. Add tenant-scoped order submission and read APIs
 
-[Issue #56](https://github.com/MingxuanHu/ai-sales-operations/issues/56)
+[Issue #56](https://github.com/MingxuanHu/ai-sales-operations/issues/56) · [PR #63](https://github.com/MingxuanHu/ai-sales-operations/pull/63)
 
 - **Goal.** Persist valid orders and the submission decision using organisation master data.
 - **In scope.** Add the Prisma migration, order and line snapshots, audit storage, limited selectors, scoped list and detail reads, and idempotent submission. Apply the discount rule at submission.
