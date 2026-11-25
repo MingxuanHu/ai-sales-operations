@@ -26,7 +26,9 @@ export async function checkIdentity(app) {
     request('GET', '/me', 'alice', 200),
   ])
   assert.deepEqual(aliceProfile, concurrentAliceProfile)
-  assert.deepEqual(aliceProfile.memberships, [])
+  assert.equal(aliceProfile.memberships.length, 1)
+  assert.equal(aliceProfile.memberships[0].role, 'admin')
+  assert.match(aliceProfile.memberships[0].name, /^Demo · Fern & Finch Supply/)
   const bobProfile = await request('GET', '/me', 'bob', 200)
   const charlieProfile = await request('GET', '/me', 'charlie', 200)
 

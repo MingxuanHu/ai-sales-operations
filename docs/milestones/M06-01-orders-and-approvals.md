@@ -100,3 +100,31 @@ order is visible to the authorised actor but its status no longer allows the com
   - Organisation creation, administrator membership and fixture writes are atomic. A failure leaves no partially populated demo, and retrying a failed attempt can complete provisioning.
 - **Dependencies.** Issue #58 completes the browser order workflow first. Reuse the existing registration and organisation selection flows, authorisation rules, master-data models, and order and audit invariants. Follow the [security rules for synthetic data](../engineering/security.md).
 - **Validation.** Run `pnpm check` with Docker. In the browser, verify automatic provisioning for a new registration, sign in again, and verify that a pre-existing user can create two demos and switch between them while their existing organisation data stays intact. API integration tests cover registration retries, concurrent retries of the same create request, separate create requests, rollback and recovery, tenant isolation, system audit attribution, and expected M7 totals.
+
+#### Demo dataset for M7
+
+Fern & Finch Supply is a fictional café-supply wholesaler. Each demo has five customers,
+six products and 24 orders with two or three line items each. The fixtures use the same
+quantities, prices and discounts across demos. Timestamps are anchored to organisation
+creation and kept as historical dates after provisioning.
+
+| Fixture check | Expected result |
+| --- | --- |
+| Order states | 20 fulfilled, 2 pending, 1 approved, 1 rejected |
+| Fulfilled net sales | $8,502.18 across eight seven-day periods |
+| Net sales by seven-day period, newest first | $1,416.36, $1,086.72, $1,716.50, $1,146.03, $599.10, $1,278.03, $658.58, $600.86 |
+| Highest net sales by customer | Fern Lane Café at $2,515.81 |
+| Highest unit volume by product | 90 mm cup lids at 79 cases |
+
+Cases are the order quantity unit. M7 can filter by fulfilment timestamp and allocate
+the stored order discount across products. The three fulfilled orders with discounts
+above 10% have a manual approval in their system-generated history. The approved,
+pending and rejected examples are excluded from sales totals.
+
+First verified sign-in provisions the application user and demo in one transaction.
+Existing application users can create one through **Create demo organisation** in the
+workspace navigation. That action uses `POST /api/organisations/demo` with
+`{ requestId }` and returns the new picker entry. Reusing a successful request ID
+returns the same entry. System-generated orders have a null submitter and null audit
+actors. Live commands continue to require real tenant memberships and the applicable
+roles.

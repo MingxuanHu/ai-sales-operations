@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service'
 import { OrderStatus, Prisma, type SalesOrder } from '../../generated/prisma/client'
 import { IdentityService } from '../identity/identity.service'
 import { orderInput } from './order-input'
+import { money, orderAmounts } from './order-money'
 
 // Positions keep nested rows in submission order even when timestamps match.
 const details = {
@@ -32,11 +33,6 @@ function detail(order: Prisma.SalesOrderGetPayload<{ include: typeof details }>)
       kind, actorUserId, fromStatus, toStatus, createdAt,
     })),
   }
-}
-
-// Format nonnegative integer cents as a decimal string for Prisma.
-function money(cents: bigint) {
-  return `${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`
 }
 
 function approvalThreshold(settings: Prisma.JsonValue) {
@@ -164,11 +160,7 @@ export class OrdersService {
         const { sku, name, unitPrice } = product
         return { position, productId, sku, name, unitPrice, quantity }
       })
-      // BigInt keeps large quantities exact. Add half the divisor before truncating to round half up.
-      const subtotal = snapshots.reduce((sum, line) => (
-        sum + BigInt(line.unitPrice.toFixed(2).replace('.', '')) * BigInt(line.quantity)
-      ), 0n)
-      const total = (subtotal * BigInt(10_000 - discount) + 5_000n) / 10_000n
+      const { subtotal, total } = orderAmounts(snapshots, discount)
       // Read the policy under the organisation lock after checking for a matching retry.
       const { settings } = await tx.organisation.findUniqueOrThrow({ where: { id: organisationId }, select: { settings: true } })
       const threshold = approvalThreshold(settings)
@@ -184,7 +176,7 @@ export class OrdersService {
         data: {
           organisationId, submittedByUserId: userId, requestId, requestHash, customerId,
           customerName: customer.name, status, discountPercent: money(BigInt(discount)),
-          approvalThresholdPercent: money(BigInt(threshold)), subtotal: money(subtotal), total: money(total),
+          approvalThresholdPercent: money(BigInt(threshold)), subtotal, total,
           lines: { create: snapshots }, history: { create: history },
         },
         include: details,

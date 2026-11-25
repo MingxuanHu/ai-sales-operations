@@ -52,6 +52,10 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
       request<void>(`/organisations/${encodeURIComponent(id)}/invitations/${encodeURIComponent(invitationId)}`, {
         method: 'DELETE', signal,
       }),
+    createDemo: (requestId: string, signal: AbortSignal) =>
+      request<Membership>('/organisations/demo', {
+        method: 'POST', body: JSON.stringify({ requestId }), signal,
+      }),
     create: (name: string, requestId: string, signal: AbortSignal) =>
       request<{ organisationId: string }>('/organisations', {
         method: 'POST', body: JSON.stringify({ name, requestId }), signal,

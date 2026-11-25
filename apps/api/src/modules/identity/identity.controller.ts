@@ -50,6 +50,21 @@ export class IdentityController {
     return { organisationId }
   }
 
+  @Post('organisations/demo')
+  async createDemo(
+    @Req() request: AuthenticatedRequest, @Body() body: unknown,
+    @Res({ passthrough: true }) response: StatusResponse,
+  ) {
+    const { requestId } = payload(body)
+    if (typeof requestId !== 'string') throw new BadRequestException('Invalid request ID')
+    const id = await new ParseUUIDPipe().transform(requestId, { type: 'body' })
+    if (!id) throw new BadRequestException('Missing request ID')
+    const { organisationId, created } = await this.identity.createDemo(request.userId, id)
+    response.status(created ? HttpStatus.CREATED : HttpStatus.OK)
+    // Resolve the membership so the web picker can update without switching workspaces.
+    return this.identity.overview(organisationId, request.userId)
+  }
+
   // ParseUUIDPipe rejects malformed path IDs before the service queries PostgreSQL.
   @Get('organisations/:organisationId')
   getOrganisationOverview(

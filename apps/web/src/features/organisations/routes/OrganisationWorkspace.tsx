@@ -4,7 +4,7 @@ import { CustomersPage } from '../../customers/components/CustomersPage'
 import { OrdersPage } from '../../orders/components/OrdersPage'
 import { ProductsPage } from '../../products/components/ProductsPage'
 import { Navigate, Route, Routes, useNavigate } from 'react-router'
-import type { OrganisationsApi, Profile } from '../api/organisations'
+import type { Membership, OrganisationsApi, Profile } from '../api/organisations'
 import { Loading, type LoadResult } from '../components/Loading'
 import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { CreateOrganisationPage } from './CreateOrganisationPage'
@@ -42,6 +42,16 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
     void navigate(organisationPath(id))
   }
 
+  function addDemo(membership: Membership) {
+    // Update the picker in place so the current route and its form state stay intact.
+    setProfile((current) => {
+      if (current.status !== 'ready' || current.data.memberships.some((item) => item.organisationId === membership.organisationId)) {
+        return current
+      }
+      return { status: 'ready', data: { ...current.data, memberships: [...current.data.memberships, membership] } }
+    })
+  }
+
   if (profile.status === 'loading') return <Loading>Loading your organisations…</Loading>
   if (profile.status === 'failed') {
     return <Alert role="alert" color="red" title="Could not load your organisations">
@@ -52,7 +62,7 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
   const { memberships, userId } = profile.data
   return (
     <div className={styles.workspace}>
-      <WorkspaceNavigation memberships={memberships} />
+      <WorkspaceNavigation memberships={memberships} api={api} onDemoCreated={addDemo} />
       <div className={styles.content}>
         <Routes>
           <Route index element={memberships.length === 1 ? (

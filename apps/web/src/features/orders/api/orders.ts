@@ -3,7 +3,7 @@ export type OrderAction = 'approve' | 'reject' | 'fulfil'
 
 export type OrderSummary = {
   id: string
-  submittedByUserId: string
+  submittedByUserId: string | null
   customerName: string
   status: OrderStatus
   createdAt: string

@@ -105,6 +105,43 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
+  it('retries demo creation and adds two demos without navigating away from the current organisation', async () => {
+    const demos = [
+      { organisationId: 'demo-1', name: 'Fern & Finch Demo 1', role: 'admin' },
+      { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
+    ]
+    const requests: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
+      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/demo-2') return Response.json(demos[1])
+      if (url === '/api/organisations/demo') {
+        requests.push(JSON.parse(String(options.body)).requestId)
+        if (requests.length === 1) return new Response(null, { status: 503 })
+        return Response.json(demos[requests.length - 2], { status: 201 })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first')} />)
+    await screen.findByRole('heading', { name: first.name })
+    const create = screen.getByRole('button', { name: 'Create demo organisation' })
+    fireEvent.click(create)
+    await screen.findByText('Could not create the demo. Try again.')
+    fireEvent.click(create)
+    await screen.findByText(/Demo ready/)
+    fireEvent.click(create)
+    await screen.findByText(/Demo ready/)
+    expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
+    expect(requests[2]).not.toBe(requests[0])
+    expect(window.location.pathname).toBe('/organisations/first')
+
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    expect(await screen.findByText(demos[0].name)).toBeTruthy()
+    fireEvent.click(screen.getByText(demos[1].name))
+    expect(await screen.findByRole('heading', { name: demos[1].name })).toBeTruthy()
+  })
+
   it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {
     let pendingSignal: AbortSignal | null = null
     let finishAcceptance: (response: Response) => void = () => {}

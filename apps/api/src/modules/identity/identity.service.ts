@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import {
   ConflictException, ForbiddenException, Injectable, NotFoundException,
 } from '@nestjs/common'
@@ -5,6 +6,7 @@ import { isUniqueConstraintViolation } from '../../database/prisma-errors'
 import { PrismaService } from '../../database/prisma.service'
 import { Prisma } from '../../generated/prisma/client'
 import { MembershipRole } from '../../generated/prisma/enums'
+import { provisionDemo } from './demo-organisation'
 
 @Injectable()
 export class IdentityService {
@@ -18,10 +20,12 @@ export class IdentityService {
     if (existing) return existing.userId
 
     try {
-      // user is the relation field on ExternalIdentity. Its nested create inserts
-      // an ApplicationUser with database defaults, then links both rows in one transaction.
-      const identity = await db.externalIdentity.create({ data: { subject, user: { create: {} } } })
-      return identity.userId
+      // First sign-in completes app registration. Commit the identity only if its demo is ready.
+      return await db.$transaction(async (tx) => {
+        const identity = await tx.externalIdentity.create({ data: { subject, user: { create: {} } } })
+        await provisionDemo(tx, identity.userId, randomUUID())
+        return identity.userId
+      })
     } catch (error) {
       // Another request may have inserted the same unique subject. Read the winning row.
       if (!isUniqueConstraintViolation(error)) throw error
@@ -74,7 +78,24 @@ export class IdentityService {
         where: { createdByUserId_creationRequestId: { createdByUserId: userId, creationRequestId: requestId } },
       })
       if (!existing) throw error
-      if (existing.name !== name) throw new ConflictException('Request ID already used')
+      if (existing.isDemo || existing.name !== name) throw new ConflictException('Request ID already used')
+      return { organisationId: existing.id, created: false }
+    }
+  }
+
+  async createDemo(userId: string, requestId: string) {
+    const db = this.database.client
+    try {
+      const organisationId = await db.$transaction((tx) => provisionDemo(tx, userId, requestId))
+      return { organisationId, created: true }
+    } catch (error) {
+      // The creation key is shared with regular organisations. Only a demo can satisfy this retry.
+      if (!isUniqueConstraintViolation(error)) throw error
+      const existing = await db.organisation.findUnique({
+        where: { createdByUserId_creationRequestId: { createdByUserId: userId, creationRequestId: requestId } },
+      })
+      if (!existing) throw error
+      if (!existing.isDemo) throw new ConflictException('Request ID already used')
       return { organisationId: existing.id, created: false }
     }
   }
