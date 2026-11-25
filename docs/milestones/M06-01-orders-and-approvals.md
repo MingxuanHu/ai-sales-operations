@@ -89,7 +89,7 @@ order is visible to the authorised actor but its status no longer allows the com
 
 ### 4. Create separate demo organisations with synthetic data
 
-[Issue #59](https://github.com/MingxuanHu/ai-sales-operations/issues/59)
+[Issue #59](https://github.com/MingxuanHu/ai-sales-operations/issues/59) · [PR #66](https://github.com/MingxuanHu/ai-sales-operations/pull/66)
 
 - **Goal.** Give each newly registered user one ready-to-use demo organisation. Let any signed-in user create additional demo organisations from the app.
 - **In scope.** Add a **Create demo organisation** button to the organisation selection flow. Each deliberate click creates a separate organisation, grants the requesting user its initial administrator membership, and populates it with a shared synthetic dataset. Use a distinguishable organisation name for each demo. Include customers, products, multi-line orders across all lifecycle states, approval decisions and order history. Preserve known fulfilled totals across reporting periods, products and customers for M7 filters, rankings and charts. Attribute fixture-generated audit events to the system and preserve normal role checks for live order actions. Administrators can permanently delete demo organisations from Settings after typing the exact organisation name.
