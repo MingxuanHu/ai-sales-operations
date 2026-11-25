@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
+import { PrismaService } from '../dist/database/prisma.service.js'
 
 export async function checkOrders(app) {
   const api = (await app.getUrl()) + '/api'
@@ -66,6 +67,7 @@ export async function checkOrders(app) {
   ])
   assert.deepEqual(approved, retry)
   assert.equal(approved.status, 'approved')
+  assert.equal(approved.approvalThresholdPercent, '10.00')
   assert.equal(approved.subtotal, '0.05')
   assert.equal(approved.total, '0.05') // 4.5 cents rounds up.
   assert.deepEqual(approved.history.map(({ kind, actorUserId, fromStatus, toStatus }) => (
@@ -98,6 +100,31 @@ export async function checkOrders(app) {
   assert.deepEqual(new Set(all.map(({ id }) => id)), new Set([approved.id, pending.id, multi.id]))
   const { orders: queue } = await request('GET', orders + '?status=pending', 'charlie', 200)
   assert.deepEqual(queue.map(({ id }) => id), [pending.id])
+
+  const database = app.get(PrismaService).client
+  // Set the policy directly because the feature currently reads settings from PostgreSQL.
+  const setThreshold = (organisationId, value) => database.organisation.update({
+    where: { id: organisationId },
+    data: { settings: { orderApprovalThresholdBasisPoints: value, otherSetting: true } },
+  })
+  await setThreshold(alpha, 1_001)
+  const customInput = { ...input, requestId: randomUUID(), discountPercent: '10.01' }
+  const custom = await request('POST', orders, 'bob', 201, customInput)
+  assert.equal(custom.status, 'approved')
+  assert.equal(custom.approvalThresholdPercent, '10.01')
+  const aboveCustom = await request('POST', orders, 'bob', 201, {
+    ...customInput, requestId: randomUUID(), discountPercent: '10.02',
+  })
+  assert.equal(aboveCustom.status, 'pending')
+  assert.deepEqual(await request('GET', orders + '/' + pending.id, 'bob', 200), pending)
+  await setThreshold(alpha, '1001')
+  const newRequest = { ...customInput, requestId: randomUUID() }
+  await request('POST', orders, 'bob', 500, newRequest)
+  assert.deepEqual(await request('POST', orders, 'bob', 201, customInput), custom)
+  await setThreshold(alpha, 0)
+  const zeroThreshold = await request('POST', orders, 'bob', 201, newRequest)
+  assert.equal(zeroThreshold.status, 'pending')
+  assert.equal(zeroThreshold.approvalThresholdPercent, '0.00')
 
   await request('PUT', a + '/products/' + product.id, 'alice', 200, { ...product, unitPrice: '14.00' })
   await request('PUT', a + '/customers/' + customer.id, 'alice', 200, { name: 'Renamed' })

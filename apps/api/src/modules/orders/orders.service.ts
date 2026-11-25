@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { OrderStatus, Prisma, type SalesOrder } from '../../generated/prisma/client'
 import { IdentityService } from '../identity/identity.service'
@@ -16,6 +16,7 @@ function summary(order: SalesOrder) {
   return {
     id, submittedByUserId, customerId, customerName, status, createdAt,
     discountPercent: order.discountPercent.toFixed(2),
+    approvalThresholdPercent: order.approvalThresholdPercent.toFixed(2),
     subtotal: order.subtotal.toFixed(2),
     total: order.total.toFixed(2),
   }
@@ -36,6 +37,18 @@ function detail(order: Prisma.SalesOrderGetPayload<{ include: typeof details }>)
 // Format nonnegative integer cents as a decimal string for Prisma.
 function money(cents: bigint) {
   return `${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`
+}
+
+function approvalThreshold(settings: Prisma.JsonValue) {
+  // Settings values are JSON, so narrow the value before using it in the approval rule.
+  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+    const threshold = settings.orderApprovalThresholdBasisPoints
+    if (threshold === undefined) return 1_000 // 1,000 hundredths of a percent is 10%.
+    if (typeof threshold === 'number' && Number.isInteger(threshold) && threshold >= 0 && threshold <= 10_000) {
+      return threshold
+    }
+  }
+  throw new InternalServerErrorException('Invalid organisation order approval settings.')
 }
 
 @Injectable()
@@ -117,7 +130,10 @@ export class OrdersService {
         sum + BigInt(line.unitPrice.toFixed(2).replace('.', '')) * BigInt(line.quantity)
       ), 0n)
       const total = (subtotal * BigInt(10_000 - discount) + 5_000n) / 10_000n
-      const status = discount <= 1_000 ? OrderStatus.approved : OrderStatus.pending
+      // Read the policy under the organisation lock after checking for a matching retry.
+      const { settings } = await tx.organisation.findUniqueOrThrow({ where: { id: organisationId }, select: { settings: true } })
+      const threshold = approvalThreshold(settings)
+      const status = discount <= threshold ? OrderStatus.approved : OrderStatus.pending
       const history: Prisma.OrderEventUncheckedCreateWithoutOrderInput[] = [
         { position: 0, kind: 'submitted', actorUserId: userId, toStatus: 'pending' },
       ]
@@ -129,7 +145,7 @@ export class OrdersService {
         data: {
           organisationId, submittedByUserId: userId, requestId, requestHash, customerId,
           customerName: customer.name, status, discountPercent: money(BigInt(discount)),
-          subtotal: money(subtotal), total: money(total),
+          approvalThresholdPercent: money(BigInt(threshold)), subtotal: money(subtotal), total: money(total),
           lines: { create: snapshots }, history: { create: history },
         },
         include: details,

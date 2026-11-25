@@ -51,6 +51,8 @@ model Organisation {
   products          Product[]
   customers         Customer[]
   orders            SalesOrder[]
+  // JSONB lets organisations add settings without adding a column for each option.
+  settings          Json            @default("{}") @db.JsonB
 
   // An organisation creation request ID is unique per creator, so retries can reuse the result.
   @@unique([createdByUserId, creationRequestId])
@@ -149,22 +151,23 @@ model Customer {
 
 // Customer and product IDs are historical references. Snapshots survive master-data deletion.
 model SalesOrder {
-  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organisationId    String       @map("organisation_id") @db.Uuid
-  submittedByUserId String       @map("submitted_by_user_id") @db.Uuid
-  requestId         String       @map("request_id") @db.Uuid
-  requestHash       String       @map("request_hash") @db.Char(64)
-  customerId        String       @map("customer_id") @db.Uuid
-  customerName      String       @map("customer_name") @db.VarChar(120)
-  status            OrderStatus
-  discountPercent   Decimal      @map("discount_percent") @db.Decimal(5, 2)
-  subtotal          Decimal      @db.Decimal(30, 2)
-  total             Decimal      @db.Decimal(30, 2)
-  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  organisation      Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  submitter         Membership   @relation(fields: [organisationId, submittedByUserId], references: [organisationId, userId], onDelete: Restrict)
-  lines             OrderLine[]
-  history           OrderEvent[]
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organisationId           String       @map("organisation_id") @db.Uuid
+  submittedByUserId        String       @map("submitted_by_user_id") @db.Uuid
+  requestId                String       @map("request_id") @db.Uuid
+  requestHash              String       @map("request_hash") @db.Char(64)
+  customerId               String       @map("customer_id") @db.Uuid
+  customerName             String       @map("customer_name") @db.VarChar(120)
+  status                   OrderStatus
+  discountPercent          Decimal      @map("discount_percent") @db.Decimal(5, 2)
+  approvalThresholdPercent Decimal      @map("approval_threshold_percent") @db.Decimal(5, 2)
+  subtotal                 Decimal      @db.Decimal(30, 2)
+  total                    Decimal      @db.Decimal(30, 2)
+  createdAt                DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  organisation             Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  submitter                Membership   @relation(fields: [organisationId, submittedByUserId], references: [organisationId, userId], onDelete: Restrict)
+  lines                    OrderLine[]
+  history                  OrderEvent[]
 
   @@unique([organisationId, submittedByUserId, requestId])
   @@index([organisationId, createdAt, id])
