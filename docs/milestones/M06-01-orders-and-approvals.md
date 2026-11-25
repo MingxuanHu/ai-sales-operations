@@ -90,7 +90,7 @@ order is visible to the authorised actor but its status no longer allows the com
 [Issue #59](https://github.com/MingxuanHu/ai-sales-operations/issues/59)
 
 - **Goal.** Give each newly registered user one ready-to-use demo organisation. Let any signed-in user create additional demo organisations from the app.
-- **In scope.** Add a **Create demo organisation** button to the organisation selection flow. Each deliberate click creates a separate organisation, grants the requesting user its initial administrator membership, and populates it with a shared synthetic dataset. Use a distinguishable organisation name for each demo. Include customers, products, multi-line orders across all lifecycle states, approval decisions and order history. Preserve known fulfilled totals across reporting periods, products and customers for M7 filters, rankings and charts. Attribute fixture-generated audit events to the system and preserve normal role checks for live order actions.
+- **In scope.** Add a **Create demo organisation** button to the organisation selection flow. Each deliberate click creates a separate organisation, grants the requesting user its initial administrator membership, and populates it with a shared synthetic dataset. Use a distinguishable organisation name for each demo. Include customers, products, multi-line orders across all lifecycle states, approval decisions and order history. Preserve known fulfilled totals across reporting periods, products and customers for M7 filters, rankings and charts. Attribute fixture-generated audit events to the system and preserve normal role checks for live order actions. Administrators can permanently delete demo organisations from Overview after typing the exact organisation name.
 - **Out of scope.** Backfilling demo organisations for existing users, adding fixtures to existing organisations, synthetic sign-in accounts, changes to staff invitations or role assignment flows, dashboard implementation, and seeding during releases.
 - **Acceptance.**
   - A newly registered user gets exactly one demo organisation automatically. Repeated registration completion requests and later sign-ins do not create additional demos.
@@ -98,6 +98,7 @@ order is visible to the authorised actor but its status no longer allows the com
   - The button remains available after successful creation. Two deliberate clicks produce two separate demo organisations with distinguishable names and the same fixture content. Retrying the same request creates at most one organisation.
   - Successful manual creation opens the new demo and selects it in the organisation picker. Each demo has its own tenant-scoped records, and existing business records are untouched.
   - Organisation creation, administrator membership and fixture writes are atomic. A failure leaves no partially populated demo, and retrying a failed attempt can complete provisioning.
+  - Only an active administrator can delete a demo. Deletion removes the demo and all its tenant-scoped records in one transaction. Regular organisations, other tenants and user accounts are preserved.
 - **Dependencies.** Issue #58 completes the browser order workflow first. Reuse the existing registration and organisation selection flows, authorisation rules, master-data models, and order and audit invariants. Follow the [security rules for synthetic data](../engineering/security.md).
 - **Validation.** Run `pnpm check` with Docker. In the browser, verify automatic provisioning for a new registration, sign in again, and verify that a pre-existing user can create two demos and switch between them while their existing organisation data stays intact. API integration tests cover registration retries, concurrent retries of the same create request, separate create requests, rollback and recovery, tenant isolation, system audit attribution, and expected M7 totals.
 
@@ -128,3 +129,7 @@ workspace navigation. That action uses `POST /api/organisations/demo` with
 returns the same entry. System-generated orders have a null submitter and null audit
 actors. Live commands continue to require real tenant memberships and the applicable
 roles.
+
+The Overview response includes the stored demo flag. Demo administrators can send
+`DELETE /api/organisations/:organisationId` with `{ confirmationName }` to remove
+the demo and its tenant-owned records. Confirmation uses the exact stored name.

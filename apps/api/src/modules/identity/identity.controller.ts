@@ -74,6 +74,19 @@ export class IdentityController {
     return this.identity.overview(organisationId, request.userId)
   }
 
+  @Delete('organisations/:organisationId')
+  @HttpCode(204)
+  deleteDemo(
+    @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,
+    @Body() body: unknown,
+  ) {
+    const { confirmationName } = payload(body)
+    if (typeof confirmationName !== 'string' || !confirmationName || [...confirmationName].length > 120) {
+      throw new BadRequestException('Invalid organisation name')
+    }
+    return this.identity.deleteDemo(organisationId, request.userId, confirmationName)
+  }
+
   @Post('organisations/:organisationId/invitations')
   async issueInvitation(
     @Req() request: AuthenticatedRequest, @Param('organisationId', ParseUUIDPipe) organisationId: string,

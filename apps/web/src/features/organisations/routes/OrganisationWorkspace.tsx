@@ -78,7 +78,10 @@ export function OrganisationWorkspace({ api }: { api: OrganisationsApi }) {
           <Route path="/invitations" element={<InvitationsPage api={api} userId={userId} onJoined={onJoined} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <OrganisationOverviewPage membership={membership} />}
+              {(membership) => <OrganisationOverviewPage membership={membership} api={api} onDeleted={() => {
+                reloadProfile()
+                void navigate('/', { replace: true })
+              }} />}
             </OrganisationAccess>
           } />
           <Route path="/organisations/:organisationId/invitations" element={

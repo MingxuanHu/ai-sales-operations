@@ -145,6 +145,37 @@ describe('protected React shell', () => {
     expect(screen.queryByText(/Demo ready/)).toBeNull()
   })
 
+  it('requires the exact name to delete a demo and removes it from the picker', async () => {
+    const demo = { organisationId: 'demo', name: 'Demo · Fern & Finch', role: 'admin', isDemo: true }
+    const regular = { ...first, role: 'admin', isDemo: false }
+    let deleted = false
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: deleted ? [regular] : [demo, regular] })
+      if (url === '/api/organisations/first') return Response.json(regular)
+      if (url === '/api/organisations/demo' && options.method === 'DELETE') {
+        expect(JSON.parse(String(options.body))).toEqual({ confirmationName: demo.name })
+        deleted = true
+        return new Response(null, { status: 204 })
+      }
+      if (url === '/api/organisations/demo') return Response.json(demo)
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/demo')} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete organisation' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete demo organisation' })
+    const confirm = within(dialog).getByRole('button', { name: 'Delete permanently' })
+    const name = within(dialog).getByRole('textbox', { name: 'Organisation name' })
+    fireEvent.change(name, { target: { value: demo.name + ' ' } })
+    expect(confirm).toHaveProperty('disabled', true)
+    fireEvent.change(name, { target: { value: demo.name } })
+    expect(confirm).toHaveProperty('disabled', false)
+    fireEvent.click(confirm)
+    expect(await screen.findByRole('heading', { name: regular.name })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Delete organisation' })).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', regular.name)
+  })
+
   it('aborts a pending acceptance when leaving Invitations and ignores its late response', async () => {
     let pendingSignal: AbortSignal | null = null
     let finishAcceptance: (response: Response) => void = () => {}

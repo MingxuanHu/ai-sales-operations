@@ -3,7 +3,7 @@ import { createOrdersApi } from '../../orders/api/orders'
 import { createProductsApi } from '../../products/api/products'
 
 export type Role = 'admin' | 'salesperson' | 'manager'
-export type Membership = { organisationId: string; name: string; role: Role }
+export type Membership = { organisationId: string; name: string; role: Role; isDemo?: boolean }
 export type Profile = { userId: string; memberships: Membership[] }
 export type InvitationReceipt = { invitationId: string; role: Role; expiresAt: string }
 export type Invitation = Membership & InvitationReceipt
@@ -43,6 +43,10 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
     profile: (signal: AbortSignal) => request<Profile>('/me', { signal }),
     overview: (id: string, signal: AbortSignal) =>
       request<Membership>(`/organisations/${encodeURIComponent(id)}`, { signal }),
+    deleteDemo: (id: string, confirmationName: string, signal: AbortSignal) =>
+      request<void>(`/organisations/${encodeURIComponent(id)}`, {
+        method: 'DELETE', body: JSON.stringify({ confirmationName }), signal,
+      }),
     invitations: (signal: AbortSignal) => request<{ invitations: Invitation[] }>('/invitations', { signal }),
     issueInvitation: (id: string, recipientUserId: string, role: Role, signal: AbortSignal) =>
       request<InvitationReceipt>(`/organisations/${encodeURIComponent(id)}/invitations`, {

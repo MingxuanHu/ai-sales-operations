@@ -106,12 +106,35 @@ export class IdentityService {
     const [membership] = await this.database.client.$transaction(
       [this.database.client.membership.findUnique({
         where: { organisationId_userId: { organisationId, userId }, status: 'active' },
-        select: { organisationId: true, role: true, organisation: { select: { name: true } } },
+        select: { organisationId: true, role: true, organisation: { select: { name: true, isDemo: true } } },
       })],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     )
     if (!membership) throw new NotFoundException()
-    return { organisationId: membership.organisationId, name: membership.organisation.name, role: membership.role }
+    const { name, isDemo } = membership.organisation
+    return { organisationId: membership.organisationId, name, role: membership.role, isDemo }
+  }
+
+  deleteDemo(organisationId: string, userId: string, confirmationName: string) {
+    return this.database.client.$transaction(async (tx) => {
+      // Use the same row lock as other tenant writes so deletion cannot race a new order or invitation.
+      await this.lockOrganisation(tx, organisationId)
+      await this.requireRole(tx, organisationId, userId, 'admin')
+      const where = { id: organisationId }
+      const organisation = await tx.organisation.findUniqueOrThrow({ where })
+      if (!organisation.isDemo) throw new ForbiddenException('Only demo organisations can be deleted')
+      if (organisation.name !== confirmationName) throw new ConflictException('Type the exact organisation name')
+
+      // Remove dependent rows first to satisfy foreign keys. A failed delete rolls back every change.
+      await tx.orderEvent.deleteMany({ where: { order: { organisationId } } })
+      await tx.orderLine.deleteMany({ where: { order: { organisationId } } })
+      await tx.salesOrder.deleteMany({ where: { organisationId } })
+      await tx.invitation.deleteMany({ where: { organisationId } })
+      await tx.product.deleteMany({ where: { organisationId } })
+      await tx.customer.deleteMany({ where: { organisationId } })
+      await tx.membership.deleteMany({ where: { organisationId } })
+      await tx.organisation.delete({ where })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
   }
 
   async lockOrganisation(tx: Prisma.TransactionClient, organisationId: string) {

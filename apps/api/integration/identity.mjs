@@ -52,7 +52,7 @@ export async function checkIdentity(app) {
 
   // The creator can enter Company A. The API returns 404 to callers without membership.
   const companyAPath = '/organisations/' + companyAId
-  assert.deepEqual(await request('GET', companyAPath, 'alice', 200), { organisationId: companyAId, name: 'Test Company A', role: 'admin' })
+  assert.deepEqual(await request('GET', companyAPath, 'alice', 200), { organisationId: companyAId, name: 'Test Company A', role: 'admin', isDemo: false })
   await request('GET', companyAPath, 'bob', 404)
   // A malformed UUID returns 400 before the service looks up the organisation.
   await request('GET', '/organisations/invalid', 'bob', 400)

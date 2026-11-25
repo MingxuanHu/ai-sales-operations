@@ -131,4 +131,39 @@ export async function checkDemos(app) {
       'CUP-08': 173550, 'CUP-12': 253200, 'LID-90': 270575, 'BAG-KR': 116220, 'NAP-2P': 66420, 'TRAY-4': 27930,
     })
   }
+
+  // The confirmed delete removes all tenant records while leaving identities and other tenants intact.
+  const deleteDemo = (id, token, confirmationName) => fetch(base + '/organisations/' + id, {
+    method: 'DELETE', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+    body: JSON.stringify({ confirmationName }),
+  })
+  const { organisationId } = first
+  const alice = await profile('alice')
+  await db.membership.create({ data: { organisationId, userId: alice.userId, role: 'manager' } })
+  await db.invitation.create({ data: {
+    organisationId, issuedByUserId: userId, recipientUserId: newProfile.userId,
+    role: 'salesperson', expiresAt: new Date(Date.now() + 60_000),
+  } })
+  const orderIds = orders.map(({ id }) => id)
+  assert.equal((await deleteDemo(regular.id, 'legacy', regular.name)).status, 403)
+  assert.equal((await deleteDemo(organisationId, 'charlie', first.name)).status, 404)
+  assert.equal((await deleteDemo(organisationId, 'alice', first.name)).status, 403)
+  assert.equal((await deleteDemo(organisationId, 'legacy', first.name + ' ')).status, 409)
+  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 24)
+
+  assert.equal((await deleteDemo(organisationId, 'legacy', first.name)).status, 204)
+  assert.equal(await db.organisation.findUnique({ where: { id: organisationId } }), null)
+  assert.equal(await db.orderLine.count({ where: { orderId: { in: orderIds } } }), 0)
+  assert.equal(await db.orderEvent.count({ where: { orderId: { in: orderIds } } }), 0)
+  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 0)
+  assert.equal(await db.invitation.count({ where: { organisationId } }), 0)
+  assert.equal(await db.membership.count({ where: { organisationId } }), 0)
+  assert.equal(await db.customer.count({ where: { organisationId } }), 0)
+  assert.equal(await db.product.count({ where: { organisationId } }), 0)
+  assert.equal(await db.salesOrder.count({ where: { organisationId: second.organisationId } }), 24)
+  assert.ok(await db.organisation.findUnique({ where: { id: regular.id } }))
+  assert.equal((await profile('legacy')).userId, userId)
+  assert.equal((await profile('alice')).userId, alice.userId)
+  assert.equal((await get(demoOrdersPath, 'legacy')).status, 404)
+
 }
