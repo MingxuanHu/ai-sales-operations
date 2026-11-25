@@ -73,8 +73,17 @@ export class ProductsService {
 
   remove(organisationId: string, userId: string, id: string) {
     return this.asAdmin(organisationId, userId, true, async (tx) => {
-      const { count } = await tx.product.deleteMany({ where: { id, organisationId } })
-      if (count === 0) throw new NotFoundException('Product not found.')
+      const where = { id, organisationId }
+      const product = await tx.product.findUnique({ where, select: { id: true } })
+      if (!product) throw new NotFoundException('Product not found.')
+
+      // Order submission uses the same organisation lock, so it cannot add a line during this check.
+      const reference = await tx.orderLine.findFirst({
+        where: { productId: id, order: { organisationId } },
+        select: { orderId: true },
+      })
+      if (reference) throw new ConflictException('This product cannot be deleted because it is used in an order.')
+      await tx.product.delete({ where })
     })
   }
 }

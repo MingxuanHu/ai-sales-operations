@@ -146,7 +146,12 @@ export async function checkOrders(app) {
   await request('PUT', a + '/products/' + product.id, 'alice', 200, { ...product, unitPrice: '14.00' })
   await request('PUT', a + '/customers/' + customer.id, 'alice', 200, { name: 'Renamed' })
   assert.deepEqual(await request('GET', orders + '/' + approved.id, 'bob', 200), approved)
-  await request('DELETE', a + '/products/' + product.id, 'alice', 204)
+  const referencedProduct = a + '/products/' + product.id
+  const deletion = await request('DELETE', referencedProduct, 'alice', 409)
+  assert.equal(deletion.message, 'This product cannot be deleted because it is used in an order.')
+  assert.equal((await request('GET', referencedProduct, 'alice', 200)).unitPrice, '14.00')
+  await request('DELETE', b + '/products/' + product.id, 'bob', 404)
+  await request('DELETE', b + '/products/' + foreignProduct.id, 'bob', 204)
   await request('DELETE', a + '/customers/' + customer.id, 'alice', 204)
   assert.deepEqual(await request('POST', orders, 'bob', 201, input), approved)
 
