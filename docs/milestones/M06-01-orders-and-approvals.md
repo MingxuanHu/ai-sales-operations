@@ -31,6 +31,18 @@
 - **Dependencies.** [M5 master data](M05-01-master-data.md) and the [identity and tenant authorisation rules](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Cover role and tenant scope, rounding and threshold boundaries, historical snapshots and concurrent retries in automated tests.
 
+The authenticated API uses `/api/organisations/:organisationId/orders`.
+
+| Method and path relative to that base | Behaviour |
+| --- | --- |
+| `POST` | A salesperson submits `{ requestId, customerId, discountPercent, lines: [{ productId, quantity }] }`. Use a new UUID for each order and reuse it for retries. The discount is a decimal string, and quantities are JSON integers. Returns the order detail with HTTP 201, including on a matching retry. A changed order with the same request ID returns HTTP 409. |
+| `GET` | Salespeople list their own orders. Managers list organisation orders and can use `?status=pending` for the approval queue. |
+| `GET /:id` | Returns a scoped order with customer and line snapshots and ordered audit history. |
+| `GET /selectors` | Returns customer IDs and names and product IDs, SKUs, names and prices for salesperson entry. |
+
+Money and discount fields in responses are two-place decimal strings. A system approval
+has a null actor, and the submission event records the submitting user.
+
 ### 2. Add manager decisions and fulfilment APIs
 
 [Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57)
