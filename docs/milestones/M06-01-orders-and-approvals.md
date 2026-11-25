@@ -76,7 +76,7 @@ order is visible to the authorised actor but its status no longer allows the com
 
 ### 3. Build the order entry and approval workflows in React
 
-[Issue #58](https://github.com/MingxuanHu/ai-sales-operations/issues/58)
+[Issue #58](https://github.com/MingxuanHu/ai-sales-operations/issues/58) · [PR #65](https://github.com/MingxuanHu/ai-sales-operations/pull/65)
 
 - **Goal.** Let salespeople and managers complete the order lifecycle from the protected app.
 - **In scope.** Add salesperson entry, order list and details, manager pending queue and decision controls, fulfilment and readable audit history. Clear tenant-specific state on organisation switch and handle stale lifecycle responses.

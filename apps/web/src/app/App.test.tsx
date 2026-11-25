@@ -410,3 +410,176 @@ describe('customer directory', () => {
     expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/me', '/api/organisations/second'])
   })
 })
+
+describe('order workflows', () => {
+  const ordersPath = (id: string) => '/api/organisations/' + id + '/orders'
+  const createdAt = '2026-11-25T00:00:00Z'
+  const order = {
+    id: 'order-1', submittedByUserId: 'synthetic-user', customerName: 'Fixture customer',
+    status: 'approved', createdAt, discountPercent: '10.00', approvalThresholdPercent: '10.00',
+    subtotal: '20.00', total: '18.00',
+    lines: [{ productId: 'product-1', sku: 'BOX', name: 'Fixture box', unitPrice: '10.00', quantity: 2 }],
+    history: [{ kind: 'automatically_approved', actorUserId: null, fromStatus: null, toStatus: 'approved', createdAt }],
+  }
+
+  function workspaceResponse(url: string) {
+    if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first, second] })
+    const membership = [first, second].find(({ organisationId }) => url === '/api/organisations/' + organisationId)
+    if (membership) return Response.json(membership)
+  }
+
+  function selectors() {
+    return Response.json({
+      customers: [{ id: 'customer-1', name: order.customerName }],
+      products: [{ id: 'product-1', sku: 'BOX', name: 'Fixture box', unitPrice: '10.00' }],
+    })
+  }
+
+  function fillOrder() {
+    fireEvent.change(screen.getByLabelText(/^Customer/), { target: { value: 'customer-1' } })
+    fireEvent.change(screen.getByLabelText(/^Product 1/), { target: { value: 'product-1' } })
+    fireEvent.change(screen.getByLabelText(/^Quantity 1/), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '10' } })
+  }
+
+  it('retries the same submission and fulfils the returned approved order', async () => {
+    const path = ordersPath('first')
+    const submissions: unknown[] = []
+    let orders: object[] = []
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === path + '/selectors') return selectors()
+      if (url === path && options.method === 'POST') {
+        submissions.push(JSON.parse(String(options.body)))
+        if (submissions.length === 1) throw new Error('Lost response')
+        orders = [order]
+        return Response.json(order, { status: 201 })
+      }
+      if (url === path + '/order-1/fulfil') {
+        const fulfilled = { ...order, status: 'fulfilled', history: [...order.history, {
+          kind: 'fulfilled', actorUserId: 'synthetic-user', fromStatus: 'approved', toStatus: 'fulfilled', createdAt,
+        }] }
+        orders = [fulfilled]
+        return Response.json(fulfilled)
+      }
+      if (url === path) return Response.json({ orders })
+      throw new Error('Unexpected request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    await screen.findByLabelText(/^Customer/)
+    fillOrder()
+    fireEvent.click(screen.getByRole('button', { name: 'Add line' }))
+    await screen.findByLabelText(/^Product 2/)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove line 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Submit order' }))
+    await screen.findByText('Could not submit the order. Try again.')
+    fireEvent.click(screen.getByRole('button', { name: 'Submit order' }))
+    await screen.findByText('Total 18.00')
+    expect(submissions).toEqual([expect.objectContaining({
+      requestId: expect.any(String), customerId: 'customer-1', discountPercent: '10',
+      lines: [{ productId: 'product-1', quantity: 2 }],
+    }), submissions[0]])
+    expect(screen.getByText('Automatically approved')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Fulfil' }))
+    expect(await screen.findByText(/Approved → Fulfilled/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Fulfil' })).toBeNull()
+    expect(fetch).toHaveBeenCalledWith(path + '/order-1/fulfil', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('opens the manager queue and refreshes a stale decision', async () => {
+    const path = ordersPath('second')
+    let status = 'pending'
+    const fetch = vi.fn(async (url: string) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === path + '?status=pending') return Response.json({ orders: status === 'pending' ? [{ ...order, status }] : [] })
+      if (url === path) return Response.json({ orders: [{ ...order, status }] })
+      if (url === path + '/order-1') return Response.json({ ...order, status })
+      if (url === path + '/order-1/reject') {
+        status = 'approved'
+        return Response.json({ message: 'Order already decided.' }, { status: 409 })
+      }
+      throw new Error('Unexpected request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/second/orders')} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'View order' }))
+    const reject = await screen.findByRole('button', { name: 'Reject' })
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'New order' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Fulfil' })).toBeNull()
+    fireEvent.click(reject)
+    await screen.findByText('Order already decided.')
+    await screen.findByText('No orders are awaiting approval.')
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Pending only' }))
+    await screen.findByRole('button', { name: 'View order' })
+    expect(fetch).toHaveBeenCalledWith(path, expect.anything())
+  })
+
+  it.each([
+    { action: 'Approve', command: 'approve', status: 'approved', label: 'Approved' },
+    { action: 'Reject', command: 'reject', status: 'rejected', label: 'Rejected' },
+  ])('records a successful manager decision to $command', async ({ action, command, status, label }) => {
+    const path = ordersPath('second')
+    const pendingOrder = { ...order, status: 'pending', history: [] }
+    let orders = [pendingOrder]
+    const fetch = vi.fn(async (url: string) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === path + '?status=pending') return Response.json({ orders })
+      if (url === path + '/order-1') return Response.json(pendingOrder)
+      if (url === path + '/order-1/' + command) {
+        orders = []
+        return Response.json({ ...order, status, history: [{
+          kind: status, actorUserId: 'synthetic-user', fromStatus: 'pending', toStatus: status, createdAt,
+        }] })
+      }
+      throw new Error('Unexpected request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/second/orders')} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'View order' }))
+    fireEvent.click(await screen.findByRole('button', { name: action }))
+    await screen.findByText(new RegExp('Pending approval → ' + label))
+    await screen.findByText('No orders are awaiting approval.')
+    expect(screen.queryByRole('button', { name: action })).toBeNull()
+    expect(fetch).toHaveBeenCalledWith(path + '/order-1/' + command, expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('discards a late submission when switching organisations', async () => {
+    const path = ordersPath('first')
+    let previousSignal: AbortSignal | null = null
+    let finishPrevious: (value: Response) => void = () => {}
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === path + '/selectors') return selectors()
+      if (url === path && options.method === 'POST') {
+        previousSignal = options.signal ?? null
+        return new Promise<Response>((resolve) => { finishPrevious = resolve })
+      }
+      if (url === path || url === ordersPath('second') + '?status=pending') return Response.json({ orders: [] })
+      throw new Error('Unexpected request')
+    }))
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    await screen.findByLabelText(/^Customer/)
+    fillOrder()
+    fireEvent.click(screen.getByRole('button', { name: 'Submit order' }))
+    await waitFor(() => expect(previousSignal).not.toBeNull())
+
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.keyDown(picker, { key: 'Enter', code: 'Enter' })
+    await screen.findByText('No orders are awaiting approval.')
+    expect(window.location.pathname).toBe('/organisations/second/orders')
+    expect(previousSignal).toHaveProperty('aborted', true)
+    await act(async () => finishPrevious(Response.json(order)))
+    expect(screen.queryByText('Total 18.00')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'New order' })).toBeNull()
+  })
+})

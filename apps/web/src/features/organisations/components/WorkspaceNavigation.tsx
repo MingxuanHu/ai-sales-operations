@@ -1,7 +1,7 @@
 import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership } from '../api/organisations'
-import { customersPath, invitationsPath, organisationPath, productsPath } from '../routes/workspacePaths'
+import { customersPath, invitationsPath, organisationPath, ordersPath, productsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
 export function WorkspaceNavigation({ memberships }: { memberships: Membership[] }) {
@@ -10,9 +10,10 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
   const invitationRoute = useMatch('/organisations/:organisationId/invitations')
   const productsRoute = useMatch('/organisations/:organisationId/products')
   const customersRoute = useMatch('/organisations/:organisationId/customers')
+  const ordersRoute = useMatch('/organisations/:organisationId/orders')
   const overviewRoute = useMatch('/organisations/:organisationId')
   const inboxRoute = useMatch('/invitations')
-  const selectedId = (invitationRoute ?? productsRoute ?? customersRoute ?? overviewRoute)?.params.organisationId
+  const selectedId = (invitationRoute ?? productsRoute ?? customersRoute ?? ordersRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
   const isInvitations = Boolean(invitationRoute ?? inboxRoute)
 
@@ -33,6 +34,7 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               const next = memberships.find(({ organisationId }) => organisationId === id)
               if (productsRoute && next?.role === 'admin') void navigate(productsPath(id))
               else if (customersRoute && next?.role === 'admin') void navigate(customersPath(id))
+              else if (ordersRoute && next && next.role !== 'admin') void navigate(ordersPath(id))
               else void navigate(isInvitations ? invitationsPath(id) : organisationPath(id))
             }}
           />
@@ -52,6 +54,11 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
           {selected?.role === 'admin' && (
             <NavLink label="Customers" renderRoot={(props) => (
               <RouterNavLink {...props} to={customersPath(selected.organisationId)} end />
+            )} />
+          )}
+          {(selected?.role === 'salesperson' || selected?.role === 'manager') && (
+            <NavLink label="Orders" renderRoot={(props) => (
+              <RouterNavLink {...props} to={ordersPath(selected.organisationId)} end />
             )} />
           )}
           <NavLink label="Invitations" renderRoot={(props) => (
