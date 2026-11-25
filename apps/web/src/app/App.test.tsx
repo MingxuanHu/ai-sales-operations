@@ -107,16 +107,18 @@ describe('protected React shell', () => {
     expect(requestIds).toEqual([expect.any(String), requestIds[0]])
   })
 
-  it('opens organisation setup on sign-in for a user with only the starter demo', async () => {
-    const demo = { ...first, role: 'admin', isDemo: true }
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ userId: 'synthetic-user', memberships: [demo] })))
+  it('automatically opens the first organisation when the user has only demos', async () => {
+    const demos = [{ ...second, isDemo: true }, { ...first, isDemo: true }]
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: demos })
+      if (url === '/api/organisations/second') return Response.json(demos[0])
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      throw new Error('Unexpected API request')
+    }))
     render(<App session={mockSession()} />)
-    expect(await screen.findByRole('heading', { name: 'Set up your organisation' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Explore a demo' })).toBeTruthy()
-    const links = within(screen.getByRole('navigation', { name: 'Workspace' })).getAllByRole('link')
-    expect(links.map((link) => link.textContent)).toEqual(['Create organisation'])
-    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
-    expect(window.location.pathname).toBe('/onboarding')
+    await screen.findByRole('heading', { name: second.name })
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
+    expect(window.location.pathname).toBe('/organisations/second')
   })
 
   it('shows Overview only after choosing an organisation and groups it with organisation links', async () => {

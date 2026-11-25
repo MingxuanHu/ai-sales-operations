@@ -109,7 +109,7 @@ Prisma applies both migrations in order through the same command.
    `http://localhost:5173/` so the browser uses the origin registered in Cognito.
 2. Select **Continue to sign in**. In Managed Login, register a synthetic native
    account using a test inbox you control, verify the email, and sign in.
-   Confirm the app opens **Create organisation** and **Messages** shows the user ID.
+   Confirm the app opens the starter demo and **Messages** shows the user ID.
    In **Create organisation**, create an
    organisation, and verify that its overview shows the **admin** role.
 3. Open a separate browser session and sign in with the configured synthetic

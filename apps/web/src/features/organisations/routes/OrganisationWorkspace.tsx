@@ -69,7 +69,7 @@ export function OrganisationWorkspace({ api, messagesTarget }: { api: Organisati
       <div className={styles.content}>
         <Routes>
           {/* The picker and default route use the same membership order from the profile. */}
-          <Route index element={<Navigate replace to={memberships.some(({ isDemo }) => !isDemo)
+          <Route index element={<Navigate replace to={memberships.length > 0
             ? organisationPath(memberships[0].organisationId)
             : '/onboarding'} />} />
           <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
