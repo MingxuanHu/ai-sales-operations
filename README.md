@@ -2,7 +2,7 @@
 
 A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, with an AI copilot for sales analytics, policy-aware answers, and human-approved follow-up actions.
 
-> **Status:** [Milestone 7 kickoff — Dashboard](docs/milestones/M07-01-dashboard.md). The proposed scope covers fulfilled sales totals, product and customer rankings, and a date-filtered dashboard.
+> **Status:** [Milestone 7 kickoff — Dashboard](docs/milestones/M07-01-dashboard.md). The approved scope covers fulfilled sales totals, product and customer rankings, and a date-filtered dashboard.
 
 ## Try the live demo
 
