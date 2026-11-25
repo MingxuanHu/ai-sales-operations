@@ -4,7 +4,7 @@ A portfolio-oriented, multi-tenant sales operations SaaS for B2B wholesalers, wi
 
 [Open the public demo](https://d3finwpuxpr8bj.cloudfront.net) to sign in and try organisation onboarding.
 
-> **Status:** [Milestone 5 kickoff — Master data](docs/milestones/M05-01-master-data.md). Up next are the administrator invitation UI and product and customer management.
+> **Status:** [Milestone 7 kickoff — Dashboard](docs/milestones/M07-01-dashboard.md). The proposed scope covers fulfilled sales totals, product and customer rankings, and a date-filtered dashboard.
 
 ## Product
 
