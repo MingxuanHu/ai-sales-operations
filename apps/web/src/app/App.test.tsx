@@ -162,7 +162,7 @@ describe('protected React shell', () => {
     })
     vi.stubGlobal('fetch', fetch)
     render(<App session={mockSession('/organisations/demo')} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete organisation' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete demo organisation' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete demo organisation' })
     const confirm = within(dialog).getByRole('button', { name: 'Delete permanently' })
     const name = within(dialog).getByRole('textbox', { name: 'Organisation name' })
@@ -172,7 +172,7 @@ describe('protected React shell', () => {
     expect(confirm).toHaveProperty('disabled', false)
     fireEvent.click(confirm)
     expect(await screen.findByRole('heading', { name: regular.name })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Delete organisation' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete demo organisation' })).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', regular.name)
   })
 

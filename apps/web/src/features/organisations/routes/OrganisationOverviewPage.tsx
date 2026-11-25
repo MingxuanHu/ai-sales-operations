@@ -50,7 +50,7 @@ export function OrganisationOverviewPage({ membership, api, onDeleted }: {
             setConfirmationName('')
             setError('')
             setOpened(true)
-          }}>Delete organisation</Button>
+          }}>Delete demo organisation</Button>
         )}
       </Stack>
       <Modal opened={opened} onClose={() => setOpened(false)} title="Delete demo organisation"
