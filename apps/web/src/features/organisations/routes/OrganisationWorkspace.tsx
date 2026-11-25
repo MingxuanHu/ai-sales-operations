@@ -1,4 +1,4 @@
-import { Alert, Button, Paper, Text, Title } from '@mantine/core'
+import { Alert, Button } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { CustomersPage } from '../../customers/components/CustomersPage'
 import { OrdersPage } from '../../orders/components/OrdersPage'
@@ -68,16 +68,10 @@ export function OrganisationWorkspace({ api, messagesTarget }: { api: Organisati
       {messagesTarget && <InvitationInbox target={messagesTarget} api={api} userId={userId} onJoined={onJoined} />}
       <div className={styles.content}>
         <Routes>
-          <Route index element={memberships.every((membership) => membership.isDemo === true) ? (
-            <Navigate replace to="/onboarding" />
-          ) : memberships.length === 1 ? (
-            <Navigate replace to={organisationPath(memberships[0].organisationId)} />
-          ) : (
-            <Paper withBorder p="lg">
-              <Title order={1} size="h2">Choose an organisation</Title>
-              <Text c="dimmed">Select an organisation to open its workspace.</Text>
-            </Paper>
-          )} />
+          {/* The picker and default route use the same membership order from the profile. */}
+          <Route index element={<Navigate replace to={memberships.some(({ isDemo }) => !isDemo)
+            ? organisationPath(memberships[0].organisationId)
+            : '/onboarding'} />} />
           <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>

@@ -125,8 +125,8 @@ describe('protected React shell', () => {
       if (url === '/api/organisations/first') return Response.json(first)
       throw new Error('Unexpected API request')
     }))
-    render(<App session={mockSession()} />)
-    await screen.findByRole('heading', { name: 'Choose an organisation' })
+    render(<App session={mockSession('/onboarding')} />)
+    await screen.findByRole('heading', { name: 'Create organisation' })
     expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
     const picker = screen.getByRole('combobox', { name: 'Organisation' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
@@ -135,6 +135,19 @@ describe('protected React shell', () => {
     expect(within(navigation).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
     expect(within(navigation).getByRole('link', { name: 'Orders' })).toBeTruthy()
     expect(within(navigation).queryByRole('link', { name: 'Invitations' })).toBeNull()
+  })
+
+  it('automatically opens the first organisation in the picker after sign-in', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second, first] })
+      if (url === '/api/organisations/second') return Response.json(second)
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession()} />)
+    await screen.findByRole('heading', { name: second.name })
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
+    expect(window.location.pathname).toBe('/organisations/second')
   })
 
   it('retries demo creation and selects each newly created demo', async () => {
