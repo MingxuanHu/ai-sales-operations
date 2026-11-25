@@ -32,9 +32,20 @@ export function OrderEntry({ api, organisationId, onSubmitted }: {
   // Leaving the form cancels the browser request and prevents updates to the next organisation.
   useEffect(() => () => submission.current?.abort(), [])
 
+  // A salesperson needs both kinds of records from this organisation to submit an order.
+  const missing = selectors.status === 'ready' ? [
+    ...(selectors.data.customers.length === 0 ? ['a customer'] : []),
+    ...(selectors.data.products.length === 0 ? ['a product'] : []),
+  ] : []
+
+  function refreshSelectors() {
+    setSelectors({ status: 'loading' })
+    setRevision((value) => value + 1)
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (submission.current) return
+    if (submission.current || selectors.status !== 'ready' || missing.length > 0) return
     const form = event.currentTarget
     // FormData reads inputs by name. Quantities become JSON integers and the discount stays a decimal string.
     const data = new FormData(form)
@@ -79,17 +90,21 @@ export function OrderEntry({ api, organisationId, onSubmitted }: {
         {selectors.status === 'loading' && <Loading>Loading customers and products…</Loading>}
         {selectors.status === 'failed' && (
           <Alert role="alert" color="red" title="Could not load customers and products">
-            <Button variant="light" onClick={() => {
-              setSelectors({ status: 'loading' })
-              setRevision((value) => value + 1)
-            }}>Retry selectors</Button>
+            <Button variant="light" onClick={refreshSelectors}>Retry selectors</Button>
           </Alert>
         )}
         {selectors.status === 'ready' && (
-          selectors.data.customers.length === 0 || selectors.data.products.length === 0
-            ? <Text c="dimmed">Ask an administrator to add at least one customer and one product.</Text>
-            : <form onSubmit={(event) => void submit(event)}>
-              <Fieldset disabled={saving} variant="unstyled">
+          <>
+            {missing.length > 0 && (
+              <Alert title="Order setup needed">
+                <Stack gap="xs" align="start">
+                  <Text size="sm">Ask an administrator to add {missing.join(' and ')} to this organisation.</Text>
+                  <Button variant="light" size="xs" onClick={refreshSelectors}>Refresh customers and products</Button>
+                </Stack>
+              </Alert>
+            )}
+            <form onSubmit={(event) => void submit(event)}>
+              <Fieldset disabled={saving || missing.length > 0} variant="unstyled">
                 <Stack>
                   <NativeSelect required label="Customer" name="customer" data={[
                     { value: '', label: 'Choose a customer' },
@@ -125,6 +140,7 @@ export function OrderEntry({ api, organisationId, onSubmitted }: {
                 </Stack>
               </Fieldset>
             </form>
+          </>
         )}
       </Stack>
     </Paper>

@@ -595,6 +595,31 @@ describe('order workflows', () => {
     fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '10' } })
   }
 
+  it('shows the salesperson form and enables it when missing setup is refreshed', async () => {
+    let ready = false
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const workspace = workspaceResponse(url)
+      if (workspace) return workspace
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === ordersPath('first')) return Response.json({ orders: [] })
+      if (url === ordersPath('first') + '/selectors') {
+        return ready ? selectors() : Response.json({
+          customers: [{ id: 'customer-1', name: order.customerName }], products: [],
+        })
+      }
+      throw new Error('Unexpected API request')
+    }))
+    render(<App session={mockSession('/organisations/first/orders')} />)
+    expect(await screen.findByText('Ask an administrator to add a product to this organisation.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'How to create an order' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Submit order' }).closest('fieldset')).toHaveProperty('disabled', true)
+    ready = true
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh customers and products' }))
+    const submit = await screen.findByRole('button', { name: 'Submit order' })
+    expect(submit.closest('fieldset')).toHaveProperty('disabled', false)
+    expect(await screen.findByRole('option', { name: /Fixture box/ })).toBeTruthy()
+  })
+
   it('explains who can submit and approve orders in an empty regular organisation', async () => {
     const regular = { ...first, role: 'admin', isDemo: false }
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {

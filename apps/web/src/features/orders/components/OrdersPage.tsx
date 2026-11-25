@@ -45,6 +45,10 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
   return (
     <Stack>
       <Title order={1} size="h2">Orders</Title>
+      {role === 'salesperson' && <OrderEntry api={api} organisationId={organisationId} onSubmitted={(order) => {
+        setSelection({ id: order.id, submitted: order })
+        refreshList()
+      }} />}
       <Paper withBorder p="lg">
         <Stack>
           <Group justify="space-between">
@@ -61,8 +65,8 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
           {orders.status === 'ready' && (orders.data.length === 0
             ? <Stack gap="xs">
               <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
-              {/* A filtered queue can be empty even when the organisation has orders. */}
-              {!pending && !isDemo && <>
+              {/* Administrators see setup guidance. Salespeople use the form above. */}
+              {role === 'admin' && !isDemo && <>
                 <Title order={3} size="h5">How to create an order</Title>
                 <List type="ordered" size="sm" spacing="xs">
                   <List.Item><strong>Administrator</strong> — Add customers and products, then invite staff as salespeople or managers.</List.Item>
@@ -97,10 +101,6 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
             </Table.ScrollContainer>)}
         </Stack>
       </Paper>
-      {role === 'salesperson' && <OrderEntry api={api} organisationId={organisationId} onSubmitted={(order) => {
-        setSelection({ id: order.id, submitted: order })
-        refreshList()
-      }} />}
       {/* The modal stays outside the table layout. Its key resets detail state when another order opens. */}
       {selection && <OrderDetail key={selection.id} api={api} organisationId={organisationId} id={selection.id}
         submitted={selection.submitted} role={role} userId={userId} onChanged={refreshList}
