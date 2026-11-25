@@ -48,7 +48,7 @@ has a null actor, and the submission event records the submitting user.
 
 ### 2. Add manager decisions and fulfilment APIs
 
-[Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57)
+[Issue #57](https://github.com/MingxuanHu/ai-sales-operations/issues/57) · [PR #64](https://github.com/MingxuanHu/ai-sales-operations/pull/64)
 
 - **Goal.** Enforce manual approval, rejection and fulfilment with a complete history.
 - **In scope.** Add decision and fulfilment commands using the existing organisation transaction policy. Expose the recorded history through the scoped order detail API.
