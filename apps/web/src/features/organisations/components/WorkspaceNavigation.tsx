@@ -22,8 +22,7 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
     return [organisationId, {
       value: organisationId,
       label: display.demoLabel || name,
-      name: display.name,
-      detail: display.demoLabel,
+      detail: display.demoLabel ? display.name : '',
       role: roleLabels[role],
       fullName: name,
     }]
@@ -46,8 +45,9 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               return (
                 <div className={styles.optionRow} title={entry.fullName}>
                   <div className={styles.optionText}>
-                    <span className={styles.optionName}>{entry.name}</span>
-                    {entry.detail && <span className={styles.demoCode}>{entry.detail}</span>}
+                    {/* The bold row label uses the same text as the selected input. */}
+                    <span className={styles.optionName}>{option.label}</span>
+                    {entry.detail && <span className={styles.optionDetail}>{entry.detail}</span>}
                     <span className={styles.optionRole}>{entry.role}</span>
                   </div>
                   {checked && <span className={styles.optionCheck} aria-hidden="true">✓</span>}
