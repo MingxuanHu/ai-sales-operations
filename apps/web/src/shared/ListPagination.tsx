@@ -3,9 +3,14 @@ import { useState } from 'react'
 
 const pageSize = 10
 
-export function useListPagination<T>(records: readonly T[] | undefined) {
+export function useSearchableList<T>(records: readonly T[] | undefined, searchFields: (record: T) => string[]) {
   const [page, setPage] = useState(1)
-  const recordCount = records?.length ?? 0
+  const [query, setQuery] = useState('')
+  const term = query.trim().toLowerCase()
+  // Filter all loaded records before slicing so search also finds rows on later pages.
+  const matches = term ? records?.filter((record) =>
+    searchFields(record).some((field) => field.toLowerCase().includes(term))) : records
+  const recordCount = matches?.length ?? 0
   const pageCount = Math.max(1, Math.ceil(recordCount / pageSize))
   const currentPage = Math.min(page, pageCount)
 
@@ -13,9 +18,15 @@ export function useListPagination<T>(records: readonly T[] | undefined) {
   // so later additions don't jump the user back to the page that disappeared.
   if (records && page !== currentPage) setPage(currentPage)
 
+  function search(value: string) {
+    setQuery(value)
+    setPage(1)
+  }
+
   const start = (currentPage - 1) * pageSize
   return {
-    rows: records?.slice(start, start + pageSize) ?? [],
+    query, search,
+    rows: matches?.slice(start, start + pageSize) ?? [],
     controls: { currentPage, pageCount, recordCount, start, setPage },
   }
 }

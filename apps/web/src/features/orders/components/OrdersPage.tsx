@@ -1,6 +1,6 @@
-import { Alert, Badge, Button, Checkbox, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
+import { Alert, Badge, Button, Checkbox, Group, List, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ListPagination, useListPagination } from '../../../shared/ListPagination'
+import { ListPagination, useSearchableList } from '../../../shared/ListPagination'
 import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../api/orders'
@@ -18,7 +18,9 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
   const [orders, setOrders] = useState<LoadResult<OrderSummary[]>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ id: string; submitted?: Order }>()
-  const { rows, controls } = useListPagination(orders.status === 'ready' ? orders.data : undefined)
+  const { rows, controls, query, search } = useSearchableList(
+    orders.status === 'ready' ? orders.data : undefined, ({ customerName, id, status }) => [customerName, id, statusLabels[status]],
+  )
 
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   // Restore keyboard focus to the row button after the dialog is removed.
@@ -61,12 +63,16 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
               setPending(event.currentTarget.checked)
             }} />}
           </Group>
+          {orders.status === 'ready' && <TextInput label="Search orders" type="search" placeholder="Search by customer, status or order ID"
+            value={query} onChange={(event) => search(event.currentTarget.value)} />}
           {orders.status === 'loading' && <Loading>Loading orders…</Loading>}
           {orders.status === 'failed' && <Alert role="alert" color="red" title="Could not load orders">
             <Button variant="light" onClick={refreshList}>Retry orders</Button>
           </Alert>}
-          {orders.status === 'ready' && (orders.data.length === 0
-            ? <Stack gap="xs">
+          {orders.status === 'ready' && orders.data.length > 0 && rows.length === 0 &&
+            <Text c="dimmed">No orders match your search.</Text>}
+          {orders.status === 'ready' && orders.data.length === 0 && (
+            <Stack gap="xs">
               <Text c="dimmed">{pending ? 'No orders are awaiting approval.' : 'No orders yet.'}</Text>
               {/* Administrators see setup guidance. Salespeople use the form above. */}
               {role === 'admin' && !isDemo && <>
@@ -79,7 +85,9 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
                 </List>
               </>}
             </Stack>
-            : <Table.ScrollContainer minWidth={460}>
+          )}
+          {orders.status === 'ready' && rows.length > 0 && (
+            <Table.ScrollContainer minWidth={460}>
               <Table>
                 <Table.Thead>
                   <Table.Tr><Table.Th>Customer</Table.Th><Table.Th>Submitted</Table.Th><Table.Th>Status</Table.Th>
@@ -101,7 +109,8 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
                   ))}
                 </Table.Tbody>
               </Table>
-            </Table.ScrollContainer>)}
+            </Table.ScrollContainer>
+          )}
           {orders.status === 'ready' && <ListPagination {...controls} label="Orders pages" />}
         </Stack>
       </Paper>

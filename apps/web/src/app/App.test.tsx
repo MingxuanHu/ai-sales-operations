@@ -814,8 +814,8 @@ describe('order workflows', () => {
   })
 })
 
-describe('list pagination', () => {
-  it.each(['products', 'customers', 'orders'] as const)('shows ten %s per page and keeps the current page valid', async (list) => {
+describe('list search and pagination', () => {
+  it.each(['products', 'customers', 'orders'] as const)('searches and paginates %s across the full list', async (list) => {
     const membership = { ...first, role: list === 'orders' ? 'manager' : 'admin' }
     const path = '/api/organisations/first/' + list
     // Padded labels keep the fixture in the same order when the catalogue sorts it.
@@ -830,7 +830,10 @@ describe('list pagination', () => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [membership] })
       if (url === '/api/organisations/first') return Response.json(membership)
       if (url === '/api/invitations') return Response.json({ invitations: [] })
-      if (url === path || url === path + '?status=pending') return Response.json({ [list]: records })
+      if (url === path + '?status=pending') return Response.json({ orders: records })
+      if (url === path) return Response.json({ [list]: list === 'orders'
+        ? [...records, { ...records[0], id: 'fulfilled-12', customerName: 'Fixture 12', status: 'fulfilled' }]
+        : records })
       if (url === path + '/11' && options.method === 'DELETE') {
         records = records.filter(({ id }) => id !== '11')
         return new Response(null, { status: 204 })
@@ -839,7 +842,7 @@ describe('list pagination', () => {
     }))
 
     render(<App session={mockSession('/organisations/first/' + list)} />)
-    const table = await screen.findByRole('table')
+    let table = await screen.findByRole('table')
     expect(within(table).getAllByRole('row')).toHaveLength(11) // Includes the header.
     expect(within(table).getByText('Fixture 10')).toBeTruthy()
     expect(within(table).queryByText('Fixture 11')).toBeNull()
@@ -850,14 +853,34 @@ describe('list pagination', () => {
     expect(within(table).getByText('Fixture 11')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('page')
 
+    // Searching from page two must inspect the whole list, then show the first results page.
+    const search = screen.getByRole('searchbox', { name: 'Search ' + list })
+    fireEvent.change(search, { target: { value: list === 'products' ? '  sku-01  ' : '  fIXTURE 01  ' } })
+    expect(within(table).getAllByRole('row')).toHaveLength(2)
+    expect(within(table).getByText('Fixture 01')).toBeTruthy()
+    expect(screen.getByText('Showing 1–1 of 1')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('page')
+    fireEvent.change(search, { target: { value: 'no such record' } })
+    expect(screen.getByText('No ' + list + ' match your search.')).toBeTruthy()
+    fireEvent.change(search, { target: { value: '' } })
+    table = screen.getByRole('table')
+    expect(screen.getByText('Showing 1–10 of 11')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+
     fireEvent.click(screen.getByRole('button', { name: 'Previous page' }))
     expect(within(table).getByText('Fixture 01')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
 
     if (list === 'orders') {
-      fireEvent.click(screen.getByRole('checkbox', { name: 'Pending only' }))
+      const pendingOnly = screen.getByRole('checkbox', { name: 'Pending only' })
+      fireEvent.click(pendingOnly)
       expect(await screen.findByText('Fixture 01')).toBeTruthy()
-      expect(screen.getByText('Showing 1–10 of 11')).toBeTruthy()
+      expect(screen.getByText('Showing 1–10 of 12')).toBeTruthy()
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search orders' }), { target: { value: 'fulfilled' } })
+      expect(screen.getByText('Fixture 12')).toBeTruthy()
+      fireEvent.click(pendingOnly)
+      expect(await screen.findByText('No orders match your search.')).toBeTruthy()
+      expect(screen.getByRole('searchbox', { name: 'Search orders' })).toHaveProperty('value', 'fulfilled')
     } else {
       const deleteLabel = list === 'products' ? 'Delete SKU-11' : 'Delete Fixture 11'
       const confirmLabel = list === 'products' ? 'Delete product' : 'Delete customer'

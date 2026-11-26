@@ -1,6 +1,6 @@
 import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useState, type FormEvent } from 'react'
-import { ListPagination, useListPagination } from '../../../shared/ListPagination'
+import { ListPagination, useSearchableList } from '../../../shared/ListPagination'
 import { ApiError } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import type { Product, ProductInput, ProductsApi } from '../api/products'
@@ -28,7 +28,9 @@ export function ProductsPage({ api, organisationId }: { api: ProductsApi; organi
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [requests, setRequests] = useState<AbortController>()
-  const { rows, controls } = useListPagination(catalogue.status === 'ready' ? catalogue.data : undefined)
+  const { rows, controls, query, search } = useSearchableList(
+    catalogue.status === 'ready' ? catalogue.data : undefined, ({ sku, name }) => [sku, name],
+  )
 
   useEffect(() => {
     const request = new AbortController()
@@ -142,7 +144,10 @@ export function ProductsPage({ api, organisationId }: { api: ProductsApi; organi
               </Group>
             </Alert>
           )}
-          {catalogue.data.length === 0 ? <Text c="dimmed">No products yet.</Text> : (
+          <TextInput label="Search products" type="search" placeholder="Search by name or SKU"
+            value={query} onChange={(event) => search(event.currentTarget.value)} />
+          {rows.length === 0 ? <Text c="dimmed">{catalogue.data.length === 0
+            ? 'No products yet.' : 'No products match your search.'}</Text> : (
             <Table.ScrollContainer minWidth={520}>
               <Table>
                 <Table.Thead><Table.Tr>
