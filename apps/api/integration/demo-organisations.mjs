@@ -64,7 +64,7 @@ export async function checkDemos(app) {
   const demoOrders = await get(demoOrdersPath, 'legacy')
   assert.equal(demoOrders.status, 200)
   const { orders } = await demoOrders.json()
-  assert.equal(orders.length, 24)
+  assert.equal(orders.length, 32)
   const detail = await get(demoOrdersPath + '/' + orders[0].id, 'legacy')
   assert.equal(detail.status, 200)
   assert.ok((await detail.json()).history.length >= 1)
@@ -72,7 +72,8 @@ export async function checkDemos(app) {
     where: { id: regular.id }, include: { customers: true, products: true, orders: true },
   }), regular)
 
-  for (const membership of [first, second, newProfile.memberships[0]]) {
+  const reportPath = (id) => '/organisations/' + id + '/reports/sales'
+  for (const [membership, token] of [[first, 'legacy'], [second, 'legacy'], [newProfile.memberships[0], 'new-user']]) {
     assert.equal(membership.role, 'admin')
     const demo = await db.organisation.findUniqueOrThrow({
       where: { id: membership.organisationId },
@@ -118,18 +119,86 @@ export async function checkDemos(app) {
         productGross[line.sku] += line.unitPrice.times(100 * line.quantity).toNumber()
       }
     }
-    assert.deepEqual(counts, { fulfilled: 20, pending: 2, approved: 1, rejected: 1 })
-    assert.equal(manualApprovals, 3)
-    assert.deepEqual(weeks, [141636, 108672, 171650, 114603, 59910, 127803, 65858, 60086])
-    assert.equal(weeks.reduce((sum, week) => sum + week, 0), 850218)
+    assert.deepEqual(counts, { fulfilled: 28, pending: 2, approved: 1, rejected: 1 })
+    assert.equal(manualApprovals, 4)
+    assert.deepEqual(weeks, [255666, 108672, 247246, 159163, 121939, 177503, 115716, 98876])
+    assert.equal(weeks.reduce((sum, week) => sum + week, 0), 1284781)
     assert.deepEqual(customers, {
-      'Fern Lane Café': 251581, 'Juniper Bakehouse': 113498, 'Paperbark Coffee': 207546,
-      'Wattle Corner Deli': 223970, 'Banksia Kiosk': 53623,
+      'Fern Lane Café': 301281, 'Juniper Bakehouse': 218796, 'Paperbark Coffee': 283142,
+      'Wattle Corner Deli': 268530, 'Banksia Kiosk': 213032,
     })
-    assert.deepEqual(units, { 'CUP-08': 39, 'CUP-12': 48, 'LID-90': 79, 'BAG-KR': 39, 'NAP-2P': 27, 'TRAY-4': 14 })
+    assert.deepEqual(units, { 'CUP-08': 59, 'CUP-12': 60, 'LID-90': 106, 'BAG-KR': 75, 'NAP-2P': 49, 'TRAY-4': 41 })
     assert.deepEqual(productGross, {
-      'CUP-08': 173550, 'CUP-12': 253200, 'LID-90': 270575, 'BAG-KR': 116220, 'NAP-2P': 66420, 'TRAY-4': 27930,
+      'CUP-08': 262550, 'CUP-12': 316500, 'LID-90': 363050, 'BAG-KR': 223500, 'NAP-2P': 120540, 'TRAY-4': 81795,
     })
+
+    const salesPath = reportPath(demo.id)
+    // Use each demo's UTC creation day so the expected buckets work even across midnight.
+    const day = 86_400_000
+    const dateLabel = (timestamp) => new Date(timestamp).toISOString().slice(0, 10)
+    const dateAtAge = (age) => dateLabel(demo.createdAt.getTime() - age * day)
+    const dailySales = new Map([
+      [1, '641.20'], [3, '585.90'], [5, '1329.56'], [8, '291.65'], [10, '601.97'],
+      [12, '193.10'], [15, '532.35'], [16, '755.96'], [17, '840.82'], [20, '343.33'],
+      [22, '445.60'], [23, '508.80'], [25, '164.73'], [27, '472.50'], [29, '620.29'],
+      [30, '321.90'], [33, '277.20'], [35, '678.83'], [36, '497.00'], [37, '178.40'],
+      [40, '420.80'], [42, '498.58'], [45, '435.78'], [47, '222.80'], [49, '387.90'],
+      [52, '285.86'], [54, '315.00'],
+    ].map(([age, netSales]) => [dateAtAge(age), netSales]))
+    // Resolve fixture names and SKUs to the tenant's IDs while preserving expected rank order.
+    const customerRanks = (rows) => rows.map(([name, netSales]) => ({
+      id: demo.customers.find((customer) => customer.name === name).id, name, netSales,
+    }))
+    const productRanks = (rows) => rows.map(([sku, netSales, casesSold]) => {
+      const { id, name } = demo.products.find((product) => product.sku === sku)
+      return { id, name, netSales, casesSold }
+    })
+    const readReport = async (query = '') => {
+      const response = await get(salesPath + query, token)
+      assert.equal(response.status, 200)
+      return response.json()
+    }
+
+    const report = await readReport()
+    const expectedDaily = Array.from({ length: 60 }, (_, index) => {
+      const date = dateLabel(Date.parse(report.endDate) - (59 - index) * day)
+      return { date, netSales: dailySales.get(date) ?? '0.00' }
+    })
+    assert.deepEqual(report, {
+      startDate: expectedDaily[0].date, endDate: expectedDaily.at(-1).date,
+      fulfilledOrderCount: 28, netSales: '12847.81', daily: expectedDaily,
+      customers: customerRanks([
+        ['Fern Lane Café', '3012.81'], ['Paperbark Coffee', '2831.42'],
+        ['Wattle Corner Deli', '2685.30'], ['Juniper Bakehouse', '2187.96'], ['Banksia Kiosk', '2130.32'],
+      ]),
+      products: productRanks([
+        ['LID-90', '3358.21', 106], ['CUP-12', '2925.01', 60], ['CUP-08', '2450.84', 59],
+        ['BAG-KR', '2194.77', 75], ['NAP-2P', '1159.89', 49], ['TRAY-4', '759.09', 41],
+      ]),
+    })
+
+    const startDate = dateAtAge(5)
+    const endDate = dateAtAge(2)
+    const narrowed = await readReport('?startDate=' + startDate + '&endDate=' + endDate)
+    assert.deepEqual(narrowed, {
+      startDate, endDate, fulfilledOrderCount: 3, netSales: '1915.46',
+      daily: [5, 4, 3, 2].map((age) => ({
+        date: dateAtAge(age), netSales: dailySales.get(dateAtAge(age)) ?? '0.00',
+      })),
+      customers: customerRanks([
+        ['Fern Lane Café', '775.16'], ['Banksia Kiosk', '585.90'], ['Juniper Bakehouse', '554.40'],
+      ]),
+      products: productRanks([
+        ['CUP-08', '669.72', 17], ['LID-90', '515.47', 17], ['BAG-KR', '357.60', 12],
+        ['NAP-2P', '282.90', 12], ['TRAY-4', '89.77', 5],
+      ]),
+    })
+    for (const result of [report, narrowed]) {
+      const cents = (amount) => BigInt(amount.replace('.', ''))
+      for (const entries of [result.daily, result.customers, result.products]) {
+        assert.equal(entries.reduce((sum, entry) => sum + cents(entry.netSales), 0n), cents(result.netSales))
+      }
+    }
   }
 
   // The confirmed delete removes all tenant records while leaving identities and other tenants intact.
@@ -141,23 +210,8 @@ export async function checkDemos(app) {
   const alice = await profile('alice')
   await db.membership.create({ data: { organisationId, userId: alice.userId, role: 'manager' } })
 
-  // The same HTTP report must reconcile at every aggregation level.
-  const reportPath = (id) => '/organisations/' + id + '/reports/sales'
   const salesPath = reportPath(organisationId)
-  const reportResponse = await get(salesPath, 'legacy')
-  assert.equal(reportResponse.status, 200)
-  const report = await reportResponse.json()
-  assert.equal(report.fulfilledOrderCount, 20)
-  assert.equal(report.netSales, '8502.18')
-  assert.equal(report.daily.length, 60)
-  assert.ok(report.daily.some((day) => day.netSales === '0.00'))
-  assert.equal(report.customers[0].name, 'Fern Lane Café')
-  assert.equal(report.customers[0].netSales, '2515.81')
-  assert.equal(report.products.find(({ name }) => /90 mm cup lids/i.test(name)).casesSold, 79)
-  for (const entries of [report.daily, report.customers, report.products]) {
-    assert.equal(entries.reduce((sum, entry) => sum + BigInt(entry.netSales.replace('.', '')), 0n), 850218n)
-  }
-
+  const report = await (await get(salesPath, 'legacy')).json()
   assert.deepEqual(await (await get(salesPath, 'alice')).json(), report)
   assert.equal((await get(reportPath(second.organisationId), 'alice')).status, 404)
   assert.equal((await fetch(base + salesPath)).status, 401)
@@ -166,10 +220,6 @@ export async function checkDemos(app) {
 
   const saleDay = report.daily.find((day) => day.netSales !== '0.00')
   const dateQuery = '?startDate=' + saleDay.date + '&endDate=' + saleDay.date
-  const narrowed = await (await get(salesPath + dateQuery, 'legacy')).json()
-  assert.equal(narrowed.netSales, saleDay.netSales)
-  assert.deepEqual(narrowed.daily, [saleDay])
-  assert.ok(narrowed.fulfilledOrderCount > 0 && narrowed.fulfilledOrderCount < 20)
   assert.deepEqual(await (await get(reportPath(regular.id) + dateQuery, 'legacy')).json(), {
     startDate: saleDay.date, endDate: saleDay.date, fulfilledOrderCount: 0, netSales: '0.00',
     daily: [{ date: saleDay.date, netSales: '0.00' }], products: [], customers: [],
@@ -193,7 +243,7 @@ export async function checkDemos(app) {
   assert.equal((await deleteDemo(organisationId, 'charlie', first.name)).status, 404)
   assert.equal((await deleteDemo(organisationId, 'alice', first.name)).status, 403)
   assert.equal((await deleteDemo(organisationId, 'legacy', first.name + ' ')).status, 409)
-  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 24)
+  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 32)
 
   assert.equal((await deleteDemo(organisationId, 'legacy', first.name)).status, 204)
   assert.equal(await db.organisation.findUnique({ where: { id: organisationId } }), null)
@@ -204,7 +254,7 @@ export async function checkDemos(app) {
   assert.equal(await db.membership.count({ where: { organisationId } }), 0)
   assert.equal(await db.customer.count({ where: { organisationId } }), 0)
   assert.equal(await db.product.count({ where: { organisationId } }), 0)
-  assert.equal(await db.salesOrder.count({ where: { organisationId: second.organisationId } }), 24)
+  assert.equal(await db.salesOrder.count({ where: { organisationId: second.organisationId } }), 32)
   assert.ok(await db.organisation.findUnique({ where: { id: regular.id } }))
   assert.equal((await profile('legacy')).userId, userId)
   assert.equal((await profile('alice')).userId, alice.userId)

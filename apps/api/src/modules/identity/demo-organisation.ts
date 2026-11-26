@@ -13,7 +13,7 @@ const products = [
 ]
 
 // Each tuple is fulfilment age in days, customer index, discount in basis points,
-// and pairs of catalogue index and case quantity. The first twenty are historical sales.
+// and pairs of catalogue index and case quantity.
 const sales: [number, number, number, [number, number][]][] = [
   [54, 0, 0, [[0, 4], [2, 4]]],
   [52, 2, 500, [[1, 3], [2, 3], [5, 2]]],
@@ -35,6 +35,15 @@ const sales: [number, number, number, [number, number][]][] = [
   [8, 1, 500, [[3, 7], [4, 4]]],
   [5, 0, 1_250, [[0, 10], [2, 10], [4, 4]]],
   [1, 3, 0, [[1, 6], [2, 6], [3, 4]]],
+  // Add sales on quiet days and a second sale on an existing chart day.
+  [49, 4, 0, [[3, 9], [5, 6]]],
+  [42, 1, 750, [[0, 5], [4, 8], [5, 6]]],
+  [36, 0, 0, [[1, 4], [2, 4], [3, 5]]],
+  [29, 4, 1_500, [[0, 8], [2, 8], [5, 5]]],
+  [22, 3, 0, [[3, 10], [4, 6]]],
+  [16, 2, 500, [[1, 8], [2, 8], [5, 5]]],
+  [5, 1, 0, [[3, 12], [4, 8]]],
+  [3, 4, 1_000, [[0, 7], [2, 7], [5, 5]]],
 ]
 const outstanding: [OrderStatus, ...typeof sales[number]][] = [
   ['pending', 0, 2, 1_500, [[1, 9], [2, 9]]],
