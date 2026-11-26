@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { Prisma, type OrderStatus } from '../../generated/prisma/client'
 import { money, orderAmounts } from '../orders/order-money'
 
-const customers = ['Fern Lane Café', 'Juniper Bakehouse', 'Paperbark Coffee', 'Wattle Corner Deli', 'Banksia Kiosk']
+const customers = [
+  'Fern Lane Café', 'Juniper Bakehouse', 'Paperbark Coffee', 'Wattle Corner Deli', 'Banksia Kiosk',
+  'Acorn Espresso', 'Blue Wren Bakery', 'Clover Street Café', 'Dogwood Deli', 'Elm & Ember Coffee',
+  'Fig Tree Kitchen', 'Golden Wattle Bakery', 'Hazel Corner Café', 'Ironbark Espresso', 'Jasmine Lane Deli',
+]
 const products = [
   { sku: 'CUP-08', name: '8 oz paper cups (case of 500)', unitPrice: '44.50' },
   { sku: 'CUP-12', name: '12 oz paper cups (case of 500)', unitPrice: '52.75' },
@@ -10,6 +14,16 @@ const products = [
   { sku: 'BAG-KR', name: 'Kraft takeaway bags (case of 250)', unitPrice: '29.80' },
   { sku: 'NAP-2P', name: 'Two-ply napkins (case of 1,000)', unitPrice: '24.60' },
   { sku: 'TRAY-4', name: 'Four-cup carriers (case of 100)', unitPrice: '19.95' },
+  { sku: 'CUP-16', name: '16 oz paper cups (case of 500)', unitPrice: '61.25' },
+  { sku: 'LID-80', name: '80 mm cup lids (case of 500)', unitPrice: '32.40' },
+  { sku: 'SLV-KR', name: 'Kraft cup sleeves (case of 500)', unitPrice: '27.50' },
+  { sku: 'STIR-WD', name: 'Wooden stirrers (case of 1,000)', unitPrice: '16.80' },
+  { sku: 'STRAW-P', name: 'Paper straws (case of 500)', unitPrice: '23.75' },
+  { sku: 'BOX-SM', name: 'Small takeaway boxes (case of 200)', unitPrice: '38.60' },
+  { sku: 'BOX-LG', name: 'Large takeaway boxes (case of 200)', unitPrice: '46.20' },
+  { sku: 'PCH-KR', name: 'Kraft sandwich pouches (case of 500)', unitPrice: '33.90' },
+  { sku: 'LIN-GP', name: 'Greaseproof liners (case of 1,000)', unitPrice: '28.35' },
+  { sku: 'CUT-WD', name: 'Wooden cutlery sets (case of 250)', unitPrice: '41.50' },
 ]
 
 // Each tuple is fulfilment age in days, customer index, discount in basis points,
@@ -44,6 +58,17 @@ const sales: [number, number, number, [number, number][]][] = [
   [16, 2, 500, [[1, 8], [2, 8], [5, 5]]],
   [5, 1, 0, [[3, 12], [4, 8]]],
   [3, 4, 1_000, [[0, 7], [2, 7], [5, 5]]],
+  // Each new customer buys two catalogue products, so every added product has sales.
+  [56, 5, 0, [[6, 4], [7, 4]]],
+  [44, 6, 500, [[7, 3], [8, 6]]],
+  [31, 7, 0, [[8, 5], [9, 4]]],
+  [24, 8, 0, [[9, 5], [10, 3]]],
+  [18, 9, 750, [[10, 6], [11, 4]]],
+  [13, 10, 0, [[11, 6], [12, 5]]],
+  [11, 11, 1_000, [[12, 7], [13, 8]]],
+  [9, 12, 0, [[13, 4], [14, 5]]],
+  [7, 13, 500, [[14, 9], [15, 6]]],
+  [6, 14, 0, [[15, 3], [6, 5]]],
 ]
 const outstanding: [OrderStatus, ...typeof sales[number]][] = [
   ['pending', 0, 2, 1_500, [[1, 9], [2, 9]]],

@@ -64,7 +64,7 @@ export async function checkDemos(app) {
   const demoOrders = await get(demoOrdersPath, 'legacy')
   assert.equal(demoOrders.status, 200)
   const { orders } = await demoOrders.json()
-  assert.equal(orders.length, 32)
+  assert.equal(orders.length, 42)
   const detail = await get(demoOrdersPath + '/' + orders[0].id, 'legacy')
   assert.equal(detail.status, 200)
   assert.ok((await detail.json()).history.length >= 1)
@@ -82,13 +82,13 @@ export async function checkDemos(app) {
       } },
     })
     assert.equal(demo.settings.isDemo, true)
-    assert.equal(demo.customers.length, 5)
-    assert.equal(demo.products.length, 6)
+    assert.equal(demo.customers.length, 15)
+    assert.equal(demo.products.length, 16)
     const counts = { fulfilled: 0, pending: 0, approved: 0, rejected: 0 }
-    const weeks = Array(8).fill(0)
+    const weeks = Array(9).fill(0)
     const customers = Object.fromEntries(demo.customers.map(({ name }) => [name, 0]))
     const units = Object.fromEntries(demo.products.map(({ sku }) => [sku, 0]))
-    const productGross = { 'CUP-08': 0, 'CUP-12': 0, 'LID-90': 0, 'BAG-KR': 0, 'NAP-2P': 0, 'TRAY-4': 0 }
+    const productGross = Object.fromEntries(demo.products.map(({ sku }) => [sku, 0]))
     let manualApprovals = 0
     for (const order of demo.orders) {
       counts[order.status]++
@@ -119,17 +119,28 @@ export async function checkDemos(app) {
         productGross[line.sku] += line.unitPrice.times(100 * line.quantity).toNumber()
       }
     }
-    assert.deepEqual(counts, { fulfilled: 28, pending: 2, approved: 1, rejected: 1 })
+    assert.deepEqual(counts, { fulfilled: 38, pending: 2, approved: 1, rejected: 1 })
     assert.equal(manualApprovals, 4)
-    assert.deepEqual(weeks, [255666, 108672, 247246, 159163, 121939, 177503, 115716, 98876])
-    assert.equal(weeks.reduce((sum, week) => sum + week, 0), 1284781)
+    assert.deepEqual(weeks, [298741, 284075, 274709, 174688, 142409, 177503, 140625, 98876, 37460])
+    assert.equal(weeks.reduce((sum, week) => sum + week, 0), 1629086)
     assert.deepEqual(customers, {
-      'Fern Lane Café': 301281, 'Juniper Bakehouse': 218796, 'Paperbark Coffee': 283142,
-      'Wattle Corner Deli': 268530, 'Banksia Kiosk': 213032,
+      'Acorn Espresso': 37460, 'Banksia Kiosk': 213032, 'Blue Wren Bakery': 24909,
+      'Clover Street Café': 20470, 'Dogwood Deli': 15525, 'Elm & Ember Coffee': 27463,
+      'Fern Lane Café': 301281, 'Fig Tree Kitchen': 46260, 'Golden Wattle Bakery': 53514,
+      'Hazel Corner Café': 27735, 'Ironbark Espresso': 47894, 'Jasmine Lane Deli': 43075,
+      'Juniper Bakehouse': 218796, 'Paperbark Coffee': 283142, 'Wattle Corner Deli': 268530,
     })
-    assert.deepEqual(units, { 'CUP-08': 59, 'CUP-12': 60, 'LID-90': 106, 'BAG-KR': 75, 'NAP-2P': 49, 'TRAY-4': 41 })
+    assert.deepEqual(units, {
+      'BAG-KR': 75, 'BOX-LG': 12, 'BOX-SM': 10, 'CUP-08': 59, 'CUP-12': 60,
+      'CUP-16': 9, 'CUT-WD': 9, 'LID-80': 7, 'LID-90': 106, 'LIN-GP': 14,
+      'NAP-2P': 49, 'PCH-KR': 12, 'SLV-KR': 11, 'STIR-WD': 9, 'STRAW-P': 9,
+      'TRAY-4': 41,
+    })
     assert.deepEqual(productGross, {
-      'CUP-08': 262550, 'CUP-12': 316500, 'LID-90': 363050, 'BAG-KR': 223500, 'NAP-2P': 120540, 'TRAY-4': 81795,
+      'BAG-KR': 223500, 'BOX-LG': 55440, 'BOX-SM': 38600, 'CUP-08': 262550,
+      'CUP-12': 316500, 'CUP-16': 55125, 'CUT-WD': 37350, 'LID-80': 22680,
+      'LID-90': 363050, 'LIN-GP': 39690, 'NAP-2P': 120540, 'PCH-KR': 40680,
+      'SLV-KR': 30250, 'STIR-WD': 15120, 'STRAW-P': 21375, 'TRAY-4': 81795,
     })
 
     const salesPath = reportPath(demo.id)
@@ -138,12 +149,14 @@ export async function checkDemos(app) {
     const dateLabel = (timestamp) => new Date(timestamp).toISOString().slice(0, 10)
     const dateAtAge = (age) => dateLabel(demo.createdAt.getTime() - age * day)
     const dailySales = new Map([
-      [1, '641.20'], [3, '585.90'], [5, '1329.56'], [8, '291.65'], [10, '601.97'],
-      [12, '193.10'], [15, '532.35'], [16, '755.96'], [17, '840.82'], [20, '343.33'],
-      [22, '445.60'], [23, '508.80'], [25, '164.73'], [27, '472.50'], [29, '620.29'],
-      [30, '321.90'], [33, '277.20'], [35, '678.83'], [36, '497.00'], [37, '178.40'],
-      [40, '420.80'], [42, '498.58'], [45, '435.78'], [47, '222.80'], [49, '387.90'],
-      [52, '285.86'], [54, '315.00'],
+      [1, '641.20'], [3, '585.90'], [5, '1329.56'], [6, '430.75'], [7, '478.94'],
+      [8, '291.65'], [9, '277.35'], [10, '601.97'], [11, '535.14'], [12, '193.10'],
+      [13, '462.60'], [15, '532.35'], [16, '755.96'], [17, '840.82'], [18, '274.63'],
+      [20, '343.33'], [22, '445.60'], [23, '508.80'], [24, '155.25'], [25, '164.73'],
+      [27, '472.50'], [29, '620.29'], [30, '321.90'], [31, '204.70'], [33, '277.20'],
+      [35, '678.83'], [36, '497.00'], [37, '178.40'], [40, '420.80'], [42, '498.58'],
+      [44, '249.09'], [45, '435.78'], [47, '222.80'], [49, '387.90'], [52, '285.86'],
+      [54, '315.00'], [56, '374.60'],
     ].map(([age, netSales]) => [dateAtAge(age), netSales]))
     // Resolve fixture names and SKUs to the tenant's IDs while preserving expected rank order.
     const customerRanks = (rows) => rows.map(([name, netSales]) => ({
@@ -166,14 +179,26 @@ export async function checkDemos(app) {
     })
     assert.deepEqual(report, {
       startDate: expectedDaily[0].date, endDate: expectedDaily.at(-1).date,
-      fulfilledOrderCount: 28, netSales: '12847.81', daily: expectedDaily,
+      fulfilledOrderCount: 38, netSales: '16290.86', daily: expectedDaily,
       customers: customerRanks([
         ['Fern Lane Café', '3012.81'], ['Paperbark Coffee', '2831.42'],
-        ['Wattle Corner Deli', '2685.30'], ['Juniper Bakehouse', '2187.96'], ['Banksia Kiosk', '2130.32'],
+        ['Wattle Corner Deli', '2685.30'], ['Juniper Bakehouse', '2187.96'],
+        ['Banksia Kiosk', '2130.32'], ['Golden Wattle Bakery', '535.14'],
+        ['Ironbark Espresso', '478.94'], ['Fig Tree Kitchen', '462.60'],
+        ['Jasmine Lane Deli', '430.75'], ['Acorn Espresso', '374.60'],
+        ['Hazel Corner Café', '277.35'], ['Elm & Ember Coffee', '274.63'],
+        ['Blue Wren Bakery', '249.09'], ['Clover Street Café', '204.70'],
+        ['Dogwood Deli', '155.25'],
       ]),
       products: productRanks([
-        ['LID-90', '3358.21', 106], ['CUP-12', '2925.01', 60], ['CUP-08', '2450.84', 59],
-        ['BAG-KR', '2194.77', 75], ['NAP-2P', '1159.89', 49], ['TRAY-4', '759.09', 41],
+        ['LID-90', '3358.21', 106], ['CUP-12', '2925.01', 60],
+        ['CUP-08', '2450.84', 59], ['BAG-KR', '2194.77', 75],
+        ['NAP-2P', '1159.89', 49], ['TRAY-4', '759.09', 41],
+        ['CUP-16', '551.25', 9], ['BOX-LG', '522.06', 12],
+        ['LIN-GP', '384.14', 14], ['PCH-KR', '379.68', 12],
+        ['BOX-SM', '374.42', 10], ['CUT-WD', '361.05', 9],
+        ['SLV-KR', '294.25', 11], ['LID-80', '221.94', 7],
+        ['STRAW-P', '203.06', 9], ['STIR-WD', '151.20', 9],
       ]),
     })
 
@@ -243,7 +268,7 @@ export async function checkDemos(app) {
   assert.equal((await deleteDemo(organisationId, 'charlie', first.name)).status, 404)
   assert.equal((await deleteDemo(organisationId, 'alice', first.name)).status, 403)
   assert.equal((await deleteDemo(organisationId, 'legacy', first.name + ' ')).status, 409)
-  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 32)
+  assert.equal(await db.salesOrder.count({ where: { organisationId } }), 42)
 
   assert.equal((await deleteDemo(organisationId, 'legacy', first.name)).status, 204)
   assert.equal(await db.organisation.findUnique({ where: { id: organisationId } }), null)
@@ -254,7 +279,7 @@ export async function checkDemos(app) {
   assert.equal(await db.membership.count({ where: { organisationId } }), 0)
   assert.equal(await db.customer.count({ where: { organisationId } }), 0)
   assert.equal(await db.product.count({ where: { organisationId } }), 0)
-  assert.equal(await db.salesOrder.count({ where: { organisationId: second.organisationId } }), 32)
+  assert.equal(await db.salesOrder.count({ where: { organisationId: second.organisationId } }), 42)
   assert.ok(await db.organisation.findUnique({ where: { id: regular.id } }))
   assert.equal((await profile('legacy')).userId, userId)
   assert.equal((await profile('alice')).userId, alice.userId)
