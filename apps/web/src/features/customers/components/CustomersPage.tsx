@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useState, type FormEvent } from 'react'
+import { ListPagination, useSearchableList } from '../../../shared/ListPagination'
 import { ApiError } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import type { Customer, CustomerInput, CustomersApi } from '../api/customers'
@@ -27,6 +28,9 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [requests, setRequests] = useState<AbortController>()
+  const { rows, controls, query, search } = useSearchableList(
+    directory.status === 'ready' ? directory.data : undefined, ({ name }) => [name],
+  )
 
   useEffect(() => {
     const request = new AbortController()
@@ -136,7 +140,10 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
               </Group>
             </Alert>
           )}
-          {directory.data.length === 0 ? <Text c="dimmed">No customers yet.</Text> : (
+          <TextInput label="Search customers" type="search" placeholder="Search by name"
+            value={query} onChange={(event) => search(event.currentTarget.value)} />
+          {rows.length === 0 ? <Text c="dimmed">{directory.data.length === 0
+            ? 'No customers yet.' : 'No customers match your search.'}</Text> : (
             <Table.ScrollContainer minWidth={320}>
               <Table>
                 <Table.Thead><Table.Tr>
@@ -144,7 +151,7 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
                 </Table.Tr></Table.Thead>
                 <Table.Tbody>
                   {/* The stable customer ID lets React match rows after edits or deletions. */}
-                  {directory.data.map((customer) => (
+                  {rows.map((customer) => (
                     <Table.Tr key={customer.id}>
                       <Table.Td>{customer.name}</Table.Td>
                       <Table.Td>
@@ -161,6 +168,7 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
               </Table>
             </Table.ScrollContainer>
           )}
+          <ListPagination {...controls} label="Customers pages" />
         </>}
       </Stack>
     </Paper>
