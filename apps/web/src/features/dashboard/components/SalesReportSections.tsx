@@ -83,9 +83,12 @@ function DailySalesChart({ daily }: { daily: SalesReport['daily'] }) {
   )
 }
 
+// Start with Tableau 10 and add lighter companion shades for longer rankings.
 const rankingColors = [
-  '#2b54a3', '#148584', '#ae7135', '#7552a1', '#b94e65',
-  '#48785d', '#477da8', '#a34d80', '#747735', '#6550bd',
+  '#4e79a7', '#59a14f', '#f28e2b', '#76b7b2', '#b07aa1',
+  '#edc949', '#e15759', '#9c755f', '#ff9da7', '#bab0ab',
+  '#a0cbe8', '#8cd17d', '#ffbe7d', '#86bcb6', '#d4a6c8',
+  '#f1ce63', '#ff9d9a', '#d7b5a6', '#fabfd2', '#d7d2cb',
 ]
 
 function RankingTable({ title, nameColumn, rows, showCases = false }: {

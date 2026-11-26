@@ -55,27 +55,16 @@
 }
 
 .pie {
-  position: relative;
   aspect-ratio: 1;
   border-radius: 50%;
-  box-shadow: 0 0 0 4px var(--mantine-color-body), 0 0 0 5px var(--mantine-color-default-border),
-    0 10px 24px rgb(15 23 42 / 16%);
-}
-
-.pie::after {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at 35% 20%, rgb(255 255 255 / 20%), transparent 54%),
-    linear-gradient(155deg, transparent 45%, rgb(15 23 42 / 22%));
-  pointer-events: none;
-  content: '';
+  box-shadow: 0 0 0 2px var(--mantine-color-body), 0 0 0 3px var(--mantine-color-default-border);
 }
 
 .pieTooltip {
-  max-width: min(13rem, 55vw);
+  /* An explicit width prevents absolute positioning from shrinking the box near the right edge. */
+  inline-size: min(15rem, 44vw);
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .swatch {
