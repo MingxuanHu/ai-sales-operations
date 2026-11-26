@@ -12,7 +12,7 @@ import { InvitationInbox } from '../components/invitations/InvitationInbox'
 import { OrganisationAccess } from './OrganisationAccess'
 import { OrganisationSettingsPage } from './OrganisationSettingsPage'
 import { OrganisationOverviewPage } from './OrganisationOverviewPage'
-import { organisationPath } from './workspacePaths'
+import { organisationLandingPath, organisationPath, ordersPath } from './workspacePaths'
 import styles from './OrganisationWorkspace.module.css'
 
 export function OrganisationWorkspace({ api, messagesTarget }: { api: OrganisationsApi; messagesTarget: HTMLElement | null }) {
@@ -70,12 +70,15 @@ export function OrganisationWorkspace({ api, messagesTarget }: { api: Organisati
         <Routes>
           {/* The picker and default route use the same membership order from the profile. */}
           <Route index element={<Navigate replace to={memberships.length > 0
-            ? organisationPath(memberships[0].organisationId)
+            ? organisationLandingPath(memberships[0])
             : '/onboarding'} />} />
           <Route path="/onboarding" element={<CreateOrganisationPage api={api} onJoined={onJoined} onDemoCreated={openDemo} />} />
           <Route path="/organisations/:organisationId" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
-              {(membership) => <OrganisationOverviewPage membership={membership} />}
+              {/* Use the role returned for this tenant before mounting the Overview. */}
+              {(membership) => membership.role === 'admin'
+                ? <OrganisationOverviewPage membership={membership} salesReport={api.salesReport} />
+                : <Navigate replace to={ordersPath(membership.organisationId)} />}
             </OrganisationAccess>
           } />
           <Route path="/organisations/:organisationId/settings" element={

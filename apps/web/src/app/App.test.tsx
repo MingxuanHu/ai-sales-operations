@@ -8,6 +8,13 @@ import { App } from './App'
 const first = { organisationId: 'first', name: 'Cedar Wholesale', role: 'salesperson' }
 const second = { organisationId: 'second', name: 'River Wholesale', role: 'manager' }
 
+const firstAdmin = { ...first, role: 'admin' }
+const secondAdmin = { ...second, role: 'admin' }
+
+function salesReport(startDate: string, endDate: string) {
+  return { startDate, endDate, fulfilledOrderCount: 0, netSales: '0.00', daily: [], products: [], customers: [] }
+}
+
 function mockSession(returnTo = '/'): CognitoSession {
   return {
     beginSignIn: vi.fn(async () => {}),
@@ -71,6 +78,8 @@ describe('protected React shell', () => {
         return Response.json({ organisationId: first.organisationId })
       }
       if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/first/orders/selectors') return Response.json({ customers: [], products: [] })
+      if (url === '/api/organisations/first/orders') return Response.json({ orders: [] })
       throw new Error('Unexpected API request')
     })
     vi.stubGlobal('fetch', fetch)
@@ -78,7 +87,7 @@ describe('protected React shell', () => {
     expect(await screen.findByRole('heading', { name: 'Create organisation' })).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Messages (1 pending invitation)' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
-    expect(await screen.findByRole('heading', { name: first.name })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeTruthy()
     expect(await screen.findByRole('button', { name: 'Messages' })).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith('/api/invitations/invite/accept', expect.objectContaining({ method: 'POST' }))
   })
@@ -87,7 +96,7 @@ describe('protected React shell', () => {
     let created = false
     const requestIds: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: created ? [first] : [] })
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: created ? [firstAdmin] : [] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       if (url === '/api/organisations') {
         requestIds.push(JSON.parse(String(options.body)).requestId)
@@ -95,7 +104,7 @@ describe('protected React shell', () => {
         created = true
         return Response.json({ organisationId: first.organisationId })
       }
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession('/onboarding')} />)
@@ -108,7 +117,7 @@ describe('protected React shell', () => {
   })
 
   it('automatically opens the first organisation when the user has only demos', async () => {
-    const demos = [{ ...second, isDemo: true }, { ...first, isDemo: true }]
+    const demos = [{ ...secondAdmin, isDemo: true }, { ...first, isDemo: true }]
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: demos })
       if (url === '/api/organisations/second') return Response.json(demos[0])
@@ -123,8 +132,8 @@ describe('protected React shell', () => {
 
   it('shows Overview only after choosing an organisation and groups it with organisation links', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first, second] })
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [firstAdmin, second] })
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession('/onboarding')} />)
@@ -139,31 +148,213 @@ describe('protected React shell', () => {
     expect(within(navigation).queryByRole('link', { name: 'Invitations' })).toBeNull()
   })
 
+  it('validates UTC dates and updates every sales section after retrying a failed request', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-26T23:59:00Z'))
+    let reportRequests = 0
+    const fetch = vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [secondAdmin] })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === '/api/organisations/second') return Response.json(secondAdmin)
+      const dates = new URL(url, window.location.origin).searchParams
+      reportRequests++
+      if (reportRequests === 1) {
+        expect(dates.get('startDate')).toBe('2026-09-28')
+        expect(dates.get('endDate')).toBe('2026-11-26')
+        return Response.json(salesReport('2026-09-28', '2026-11-26'))
+      }
+      expect(dates.get('startDate')).toBe('2026-11-25')
+      expect(dates.get('endDate')).toBe('2026-11-25')
+      if (reportRequests === 2) return new Response(null, { status: 503 })
+      return Response.json({
+        ...salesReport('2026-11-25', '2026-11-25'),
+        fulfilledOrderCount: 1,
+        netSales: '42.50',
+        daily: [{ date: '2026-11-25', netSales: '42.50' }],
+        products: [
+          { id: 'p', name: 'Fixture crate', netSales: '34.00', casesSold: 3 },
+          { id: 'q', name: 'Fixture carton', netSales: '8.50', casesSold: 2 },
+          { id: 'r', name: 'Fixture sample', netSales: '0.00', casesSold: 1 },
+        ],
+        customers: [{ id: 'c', name: 'Fixture shop', netSales: '42.50' }],
+      })
+    })
+    vi.stubGlobal('fetch', fetch)
+
+    try {
+      render(<App session={mockSession('/organisations/second')} />)
+      await screen.findByText('No fulfilled orders in this date range.')
+      expect(screen.getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
+      expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
+      const start = screen.getByLabelText(/Start date/)
+      const end = screen.getByLabelText(/End date/)
+      expect(start).toHaveProperty('value', '2026-09-28')
+      fireEvent.change(start, { target: { value: '2024-01-01' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Apply dates' }))
+      expect(screen.getByText('Enter a valid range of 1 to 366 days.')).toBeTruthy()
+      expect(reportRequests).toBe(1)
+      fireEvent.change(start, { target: { value: '2026-11-25' } })
+      fireEvent.change(end, { target: { value: '2026-11-25' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Apply dates' }))
+      expect(screen.getByText('Loading sales report…')).toBeTruthy()
+      expect(screen.queryByText('No fulfilled orders in this date range.')).toBeNull()
+      await screen.findByText('Could not load the sales report')
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      await screen.findByText('Reporting period 2026-11-25 to 2026-11-25')
+      expect(screen.getAllByText('42.50')).toHaveLength(3)
+      const productPie = screen.getByRole('img', { name: 'Product share of net sales' })
+      expect(productPie.getAttribute('style')).toContain('80%')
+      expect(productPie.getAttribute('style')).toContain('conic-gradient')
+      const customerPie = screen.getByRole('img', { name: 'Customer share of net sales' })
+      vi.spyOn(productPie, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+      vi.spyOn(customerPie, 'getBoundingClientRect').mockReturnValue(new DOMRect(120, 0, 100, 100))
+
+      // The right side is 25% clockwise from the top. The upper-left sits in the final 20%.
+      fireEvent.pointerMove(productPie, { clientX: 80, clientY: 50 })
+      expect(screen.getByText('80% of net sales')).toBeTruthy()
+      fireEvent.pointerMove(productPie, { clientX: 25, clientY: 25 })
+      expect(screen.queryByText('80% of net sales')).toBeNull()
+      const productDetails = screen.getByText('20% of net sales').parentElement!
+      expect(within(productDetails).getByText('Fixture carton')).toBeTruthy()
+      expect(within(productDetails).getByText('Net sales 8.50')).toBeTruthy()
+      expect(within(productDetails).getByText('2 cases sold')).toBeTruthy()
+      fireEvent.pointerOut(productPie)
+      expect(screen.queryByText('20% of net sales')).toBeNull()
+
+      fireEvent.pointerMove(customerPie, { clientX: 200, clientY: 50 })
+      const customerDetails = screen.getByText('100% of net sales').parentElement!
+      expect(within(customerDetails).getByText('Fixture shop')).toBeTruthy()
+      expect(within(customerDetails).getByText('Net sales 42.50')).toBeTruthy()
+      fireEvent.pointerOut(customerPie)
+      expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('Fixture crate')).toBeTruthy()
+      expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('3')).toBeTruthy()
+      expect(within(screen.getByRole('table', { name: 'Customer ranking' })).getByText('Fixture shop')).toBeTruthy()
+      const dailyData = screen.getByText('View daily sales data')
+      expect(dailyData.tagName).toBe('SUMMARY')
+      expect(within(dailyData.parentElement!).getByText('2026-11-25')).toBeTruthy()
+    } finally {
+      vi.mocked(Date.now).mockRestore()
+    }
+  })
+
+  it('follows the pointer across sales and zero-sales days', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [secondAdmin] })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === '/api/organisations/second') return Response.json(secondAdmin)
+      return Response.json({
+        ...salesReport('2026-11-25', '2026-11-26'),
+        fulfilledOrderCount: 1,
+        netSales: '42.50',
+        daily: [{ date: '2026-11-25', netSales: '42.50' }, { date: '2026-11-26', netSales: '0.00' }],
+      })
+    }))
+    const { container } = render(<App session={mockSession('/organisations/second')} />)
+    await screen.findByText('Reporting period 2026-11-25 to 2026-11-26')
+    const chart = container.querySelector<HTMLDivElement>('[class*="_chart_"]')!
+    vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue(new DOMRect(20, 100, 200, 160))
+
+    fireEvent.pointerMove(chart, { clientX: 30, clientY: 110 })
+    expect(screen.getByText('2026-11-25 UTC')).toBeTruthy()
+    const guide = chart.querySelector<HTMLDivElement>('[class*="_chartGuide_"]')
+    expect(guide?.style.left).toBe('10px')
+    expect(screen.getByText('Net sales 42.50').parentElement?.style.left).toBe('10px')
+
+    fireEvent.pointerMove(chart, { clientX: 190, clientY: 140 })
+    expect(screen.getByText('2026-11-26 UTC')).toBeTruthy()
+    const zeroSales = screen.getByText('Net sales 0.00')
+    expect(zeroSales.parentElement?.style.left).toBe('170px')
+    expect(zeroSales.parentElement?.style.top).toBe('40px')
+    expect(guide?.style.left).toBe('170px')
+
+    fireEvent.pointerOut(chart)
+    expect(screen.queryByText('Net sales 0.00')).toBeNull()
+    expect(chart.contains(guide)).toBe(false)
+  })
+
+  it('clears sales on organisation switch, ignores late reports and restricts Overview to admins', async () => {
+    const admin = { ...first, role: 'admin' }
+    const salesperson = { ...first, organisationId: 'third', name: 'Third Wholesale' }
+    const manager = { ...second, organisationId: 'fourth', name: 'Fourth Wholesale' }
+    const memberships = [admin, secondAdmin, salesperson, manager]
+    let firstRequests = 0
+    let lateSignal: AbortSignal | null = null
+    let finishLate: (response: Response) => void = () => {}
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      const membership = memberships.find(({ organisationId }) => url === '/api/organisations/' + organisationId)
+      if (membership) return Response.json(membership)
+      if (url === '/api/organisations/third/orders/selectors') return Response.json({ customers: [], products: [] })
+      if (/^\/api\/organisations\/(third|fourth)\/orders/.test(url)) return Response.json({ orders: [] })
+      const dates = new URL(url, window.location.origin).searchParams
+      const report = salesReport(dates.get('startDate')!, dates.get('endDate')!)
+      if (url.includes('/first/reports/sales')) {
+        if (++firstRequests === 1) return Response.json({ ...report, netSales: '123.45', fulfilledOrderCount: 1 })
+        lateSignal = options.signal ?? null
+        return new Promise<Response>((resolve) => { finishLate = resolve })
+      }
+      if (url.includes('/second/reports/sales')) return Response.json(report)
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/first')} />)
+    await screen.findByText('123.45')
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(second.name))
+    expect(screen.queryByText('123.45')).toBeNull()
+    await screen.findByText('No fulfilled orders in this date range.')
+
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(admin.name))
+    await waitFor(() => expect(lateSignal).not.toBeNull())
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(second.name))
+    await screen.findByText('No fulfilled orders in this date range.')
+    expect(lateSignal).toHaveProperty('aborted', true)
+    await act(async () => finishLate(Response.json({ ...salesReport('2026-11-25', '2026-11-25'), netSales: '999.99' })))
+    expect(screen.queryByText('999.99')).toBeNull()
+    expect(window.location.pathname).toBe('/organisations/second')
+
+    for (const nonAdmin of [salesperson, manager]) {
+      await act(async () => {
+        window.history.pushState(null, '', '/organisations/' + nonAdmin.organisationId)
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+      await waitFor(() => expect(window.location.pathname).toBe('/organisations/' + nonAdmin.organisationId + '/orders'))
+      await screen.findByRole('heading', { name: 'Orders' })
+      expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Sales dashboard' })).toBeNull()
+      expect(fetch.mock.calls.some(([url]) => url.includes('/' + nonAdmin.organisationId + '/reports/'))).toBe(false)
+    }
+  })
+
   it('automatically opens the first organisation in the picker after sign-in', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second, first] })
       if (url === '/api/organisations/second') return Response.json(second)
       if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url.startsWith('/api/organisations/second/orders')) return Response.json({ orders: [] })
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession()} />)
-    await screen.findByRole('heading', { name: second.name })
+    await screen.findByRole('heading', { name: 'Orders' })
     expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
-    expect(window.location.pathname).toBe('/organisations/second')
+    expect(window.location.pathname).toBe('/organisations/second/orders')
   })
 
   it('retries demo creation and selects each newly created demo', async () => {
     const demoId = '20b6acc4-c4e8-41fd-901d-4a601880ded2'
     const demos = [
       { organisationId: demoId, name: `Demo · Fern & Finch Supply · ${demoId}`, role: 'admin' },
-      { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
+      { organisationId: '80e7e828-2620-4f86-8af9-86eafaa1234d', name: 'Demo · Acorn & Alder Supply · 80e7e828-2620-4f86-8af9-86eafaa1234d', role: 'admin', isDemo: true },
     ]
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [firstAdmin] })
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       if (url === '/api/organisations/' + demoId) return Response.json(demos[0])
-      if (url === '/api/organisations/demo-2') return Response.json(demos[1])
+      if (url === '/api/organisations/' + demos[1].organisationId) return Response.json(demos[1])
       if (url === '/api/organisations/demo') {
         requests.push(JSON.parse(String(options.body)).requestId)
         if (requests.length === 1) return new Response(null, { status: 503 })
@@ -181,17 +372,22 @@ describe('protected React shell', () => {
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     fireEvent.click(create)
-    await screen.findByRole('heading', { name: demos[0].name })
+    await screen.findByRole('heading', { name: 'Demo · Fern & Finch Supply · 20b6acc4' })
     const picker = screen.getByRole('combobox', { name: 'Organisation' })
     expect(picker).toHaveProperty('value', 'Demo · 20b6acc4')
     expect(picker.getAttribute('title')).toBe(demos[0].name)
+    const demoLabel = within(screen.getByRole('listbox', { hidden: true })).getByText('Demo · Fern & Finch Supply')
+    expect(demoLabel.parentElement?.firstElementChild).toBe(demoLabel)
+    expect(demoLabel.nextElementSibling?.textContent).toBe('20b6acc4')
     fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Create demo organisation' }))
-    await screen.findByRole('heading', { name: demos[1].name })
+    await screen.findByRole('heading', { name: 'Demo · Acorn & Alder Supply · 80e7e828' })
     expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
     expect(requests[2]).not.toBe(requests[0])
-    expect(window.location.pathname).toBe('/organisations/demo-2')
-    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[1].name)
+    expect(window.location.pathname).toBe('/organisations/' + demos[1].organisationId)
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', 'Demo · 80e7e828')
+    const secondDemoLabel = within(screen.getByRole('listbox', { hidden: true })).getByText('Demo · Acorn & Alder Supply')
+    expect(secondDemoLabel.nextElementSibling?.textContent).toBe('80e7e828')
     expect(screen.queryByText(/Demo ready/)).toBeNull()
   })
 
@@ -293,6 +489,7 @@ describe('protected React shell', () => {
         return new Promise<Response>((resolve) => { finishPrevious = resolve })
       }
       if (url === '/api/organisations/second') return Response.json(second)
+      if (url.startsWith('/api/organisations/second/orders')) return Response.json({ orders: [] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       throw new Error('Unexpected API request')
     })
@@ -304,10 +501,10 @@ describe('protected React shell', () => {
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'Enter', code: 'Enter' })
-    expect(await screen.findByRole('heading', { name: second.name })).toBeTruthy()
-    expect(screen.getByText('manager')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
-    expect(window.location.pathname).toBe('/organisations/second')
+    expect(window.location.pathname).toBe('/organisations/second/orders')
     expect(previousSignal).toHaveProperty('aborted', true)
     // act lets React process any updates from the late response before we check the screen.
     await act(async () => finishPrevious(Response.json(first)))

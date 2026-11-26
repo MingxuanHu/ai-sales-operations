@@ -1,7 +1,8 @@
 import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership } from '../api/organisations'
-import { customersPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
+import { organisationDisplayName } from '../organisationDisplayName'
+import { customersPath, organisationLandingPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
 const roleLabels = { admin: 'Administrator', manager: 'Manager', salesperson: 'Salesperson' }
@@ -16,15 +17,15 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
   const overviewRoute = useMatch('/organisations/:organisationId')
   const selectedId = (productsRoute ?? customersRoute ?? ordersRoute ?? settingsRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
-  const options = new Map(memberships.map(({ organisationId, name, role }) => {
-    // Match the generated demo name to its own ID so custom names keep their original labels.
-    const demo = name === `Demo · Fern & Finch Supply · ${organisationId}`
-    const code = organisationId.slice(0, 8)
+  const options = new Map(memberships.map((membership) => {
+    const { organisationId, name, role } = membership
+    const display = organisationDisplayName(membership)
     return [organisationId, {
       value: organisationId,
-      label: demo ? `Demo · ${code}` : name,
-      name: demo ? 'Fern & Finch Supply' : name,
-      detail: demo ? `Demo · ${code}` : '',
+      // Select displays the compact label in its closed field.
+      label: display.demoCode ? `Demo · ${display.demoCode}` : name,
+      name: display.name,
+      detail: display.demoCode,
       role: roleLabels[role],
       fullName: name,
     }]
@@ -48,7 +49,7 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
                 <div className={styles.optionRow} title={entry.fullName}>
                   <div className={styles.optionText}>
                     <span className={styles.optionName}>{entry.name}</span>
-                    {entry.detail && <span className={styles.demoCode}>{entry.detail}</span>}
+                    {entry.detail && <span className={styles.optionDetail}>{entry.detail}</span>}
                     <span className={styles.optionRole}>{entry.role}</span>
                   </div>
                   {checked && <span className={styles.optionCheck} aria-hidden="true">✓</span>}
@@ -66,18 +67,18 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               else if (customersRoute && next?.role === 'admin') void navigate(customersPath(id))
               else if (settingsRoute && next?.role === 'admin') void navigate(settingsPath(id))
               else if (ordersRoute && next) void navigate(ordersPath(id))
-              else void navigate(organisationPath(id))
+              else if (next) void navigate(organisationLandingPath(next))
             }}
           />
         )}
         {/* renderRoot forwards Mantine's link styles to React Router, which sets aria-current. */}
         {selected && (
           <nav aria-label="Selected organisation" className={`${styles.navigation} ${styles.organisationNavigation}`}>
-            <NavLink label="Overview" renderRoot={(props) => (
-              <RouterNavLink {...props} to={organisationPath(selected.organisationId)} end />
-            )} />
             {selected.role === 'admin' && (
               <>
+                <NavLink label="Overview" renderRoot={(props) => (
+                  <RouterNavLink {...props} to={organisationPath(selected.organisationId)} end />
+                )} />
                 <NavLink label="Products" renderRoot={(props) => (
                   <RouterNavLink {...props} to={productsPath(selected.organisationId)} end />
                 )} />

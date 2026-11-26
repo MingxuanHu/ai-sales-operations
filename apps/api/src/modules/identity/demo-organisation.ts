@@ -1,6 +1,17 @@
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
 import { Prisma, type OrderStatus } from '../../generated/prisma/client'
 import { money, orderAmounts } from '../orders/order-money'
+
+const demoNames = [
+  'Fern & Finch Supply',
+  'Juniper & Wren Wholesale',
+  'Acorn & Alder Supply',
+  'Banksia & Birch Wholesale',
+  'Clover & Copper Supply',
+  'Wattle & Willow Wholesale',
+  'Paperbark & Pine Supply',
+  'Hazel & Heron Wholesale',
+]
 
 const customers = [
   'Fern Lane Café', 'Juniper Bakehouse', 'Paperbark Coffee', 'Wattle Corner Deli', 'Banksia Kiosk',
@@ -84,9 +95,11 @@ export function isDemoOrganisation(settings: Prisma.JsonValue) {
 
 export async function provisionDemo(tx: Prisma.TransactionClient, userId: string, requestId: string) {
   const id = randomUUID()
+  // Pick a name when inserting the demo so a replay can return the stored name.
+  const name = demoNames[randomInt(demoNames.length)]
   const { createdAt } = await tx.organisation.create({
     data: {
-      id, name: `Demo · Fern & Finch Supply · ${id}`,
+      id, name: `Demo · ${name} · ${id}`,
       // Keep the previous column populated so the prior API build can still recognise new demos.
       isDemo: true, settings: { isDemo: true },
       createdByUserId: userId, creationRequestId: requestId,

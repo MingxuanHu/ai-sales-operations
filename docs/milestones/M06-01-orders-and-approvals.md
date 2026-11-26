@@ -106,8 +106,8 @@ order is visible to the authorised actor but its status no longer allows the com
 
 #### Demo dataset for M7
 
-Fern & Finch Supply is a fictional café-supply wholesaler. Each demo has 15 customers
-and 16 products. The fixtures use the same quantities, prices and discounts across
+Each demo randomly selects a fictional café-supply wholesaler name from a curated
+list and has 15 customers and 16 products. The fixtures use the same quantities, prices and discounts across
 demos. Timestamps are anchored to organisation creation and kept as historical dates
 after provisioning. Cases are the order quantity unit.
 

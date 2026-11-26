@@ -82,6 +82,9 @@ export async function checkDemos(app) {
       } },
     })
     assert.equal(demo.settings.isDemo, true)
+    assert.equal(membership.name, demo.name)
+    assert.match(demo.name, /^Demo · (Fern & Finch Supply|Juniper & Wren Wholesale|Acorn & Alder Supply|Banksia & Birch Wholesale|Clover & Copper Supply|Wattle & Willow Wholesale|Paperbark & Pine Supply|Hazel & Heron Wholesale) · /)
+    assert.ok(demo.name.endsWith(` · ${membership.organisationId}`))
     assert.equal(demo.customers.length, 15)
     assert.equal(demo.products.length, 16)
     const counts = { fulfilled: 0, pending: 0, approved: 0, rejected: 0 }

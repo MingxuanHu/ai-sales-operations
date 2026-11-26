@@ -37,10 +37,14 @@
   font-weight: 650;
 }
 
-.demoCode,
+.optionDetail,
 .optionRole {
   color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
+}
+
+.optionDetail {
+  overflow-wrap: anywhere;
 }
 
 .optionCheck {

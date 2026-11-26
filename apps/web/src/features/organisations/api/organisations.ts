@@ -1,3 +1,4 @@
+import { createSalesReportApi } from '../../dashboard/api/salesReport'
 import { createCustomersApi } from '../../customers/api/customers'
 import { createOrdersApi } from '../../orders/api/orders'
 import { createProductsApi } from '../../products/api/products'
@@ -39,6 +40,7 @@ export function createOrganisationsApi(accessToken: () => Promise<string>, sessi
 
   return {
     orders: createOrdersApi(request),
+    salesReport: createSalesReportApi(request),
     products: createProductsApi(request),
     customers: createCustomersApi(request),
     profile: (signal: AbortSignal) => request<Profile>('/me', { signal }),
