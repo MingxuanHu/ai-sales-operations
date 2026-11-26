@@ -21,8 +21,10 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
     const display = organisationDisplayName({ name, organisationId })
     return [organisationId, {
       value: organisationId,
-      label: display.demoLabel || name,
-      detail: display.demoLabel ? display.name : '',
+      // Select displays the compact label in its closed field.
+      label: display.demoCode ? `Demo · ${display.demoCode}` : name,
+      name: display.name,
+      detail: display.demoCode,
       role: roleLabels[role],
       fullName: name,
     }]
@@ -45,8 +47,7 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               return (
                 <div className={styles.optionRow} title={entry.fullName}>
                   <div className={styles.optionText}>
-                    {/* The bold row label uses the same text as the selected input. */}
-                    <span className={styles.optionName}>{option.label}</span>
+                    <span className={styles.optionName}>{entry.name}</span>
                     {entry.detail && <span className={styles.optionDetail}>{entry.detail}</span>}
                     <span className={styles.optionRole}>{entry.role}</span>
                   </div>
