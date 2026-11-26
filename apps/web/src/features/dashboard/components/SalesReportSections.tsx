@@ -1,9 +1,9 @@
 import { Paper, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core'
+import { useState, type PointerEvent } from 'react'
 import type { SalesReport } from '../api/salesReport'
 import styles from './SalesReportSections.module.css'
 
 export function SalesReportSections({ report }: { report: SalesReport }) {
-  const peak = Math.max(1, ...report.daily.map(({ netSales }) => Number(netSales)))
   return (
     <Stack gap="lg">
       <Text size="sm">Reporting period {report.startDate} to {report.endDate}</Text>
@@ -21,12 +21,7 @@ export function SalesReportSections({ report }: { report: SalesReport }) {
       <Paper withBorder p="md">
         <Stack gap="sm">
           <Title order={3} size="h3">Daily net sales</Title>
-          {/* Only the visual bar heights use numbers. The table displays the API's exact decimal strings. */}
-          <div aria-hidden="true" className={styles.chart}>
-            {report.daily.map(({ date, netSales }) => (
-              <div key={date} className={styles.bar} style={{ height: `${Number(netSales) / peak * 100}%` }} />
-            ))}
-          </div>
+          <DailySalesChart daily={report.daily} />
           <div aria-hidden="true" className={styles.axis}>
             <span>{report.startDate}</span><span>{report.endDate}</span>
           </div>
@@ -48,6 +43,39 @@ export function SalesReportSections({ report }: { report: SalesReport }) {
         <RankingTable title="Customer ranking" nameColumn="Customer" rows={report.customers} />
       </SimpleGrid>
     </Stack>
+  )
+}
+
+function DailySalesChart({ daily }: { daily: SalesReport['daily'] }) {
+  const peak = Math.max(1, ...daily.map(({ netSales }) => Number(netSales)))
+  const [hover, setHover] = useState<{ index: number; x: number; y: number; left: boolean; above: boolean }>()
+  const hoveredDay = hover && daily[hover.index]
+
+  function followPointer(event: PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (!bounds.width || !daily.length) return
+    // Map the horizontal position to a day across the full chart, including zero-height bars.
+    const x = event.clientX - bounds.left
+    const y = event.clientY - bounds.top
+    const index = Math.max(0, Math.min(daily.length - 1, Math.floor(x / bounds.width * daily.length)))
+    setHover({ index, x, y, left: x > bounds.width / 2, above: y > bounds.height / 2 })
+  }
+
+  return (
+    // Bar heights use numbers for display. The tooltip and table keep the exact decimal strings.
+    <div aria-hidden="true" className={styles.chart} onPointerMove={followPointer}
+      onPointerLeave={() => setHover(undefined)} onPointerCancel={() => setHover(undefined)}>
+      {daily.map(({ date, netSales }) => (
+        <div key={date} className={styles.bar} style={{ height: `${Number(netSales) / peak * 100}%` }} />
+      ))}
+      {hover && hoveredDay && (
+        <div className={styles.chartTooltip} data-left={hover.left} data-above={hover.above}
+          style={{ left: hover.x, top: hover.y }}>
+          <div>{hoveredDay.date} UTC</div>
+          <strong>Net sales {hoveredDay.netSales}</strong>
+        </div>
+      )}
+    </div>
   )
 }
 

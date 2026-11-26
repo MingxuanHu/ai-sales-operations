@@ -211,6 +211,37 @@ describe('protected React shell', () => {
     }
   })
 
+  it('follows the pointer across sales and zero-sales days', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second] })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === '/api/organisations/second') return Response.json(second)
+      return Response.json({
+        ...salesReport('2026-11-25', '2026-11-26'),
+        fulfilledOrderCount: 1,
+        netSales: '42.50',
+        daily: [{ date: '2026-11-25', netSales: '42.50' }, { date: '2026-11-26', netSales: '0.00' }],
+      })
+    }))
+    const { container } = render(<App session={mockSession('/organisations/second')} />)
+    await screen.findByText('Reporting period 2026-11-25 to 2026-11-26')
+    const chart = container.querySelector<HTMLDivElement>('[class*="_chart_"]')!
+    vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue(new DOMRect(20, 100, 200, 160))
+
+    fireEvent.pointerMove(chart, { clientX: 30, clientY: 110 })
+    expect(screen.getByText('2026-11-25 UTC')).toBeTruthy()
+    expect(screen.getByText('Net sales 42.50').parentElement?.style.left).toBe('10px')
+
+    fireEvent.pointerMove(chart, { clientX: 190, clientY: 140 })
+    expect(screen.getByText('2026-11-26 UTC')).toBeTruthy()
+    const zeroSales = screen.getByText('Net sales 0.00')
+    expect(zeroSales.parentElement?.style.left).toBe('170px')
+    expect(zeroSales.parentElement?.style.top).toBe('40px')
+
+    fireEvent.pointerOut(chart)
+    expect(screen.queryByText('Net sales 0.00')).toBeNull()
+  })
+
   it('clears sales on organisation switch, ignores late reports and blocks salesperson access', async () => {
     const admin = { ...first, role: 'admin' }
     const salesperson = { ...first, organisationId: 'third', name: 'Third Wholesale' }

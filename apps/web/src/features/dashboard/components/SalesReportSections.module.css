@@ -1,4 +1,5 @@
 .chart {
+  position: relative;
   display: flex;
   align-items: end;
   height: 10rem;
@@ -9,6 +10,28 @@
   flex: 1;
   background: var(--mantine-primary-color-filled);
   box-shadow: inset 0.5px 0 var(--mantine-color-body);
+}
+
+.chartTooltip {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  transform: translate(var(--tooltip-x, 0.625rem), var(--tooltip-y, 0.625rem));
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+}
+
+.chartTooltip[data-left='true'] {
+  --tooltip-x: calc(-100% - 0.625rem);
+}
+
+.chartTooltip[data-above='true'] {
+  --tooltip-y: calc(-100% - 0.625rem);
 }
 
 .axis {
