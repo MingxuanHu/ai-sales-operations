@@ -21,7 +21,7 @@
 
 ### 1. Add the tenant-scoped sales reporting API
 
-[Issue #68](https://github.com/MingxuanHu/ai-sales-operations/issues/68)
+[Issue #68](https://github.com/MingxuanHu/ai-sales-operations/issues/68) · [PR #71](https://github.com/MingxuanHu/ai-sales-operations/pull/71)
 
 - **Goal.** Expose a protected, deterministic report for a validated date range.
 - **In scope.** Add the NestJS reporting service and read endpoint, daily totals with zero-filled days, and ranked product and customer results. Apply exact-cent allocation and return money as decimal strings.

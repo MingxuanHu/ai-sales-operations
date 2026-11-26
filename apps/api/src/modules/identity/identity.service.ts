@@ -171,12 +171,12 @@ export class IdentityService {
     if (!rows.length) throw new NotFoundException()
   }
 
-  async requireRole(tx: Prisma.TransactionClient, organisationId: string, userId: string, role: MembershipRole) {
+  async requireRole(tx: Prisma.TransactionClient, organisationId: string, userId: string, role: MembershipRole, ...otherRoles: MembershipRole[]) {
     const membership = await tx.membership.findUnique({
       where: { organisationId_userId: { organisationId, userId } },
     })
     if (membership?.status !== 'active') throw new NotFoundException()
-    if (membership.role !== role) throw new ForbiddenException()
+    if (membership.role !== role && !otherRoles.includes(membership.role)) throw new ForbiddenException()
   }
 
   async changeMembership(organisationId: string, actorId: string, userId: string, role?: MembershipRole) {
