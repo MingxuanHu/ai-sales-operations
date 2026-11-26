@@ -69,11 +69,15 @@ function DailySalesChart({ daily }: { daily: SalesReport['daily'] }) {
         <div key={date} className={styles.bar} style={{ height: `${Number(netSales) / peak * 100}%` }} />
       ))}
       {hover && hoveredDay && (
-        <div className={styles.chartTooltip} data-left={hover.left} data-above={hover.above}
-          style={{ left: hover.x, top: hover.y }}>
-          <div>{hoveredDay.date} UTC</div>
-          <strong>Net sales {hoveredDay.netSales}</strong>
-        </div>
+        <>
+          {/* Both hover elements share the pointer's horizontal position. */}
+          <div className={styles.chartGuide} style={{ left: hover.x }} />
+          <div className={styles.chartTooltip} data-left={hover.left} data-above={hover.above}
+            style={{ left: hover.x, top: hover.y }}>
+            <div>{hoveredDay.date} UTC</div>
+            <strong>Net sales {hoveredDay.netSales}</strong>
+          </div>
+        </>
       )}
     </div>
   )

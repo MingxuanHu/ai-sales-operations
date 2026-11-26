@@ -230,6 +230,8 @@ describe('protected React shell', () => {
 
     fireEvent.pointerMove(chart, { clientX: 30, clientY: 110 })
     expect(screen.getByText('2026-11-25 UTC')).toBeTruthy()
+    const guide = chart.querySelector<HTMLDivElement>('[class*="_chartGuide_"]')
+    expect(guide?.style.left).toBe('10px')
     expect(screen.getByText('Net sales 42.50').parentElement?.style.left).toBe('10px')
 
     fireEvent.pointerMove(chart, { clientX: 190, clientY: 140 })
@@ -237,9 +239,11 @@ describe('protected React shell', () => {
     const zeroSales = screen.getByText('Net sales 0.00')
     expect(zeroSales.parentElement?.style.left).toBe('170px')
     expect(zeroSales.parentElement?.style.top).toBe('40px')
+    expect(guide?.style.left).toBe('170px')
 
     fireEvent.pointerOut(chart)
     expect(screen.queryByText('Net sales 0.00')).toBeNull()
+    expect(chart.contains(guide)).toBe(false)
   })
 
   it('clears sales on organisation switch, ignores late reports and blocks salesperson access', async () => {
