@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useState, type FormEvent } from 'react'
+import { ListPagination, useListPagination } from '../../../shared/ListPagination'
 import { ApiError } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import type { Customer, CustomerInput, CustomersApi } from '../api/customers'
@@ -27,6 +28,7 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [requests, setRequests] = useState<AbortController>()
+  const { rows, controls } = useListPagination(directory.status === 'ready' ? directory.data : undefined)
 
   useEffect(() => {
     const request = new AbortController()
@@ -144,7 +146,7 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
                 </Table.Tr></Table.Thead>
                 <Table.Tbody>
                   {/* The stable customer ID lets React match rows after edits or deletions. */}
-                  {directory.data.map((customer) => (
+                  {rows.map((customer) => (
                     <Table.Tr key={customer.id}>
                       <Table.Td>{customer.name}</Table.Td>
                       <Table.Td>
@@ -161,6 +163,7 @@ export function CustomersPage({ api, organisationId }: { api: CustomersApi; orga
               </Table>
             </Table.ScrollContainer>
           )}
+          <ListPagination {...controls} label="Customers pages" />
         </>}
       </Stack>
     </Paper>

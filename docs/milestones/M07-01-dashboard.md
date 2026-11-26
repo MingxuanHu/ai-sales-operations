@@ -35,11 +35,11 @@
 [Issue #72](https://github.com/MingxuanHu/ai-sales-operations/issues/72)
 
 - **Goal.** Give a fresh demo organisation enough sales activity to populate the dashboard on first visit.
-- **In scope.** Expand the shared synthetic fixtures with more fulfilled multi-line orders across several weeks, customers and products. Anchor fulfilment dates to organisation creation. Use the expanded fixtures for automatic demos on registration and for the **Create demo organisation** button.
+- **In scope.** Expand the shared synthetic fixtures with more fulfilled multi-line orders across several weeks, customers and products. Anchor fulfilment dates to organisation creation. Use the expanded fixtures for automatic demos on registration and for the **Create demo organisation** button. Paginate the Products, Customers and Orders list views at 10 records per page.
 - **Out of scope.** Backfills, dashboard UI changes and reporting rule changes.
-- **Acceptance.** Both creation paths produce data for the default 60-day report. Narrower ranges include only matching fulfilments, and the totals, chart and rankings reconcile to the included orders. Retrying the same creation request does not duplicate seeded data. Reconcile the results against the expanded fixture expectations below.
+- **Acceptance.** Both creation paths produce data for the default 60-day report. Narrower ranges include only matching fulfilments, and the totals, chart and rankings reconcile to the included orders. Retrying the same creation request does not duplicate seeded data. Reconcile the results against the expanded fixture expectations below. Users can navigate every page, changing the order filter returns to page one, and deleting the last record on the current page returns to the last available page.
 - **Dependencies.** Issue #68 and the [M6 demo organisation rules](M06-01-orders-and-approvals.md#4-create-separate-demo-organisations-with-synthetic-data).
-- **Validation.** Run `pnpm check` with Docker. Add integration coverage for both demo creation paths, request retries and report reconciliation.
+- **Validation.** Run `pnpm check` with Docker. Add integration coverage for both demo creation paths, request retries and report reconciliation. Cover pagination in the React tests.
 
 #### Expanded demo fixture expectations
 

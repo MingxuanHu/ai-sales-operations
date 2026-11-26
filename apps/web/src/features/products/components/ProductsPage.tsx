@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useState, type FormEvent } from 'react'
+import { ListPagination, useListPagination } from '../../../shared/ListPagination'
 import { ApiError } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import type { Product, ProductInput, ProductsApi } from '../api/products'
@@ -27,6 +28,7 @@ export function ProductsPage({ api, organisationId }: { api: ProductsApi; organi
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [requests, setRequests] = useState<AbortController>()
+  const { rows, controls } = useListPagination(catalogue.status === 'ready' ? catalogue.data : undefined)
 
   useEffect(() => {
     const request = new AbortController()
@@ -148,7 +150,7 @@ export function ProductsPage({ api, organisationId }: { api: ProductsApi; organi
                 </Table.Tr></Table.Thead>
                 <Table.Tbody>
                   {/* The stable product ID lets React match rows after edits or deletions. */}
-                  {catalogue.data.map((product) => (
+                  {rows.map((product) => (
                     <Table.Tr key={product.id}>
                       <Table.Td>{product.sku}</Table.Td>
                       <Table.Td>{product.name}</Table.Td>
@@ -167,6 +169,7 @@ export function ProductsPage({ api, organisationId }: { api: ProductsApi; organi
               </Table>
             </Table.ScrollContainer>
           )}
+          <ListPagination {...controls} label="Products pages" />
         </>}
       </Stack>
     </Paper>

@@ -1,5 +1,6 @@
 import { Alert, Badge, Button, Checkbox, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { ListPagination, useListPagination } from '../../../shared/ListPagination'
 import type { Role } from '../../organisations/api/organisations'
 import { Loading, type LoadResult } from '../../organisations/components/Loading'
 import { statusLabels, type Order, type OrdersApi, type OrderSummary } from '../api/orders'
@@ -17,6 +18,7 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
   const [orders, setOrders] = useState<LoadResult<OrderSummary[]>>({ status: 'loading' })
   const [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ id: string; submitted?: Order }>()
+  const { rows, controls } = useListPagination(orders.status === 'ready' ? orders.data : undefined)
 
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   // Restore keyboard focus to the row button after the dialog is removed.
@@ -55,6 +57,7 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
             <Title order={2} size="h3">{role === 'salesperson' ? 'My orders' : 'Organisation orders'}</Title>
             {role === 'manager' && <Checkbox label="Pending only" checked={pending} onChange={(event) => {
               setOrders({ status: 'loading' })
+              controls.setPage(1)
               setPending(event.currentTarget.checked)
             }} />}
           </Group>
@@ -83,7 +86,7 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
                     <Table.Th>Total</Table.Th><Table.Th>Order</Table.Th></Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {orders.data.map((order) => (
+                  {rows.map((order) => (
                     <Table.Tr key={order.id}>
                       <Table.Td>{order.customerName}</Table.Td>
                       <Table.Td>{new Date(order.createdAt).toLocaleString()}</Table.Td>
@@ -99,6 +102,7 @@ export function OrdersPage({ api, organisationId, role, userId, isDemo }: {
                 </Table.Tbody>
               </Table>
             </Table.ScrollContainer>)}
+          {orders.status === 'ready' && <ListPagination {...controls} label="Orders pages" />}
         </Stack>
       </Paper>
       {/* The modal stays outside the table layout. Its key resets detail state when another order opens. */}

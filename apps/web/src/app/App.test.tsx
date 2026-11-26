@@ -805,3 +805,59 @@ describe('order workflows', () => {
     expect(screen.queryByRole('heading', { name: 'New order' })).toBeNull()
   })
 })
+
+describe('list pagination', () => {
+  it.each(['products', 'customers', 'orders'] as const)('shows ten %s per page and keeps the current page valid', async (list) => {
+    const membership = { ...first, role: list === 'orders' ? 'manager' : 'admin' }
+    const path = '/api/organisations/first/' + list
+    // Padded labels keep the fixture in the same order when the catalogue sorts it.
+    let records = Array.from({ length: 11 }, (_, index) => {
+      const id = String(index + 1).padStart(2, '0')
+      return {
+        id, sku: 'SKU-' + id, name: 'Fixture ' + id, unitPrice: '12.00',
+        customerName: 'Fixture ' + id, status: 'pending', total: '12.00', createdAt: '2026-11-20T00:00:00Z',
+      }
+    })
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [membership] })
+      if (url === '/api/organisations/first') return Response.json(membership)
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === path || url === path + '?status=pending') return Response.json({ [list]: records })
+      if (url === path + '/11' && options.method === 'DELETE') {
+        records = records.filter(({ id }) => id !== '11')
+        return new Response(null, { status: 204 })
+      }
+      throw new Error('Unexpected API request')
+    }))
+
+    render(<App session={mockSession('/organisations/first/' + list)} />)
+    const table = await screen.findByRole('table')
+    expect(within(table).getAllByRole('row')).toHaveLength(11) // Includes the header.
+    expect(within(table).getByText('Fixture 10')).toBeTruthy()
+    expect(within(table).queryByText('Fixture 11')).toBeNull()
+    expect(screen.getByText('Showing 1–10 of 11')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(within(table).getAllByRole('row')).toHaveLength(2)
+    expect(within(table).getByText('Fixture 11')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('page')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous page' }))
+    expect(within(table).getByText('Fixture 01')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    if (list === 'orders') {
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Pending only' }))
+      expect(await screen.findByText('Fixture 01')).toBeTruthy()
+      expect(screen.getByText('Showing 1–10 of 11')).toBeTruthy()
+    } else {
+      const deleteLabel = list === 'products' ? 'Delete SKU-11' : 'Delete Fixture 11'
+      const confirmLabel = list === 'products' ? 'Delete product' : 'Delete customer'
+      fireEvent.click(screen.getByRole('button', { name: deleteLabel }))
+      fireEvent.click(screen.getByRole('button', { name: confirmLabel }))
+      expect(await screen.findByText('Fixture 01')).toBeTruthy()
+      expect(within(table).getAllByRole('row')).toHaveLength(11)
+      expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull()
+    }
+  })
+})
