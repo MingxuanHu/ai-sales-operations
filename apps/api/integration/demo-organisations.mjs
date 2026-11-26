@@ -140,6 +140,49 @@ export async function checkDemos(app) {
   const { organisationId } = first
   const alice = await profile('alice')
   await db.membership.create({ data: { organisationId, userId: alice.userId, role: 'manager' } })
+
+  // The same HTTP report must reconcile at every aggregation level.
+  const reportPath = (id) => '/organisations/' + id + '/reports/sales'
+  const salesPath = reportPath(organisationId)
+  const reportResponse = await get(salesPath, 'legacy')
+  assert.equal(reportResponse.status, 200)
+  const report = await reportResponse.json()
+  assert.equal(report.fulfilledOrderCount, 20)
+  assert.equal(report.netSales, '8502.18')
+  assert.equal(report.daily.length, 60)
+  assert.ok(report.daily.some((day) => day.netSales === '0.00'))
+  assert.equal(report.customers[0].name, 'Fern Lane Café')
+  assert.equal(report.customers[0].netSales, '2515.81')
+  assert.equal(report.products.find(({ name }) => /90 mm cup lids/i.test(name)).casesSold, 79)
+  for (const entries of [report.daily, report.customers, report.products]) {
+    assert.equal(entries.reduce((sum, entry) => sum + BigInt(entry.netSales.replace('.', '')), 0n), 850218n)
+  }
+
+  assert.deepEqual(await (await get(salesPath, 'alice')).json(), report)
+  assert.equal((await get(reportPath(second.organisationId), 'alice')).status, 404)
+  assert.equal((await fetch(base + salesPath)).status, 401)
+  assert.equal((await get(salesPath + '?startDate=2026-02-30&endDate=2026-03-01', 'legacy')).status, 400)
+  assert.equal((await get(salesPath + '?startDate=2024-01-01&endDate=2025-01-01', 'legacy')).status, 400)
+
+  const saleDay = report.daily.find((day) => day.netSales !== '0.00')
+  const dateQuery = '?startDate=' + saleDay.date + '&endDate=' + saleDay.date
+  const narrowed = await (await get(salesPath + dateQuery, 'legacy')).json()
+  assert.equal(narrowed.netSales, saleDay.netSales)
+  assert.deepEqual(narrowed.daily, [saleDay])
+  assert.ok(narrowed.fulfilledOrderCount > 0 && narrowed.fulfilledOrderCount < 20)
+  assert.deepEqual(await (await get(reportPath(regular.id) + dateQuery, 'legacy')).json(), {
+    startDate: saleDay.date, endDate: saleDay.date, fulfilledOrderCount: 0, netSales: '0.00',
+    daily: [{ date: saleDay.date, netSales: '0.00' }], products: [], customers: [],
+  })
+
+  // Change the membership behind the same token to verify that each read rechecks access.
+  const aliceMembership = { organisationId, userId: alice.userId }
+  const setAlice = (data) => db.membership.update({ where: { organisationId_userId: aliceMembership }, data })
+  await setAlice({ role: 'salesperson' })
+  assert.equal((await get(salesPath, 'alice')).status, 403)
+  await setAlice({ status: 'removed' })
+  assert.equal((await get(salesPath, 'alice')).status, 404)
+  await setAlice({ role: 'manager', status: 'active' })
   await db.invitation.create({ data: {
     organisationId, issuedByUserId: userId, recipientUserId: newProfile.userId,
     role: 'salesperson', expiresAt: new Date(Date.now() + 60_000),

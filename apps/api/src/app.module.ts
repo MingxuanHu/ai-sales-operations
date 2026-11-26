@@ -4,9 +4,10 @@ import { IdentityModule } from './modules/identity/identity.module'
 import { CustomersModule } from './modules/customers/customers.module'
 import { ProductsModule } from './modules/products/products.module'
 import { OrdersModule } from './modules/orders/orders.module'
+import { ReportingModule } from './modules/reporting/reporting.module'
 
 // The root module assembles feature modules so Nest can load their routes at startup.
 @Module({
-  imports: [HealthModule, IdentityModule, ProductsModule, CustomersModule, OrdersModule],
+  imports: [HealthModule, IdentityModule, ProductsModule, CustomersModule, OrdersModule, ReportingModule],
 })
 export class AppModule {}
