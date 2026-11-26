@@ -1,6 +1,7 @@
 import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership } from '../api/organisations'
+import { organisationDisplayName } from '../organisationDisplayName'
 import { customersPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
@@ -17,14 +18,12 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
   const selectedId = (productsRoute ?? customersRoute ?? ordersRoute ?? settingsRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
   const options = new Map(memberships.map(({ organisationId, name, role }) => {
-    // Match the generated demo name to its own ID so custom names keep their original labels.
-    const demo = name === `Demo · Fern & Finch Supply · ${organisationId}`
-    const code = organisationId.slice(0, 8)
+    const display = organisationDisplayName({ name, organisationId })
     return [organisationId, {
       value: organisationId,
-      label: demo ? `Demo · ${code}` : name,
-      name: demo ? 'Fern & Finch Supply' : name,
-      detail: demo ? `Demo · ${code}` : '',
+      label: display.demoLabel || name,
+      name: display.name,
+      detail: display.demoLabel,
       role: roleLabels[role],
       fullName: name,
     }]
