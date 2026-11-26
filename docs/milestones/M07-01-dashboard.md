@@ -6,7 +6,7 @@
 
 - **In scope.** Read-only, tenant-scoped reporting for fulfilled order count, net sales, a daily net sales chart, and product and customer rankings by net sales. Show cases sold in product rankings.
 - **Out of scope.** Salesperson-specific reporting, exports, forecasting, cross-organisation reporting, GraphQL order details and natural-language queries. M9 can reuse the reporting service behind its own authorised tools.
-- **Acceptance evidence.** In a freshly seeded demo organisation, select a range covering all fixture fulfilments. Verify 20 fulfilled orders, $8,502.18 net sales, Fern Lane Café first by customer net sales at $2,515.81, and 79 cases sold for 90 mm cup lids. Filter to a smaller range and reconcile the chart and summaries against included orders. Repeat in an empty organisation and verify that switching organisations clears the previous report.
+- **Acceptance evidence.** In a freshly seeded demo organisation, verify that the default 60-day range shows fulfilled orders, net sales on multiple days and multiple ranked customers and products. Reconcile the totals and rankings against the expanded fixture expectations recorded by issue #72. Filter to a smaller range and reconcile the chart and summaries against included orders. Repeat in an empty organisation and verify that switching organisations clears the previous report.
 
 ### Reporting rules
 
@@ -30,7 +30,18 @@
 - **Dependencies.** [M6 order and fixture rules](M06-01-orders-and-approvals.md) and [tenant authorisation](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker. Cover cent remainders and ties, zero-subtotal and fully discounted orders, date boundaries, all order states, fixture totals, and authentication and authorisation.
 
-### 2. Build the date-filtered sales dashboard in React
+### 2. Seed more fulfilled orders when creating a demo organisation
+
+[Issue #72](https://github.com/MingxuanHu/ai-sales-operations/issues/72)
+
+- **Goal.** Give a fresh demo organisation enough sales activity to populate the dashboard on first visit.
+- **In scope.** Expand the shared synthetic fixtures with more fulfilled multi-line orders across several weeks, customers and products. Anchor fulfilment dates to organisation creation. Use the expanded fixtures for automatic demos on registration and for the **Create demo organisation** button.
+- **Out of scope.** Backfills, dashboard UI changes and reporting rule changes.
+- **Acceptance.** Both creation paths produce data for the default 60-day report. Narrower ranges include only matching fulfilments, and the totals, chart and rankings reconcile to the included orders. Retrying the same creation request does not duplicate seeded data. Record expected fixture totals and rankings here when the new fixtures land.
+- **Dependencies.** Issue #68 and the [M6 demo organisation rules](M06-01-orders-and-approvals.md#4-create-separate-demo-organisations-with-synthetic-data).
+- **Validation.** Run `pnpm check` with Docker. Add integration coverage for both demo creation paths, request retries and report reconciliation.
+
+### 3. Build the date-filtered sales dashboard in React
 
 [Issue #69](https://github.com/MingxuanHu/ai-sales-operations/issues/69)
 
@@ -38,5 +49,5 @@
 - **In scope.** Add a dashboard entry for administrators and managers, date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and product and customer rankings. Handle loading, empty results and recoverable errors.
 - **Out of scope.** Order detail drill-down, chart exports, and administrator configuration.
 - **Acceptance.** Changing the date range updates all report sections together. The view displays the date convention and allows keyboard users to read the trend data. Switching organisations removes the previous report immediately and ignores late responses. Salespeople have no dashboard entry.
-- **Dependencies.** Issue #68 and the [protected organisation selection flow](../architecture/identity.md).
+- **Dependencies.** Issues #68 and #72 and the [protected organisation selection flow](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker and add React coverage for dates, loading, empty and error states, role visibility, and organisation switching. Verify the milestone acceptance flow in a local browser and repeat it with synthetic data in the demo after release.
