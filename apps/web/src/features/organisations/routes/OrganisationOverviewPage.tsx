@@ -16,10 +16,7 @@ export function OrganisationOverviewPage({ membership, salesReport }: { membersh
           </Group>
         </Stack>
       </Paper>
-      {/* Only reporting roles mount the dashboard and start a sales request. */}
-      {(membership.role === 'admin' || membership.role === 'manager') && (
-        <SalesDashboard api={salesReport} organisationId={membership.organisationId} />
-      )}
+      <SalesDashboard api={salesReport} organisationId={membership.organisationId} />
     </Stack>
   )
 }

@@ -2,7 +2,7 @@ import { NavLink, Paper, Select, Stack } from '@mantine/core'
 import { NavLink as RouterNavLink, useMatch, useNavigate } from 'react-router'
 import type { Membership } from '../api/organisations'
 import { organisationDisplayName } from '../organisationDisplayName'
-import { customersPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
+import { customersPath, organisationLandingPath, organisationPath, ordersPath, productsPath, settingsPath } from '../routes/workspacePaths'
 import styles from './WorkspaceNavigation.module.css'
 
 const roleLabels = { admin: 'Administrator', manager: 'Manager', salesperson: 'Salesperson' }
@@ -67,18 +67,18 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
               else if (customersRoute && next?.role === 'admin') void navigate(customersPath(id))
               else if (settingsRoute && next?.role === 'admin') void navigate(settingsPath(id))
               else if (ordersRoute && next) void navigate(ordersPath(id))
-              else void navigate(organisationPath(id))
+              else if (next) void navigate(organisationLandingPath(next))
             }}
           />
         )}
         {/* renderRoot forwards Mantine's link styles to React Router, which sets aria-current. */}
         {selected && (
           <nav aria-label="Selected organisation" className={`${styles.navigation} ${styles.organisationNavigation}`}>
-            <NavLink label="Overview" renderRoot={(props) => (
-              <RouterNavLink {...props} to={organisationPath(selected.organisationId)} end />
-            )} />
             {selected.role === 'admin' && (
               <>
+                <NavLink label="Overview" renderRoot={(props) => (
+                  <RouterNavLink {...props} to={organisationPath(selected.organisationId)} end />
+                )} />
                 <NavLink label="Products" renderRoot={(props) => (
                   <RouterNavLink {...props} to={productsPath(selected.organisationId)} end />
                 )} />

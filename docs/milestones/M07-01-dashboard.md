@@ -1,6 +1,6 @@
 # M07 - 01 — Dashboard
 
-**Goal.** Organisation administrators and managers can see how much their organisation sold over a selected period, how sales changed over time, and which products and customers contributed most.
+**Goal.** Organisation administrators can use Overview to see how much their organisation sold over a selected period, how sales changed over time, and which products and customers contributed most.
 
 ## Scope and acceptance
 
@@ -46,8 +46,8 @@
 [Issue #69](https://github.com/MingxuanHu/ai-sales-operations/issues/69)
 
 - **Goal.** Let authorised users inspect sales totals, trends and rankings from the protected app.
-- **In scope.** Show the dashboard in Overview for administrators and managers, with date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and separate pie charts and accessible tables for product and customer rankings. Handle loading, empty results and recoverable errors.
+- **In scope.** Show the dashboard in Overview for administrators, with date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and separate pie charts and accessible tables for product and customer rankings. Handle loading, empty results and recoverable errors.
 - **Out of scope.** Order detail drill-down, chart exports, and administrator configuration.
-- **Acceptance.** Changing the date range updates all report sections together. The view displays the date convention and allows keyboard users to read the trend data. Switching organisations removes the previous report immediately and ignores late responses. Salespeople can open Overview without seeing the report.
+- **Acceptance.** Changing the date range updates all report sections together. The view displays the date convention and allows keyboard users to read the trend data. Switching organisations removes the previous report immediately and ignores late responses. Managers and salespeople land on Orders and cannot open Overview.
 - **Dependencies.** Issues #68 and #72 and the [protected organisation selection flow](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker and add React coverage for dates, loading, empty and error states, role visibility, and organisation switching. Verify the milestone acceptance flow in a local browser and repeat it with synthetic data in the demo after release.

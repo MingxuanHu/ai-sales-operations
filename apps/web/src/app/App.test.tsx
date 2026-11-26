@@ -8,6 +8,9 @@ import { App } from './App'
 const first = { organisationId: 'first', name: 'Cedar Wholesale', role: 'salesperson' }
 const second = { organisationId: 'second', name: 'River Wholesale', role: 'manager' }
 
+const firstAdmin = { ...first, role: 'admin' }
+const secondAdmin = { ...second, role: 'admin' }
+
 function salesReport(startDate: string, endDate: string) {
   return { startDate, endDate, fulfilledOrderCount: 0, netSales: '0.00', daily: [], products: [], customers: [] }
 }
@@ -75,6 +78,8 @@ describe('protected React shell', () => {
         return Response.json({ organisationId: first.organisationId })
       }
       if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/first/orders/selectors') return Response.json({ customers: [], products: [] })
+      if (url === '/api/organisations/first/orders') return Response.json({ orders: [] })
       throw new Error('Unexpected API request')
     })
     vi.stubGlobal('fetch', fetch)
@@ -82,7 +87,7 @@ describe('protected React shell', () => {
     expect(await screen.findByRole('heading', { name: 'Create organisation' })).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Messages (1 pending invitation)' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation to Cedar Wholesale' }))
-    expect(await screen.findByRole('heading', { name: first.name })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeTruthy()
     expect(await screen.findByRole('button', { name: 'Messages' })).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith('/api/invitations/invite/accept', expect.objectContaining({ method: 'POST' }))
   })
@@ -91,7 +96,7 @@ describe('protected React shell', () => {
     let created = false
     const requestIds: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: created ? [first] : [] })
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: created ? [firstAdmin] : [] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       if (url === '/api/organisations') {
         requestIds.push(JSON.parse(String(options.body)).requestId)
@@ -99,7 +104,7 @@ describe('protected React shell', () => {
         created = true
         return Response.json({ organisationId: first.organisationId })
       }
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession('/onboarding')} />)
@@ -112,7 +117,7 @@ describe('protected React shell', () => {
   })
 
   it('automatically opens the first organisation when the user has only demos', async () => {
-    const demos = [{ ...second, isDemo: true }, { ...first, isDemo: true }]
+    const demos = [{ ...secondAdmin, isDemo: true }, { ...first, isDemo: true }]
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: demos })
       if (url === '/api/organisations/second') return Response.json(demos[0])
@@ -127,8 +132,8 @@ describe('protected React shell', () => {
 
   it('shows Overview only after choosing an organisation and groups it with organisation links', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first, second] })
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [firstAdmin, second] })
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession('/onboarding')} />)
@@ -147,9 +152,9 @@ describe('protected React shell', () => {
     vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-26T23:59:00Z'))
     let reportRequests = 0
     const fetch = vi.fn(async (url: string) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second] })
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [secondAdmin] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
-      if (url === '/api/organisations/second') return Response.json(second)
+      if (url === '/api/organisations/second') return Response.json(secondAdmin)
       const dates = new URL(url, window.location.origin).searchParams
       reportRequests++
       if (reportRequests === 1) {
@@ -233,9 +238,9 @@ describe('protected React shell', () => {
 
   it('follows the pointer across sales and zero-sales days', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second] })
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [secondAdmin] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
-      if (url === '/api/organisations/second') return Response.json(second)
+      if (url === '/api/organisations/second') return Response.json(secondAdmin)
       return Response.json({
         ...salesReport('2026-11-25', '2026-11-26'),
         fulfilledOrderCount: 1,
@@ -266,10 +271,11 @@ describe('protected React shell', () => {
     expect(chart.contains(guide)).toBe(false)
   })
 
-  it('clears sales on organisation switch, ignores late reports and blocks salesperson access', async () => {
+  it('clears sales on organisation switch, ignores late reports and restricts Overview to admins', async () => {
     const admin = { ...first, role: 'admin' }
     const salesperson = { ...first, organisationId: 'third', name: 'Third Wholesale' }
-    const memberships = [admin, second, salesperson]
+    const manager = { ...second, organisationId: 'fourth', name: 'Fourth Wholesale' }
+    const memberships = [admin, secondAdmin, salesperson, manager]
     let firstRequests = 0
     let lateSignal: AbortSignal | null = null
     let finishLate: (response: Response) => void = () => {}
@@ -278,6 +284,8 @@ describe('protected React shell', () => {
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       const membership = memberships.find(({ organisationId }) => url === '/api/organisations/' + organisationId)
       if (membership) return Response.json(membership)
+      if (url === '/api/organisations/third/orders/selectors') return Response.json({ customers: [], products: [] })
+      if (/^\/api\/organisations\/(third|fourth)\/orders/.test(url)) return Response.json({ orders: [] })
       const dates = new URL(url, window.location.origin).searchParams
       const report = salesReport(dates.get('startDate')!, dates.get('endDate')!)
       if (url.includes('/first/reports/sales')) {
@@ -308,14 +316,17 @@ describe('protected React shell', () => {
     expect(screen.queryByText('999.99')).toBeNull()
     expect(window.location.pathname).toBe('/organisations/second')
 
-    // The same Overview route omits sales reporting for salespeople.
-    await act(async () => {
-      window.history.pushState(null, '', '/organisations/third')
-      window.dispatchEvent(new PopStateEvent('popstate'))
-    })
-    await screen.findByRole('heading', { name: salesperson.name })
-    expect(screen.queryByRole('heading', { name: 'Sales dashboard' })).toBeNull()
-    expect(fetch.mock.calls.some(([url]) => url.includes('/third/reports/'))).toBe(false)
+    for (const nonAdmin of [salesperson, manager]) {
+      await act(async () => {
+        window.history.pushState(null, '', '/organisations/' + nonAdmin.organisationId)
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+      await waitFor(() => expect(window.location.pathname).toBe('/organisations/' + nonAdmin.organisationId + '/orders'))
+      await screen.findByRole('heading', { name: 'Orders' })
+      expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Sales dashboard' })).toBeNull()
+      expect(fetch.mock.calls.some(([url]) => url.includes('/' + nonAdmin.organisationId + '/reports/'))).toBe(false)
+    }
   })
 
   it('automatically opens the first organisation in the picker after sign-in', async () => {
@@ -323,12 +334,13 @@ describe('protected React shell', () => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second, first] })
       if (url === '/api/organisations/second') return Response.json(second)
       if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url.startsWith('/api/organisations/second/orders')) return Response.json({ orders: [] })
       throw new Error('Unexpected API request')
     }))
     render(<App session={mockSession()} />)
-    await screen.findByRole('heading', { name: second.name })
+    await screen.findByRole('heading', { name: 'Orders' })
     expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', second.name)
-    expect(window.location.pathname).toBe('/organisations/second')
+    expect(window.location.pathname).toBe('/organisations/second/orders')
   })
 
   it('retries demo creation and selects each newly created demo', async () => {
@@ -339,8 +351,8 @@ describe('protected React shell', () => {
     ]
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
-      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
-      if (url === '/api/organisations/first') return Response.json(first)
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [firstAdmin] })
+      if (url === '/api/organisations/first') return Response.json(firstAdmin)
       if (url === '/api/organisations/' + demoId) return Response.json(demos[0])
       if (url === '/api/organisations/' + demos[1].organisationId) return Response.json(demos[1])
       if (url === '/api/organisations/demo') {
@@ -477,6 +489,7 @@ describe('protected React shell', () => {
         return new Promise<Response>((resolve) => { finishPrevious = resolve })
       }
       if (url === '/api/organisations/second') return Response.json(second)
+      if (url.startsWith('/api/organisations/second/orders')) return Response.json({ orders: [] })
       if (url === '/api/invitations') return Response.json({ invitations: [] })
       throw new Error('Unexpected API request')
     })
@@ -488,10 +501,10 @@ describe('protected React shell', () => {
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(picker, { key: 'Enter', code: 'Enter' })
-    expect(await screen.findByRole('heading', { name: second.name })).toBeTruthy()
-    expect(screen.getByText('manager')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Overview' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull()
-    expect(window.location.pathname).toBe('/organisations/second')
+    expect(window.location.pathname).toBe('/organisations/second/orders')
     expect(previousSignal).toHaveProperty('aborted', true)
     // act lets React process any updates from the late response before we check the screen.
     await act(async () => finishPrevious(Response.json(first)))
