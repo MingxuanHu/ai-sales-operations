@@ -83,29 +83,64 @@ function DailySalesChart({ daily }: { daily: SalesReport['daily'] }) {
   )
 }
 
+const rankingColors = [
+  '#2b54a3', '#148584', '#ae7135', '#7552a1', '#b94e65',
+  '#48785d', '#477da8', '#a34d80', '#747735', '#6550bd',
+]
+
 function RankingTable({ title, nameColumn, rows, showCases = false }: {
   title: string
   nameColumn: string
   rows: (SalesReport['customers'][number] & { casesSold?: number })[]
   showCases?: boolean
 }) {
+  const [hover, setHover] = useState<{ index: number; x: number; y: number; left: boolean; above: boolean }>()
+  const activeRow = hover && rows[hover.index]
   // The pie uses approximate visual proportions. The table keeps the exact decimal amounts.
   const total = rows.reduce((sum, row) => sum + Number(row.netSales), 0)
   let cumulativeSales = 0
   const segments = rows.map((row, index) => {
-    // Spacing hues apart makes adjacent ranked entries easier to distinguish.
-    const color = `hsl(${(index * 137.508 + 168) % 360} 65% 43%)`
+    // Use additional hues when the ranking has more entries than the main palette.
+    const color = rankingColors[index] ?? `hsl(${(index * 137.508) % 360} 45% 44%)`
     const start = total > 0 ? cumulativeSales / total * 100 : 0
     cumulativeSales += Number(row.netSales)
     const end = total > 0 ? cumulativeSales / total * 100 : 0
-    return { color, stop: `${color} ${start}% ${end}%` }
+    return { color, start, end, stop: `${color} ${start}% ${end}%` }
   })
   const background = `conic-gradient(${segments.map(({ stop }) => stop).join(', ')})`
+
+  function followSlice(event: PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (!bounds.width || !bounds.height) return
+    const x = event.clientX - bounds.left
+    const y = event.clientY - bounds.top
+    const dx = x - bounds.width / 2
+    const dy = y - bounds.height / 2
+    // CSS conic gradients start at the top and increase clockwise.
+    const angle = (Math.atan2(dx, -dy) / (2 * Math.PI) + 1) % 1 * 100
+    const index = segments.findIndex(({ start, end }) => angle >= start && angle < end)
+    setHover(index === -1 ? undefined : { index, x, y, left: dx > 0, above: dy > 0 })
+  }
+
   return (
     <Paper withBorder p="md">
       <Title order={3} size="h3">{title}</Title>
       {total > 0 && (
-        <div role="img" aria-label={`${nameColumn} share of net sales`} className={styles.pie} style={{ background }} />
+        <div className={styles.pieFrame}>
+          <div role="img" aria-label={`${nameColumn} share of net sales`} className={styles.pie} style={{ background }}
+            onPointerMove={followSlice} onPointerLeave={() => setHover(undefined)} onPointerCancel={() => setHover(undefined)} />
+          {hover && activeRow && (
+            <div aria-hidden="true" className={`${styles.chartTooltip} ${styles.pieTooltip}`}
+              data-left={hover.left} data-above={hover.above} style={{ left: hover.x, top: hover.y }}>
+              <strong>{activeRow.name}</strong>
+              <div>Net sales {activeRow.netSales}</div>
+              <div>{(Number(activeRow.netSales) / total).toLocaleString(undefined, {
+                style: 'percent', maximumFractionDigits: 1,
+              })} of net sales</div>
+              {showCases && <div>{activeRow.casesSold} cases sold</div>}
+            </div>
+          )}
+        </div>
       )}
       {rows.length > 0 && total === 0 && <Text size="sm" mt="sm">No net sales to chart.</Text>}
       {rows.length === 0 ? <Text size="sm" mt="sm">{`No ranked ${nameColumn.toLowerCase()}s.`}</Text> : (

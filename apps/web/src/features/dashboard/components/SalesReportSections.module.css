@@ -48,11 +48,34 @@
   font-size: var(--mantine-font-size-sm);
 }
 
-.pie {
+.pieFrame {
+  position: relative;
   width: min(100%, 12rem);
+  margin: var(--mantine-spacing-lg) auto;
+}
+
+.pie {
+  position: relative;
   aspect-ratio: 1;
-  margin: var(--mantine-spacing-md) auto;
   border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--mantine-color-body), 0 0 0 5px var(--mantine-color-default-border),
+    0 10px 24px rgb(15 23 42 / 16%);
+}
+
+.pie::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 35% 20%, rgb(255 255 255 / 20%), transparent 54%),
+    linear-gradient(155deg, transparent 45%, rgb(15 23 42 / 22%));
+  pointer-events: none;
+  content: '';
+}
+
+.pieTooltip {
+  max-width: min(13rem, 55vw);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .swatch {

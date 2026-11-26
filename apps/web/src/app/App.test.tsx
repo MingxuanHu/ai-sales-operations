@@ -199,7 +199,27 @@ describe('protected React shell', () => {
       const productPie = screen.getByRole('img', { name: 'Product share of net sales' })
       expect(productPie.getAttribute('style')).toContain('80%')
       expect(productPie.getAttribute('style')).toContain('conic-gradient')
-      expect(screen.getByRole('img', { name: 'Customer share of net sales' })).toBeTruthy()
+      const customerPie = screen.getByRole('img', { name: 'Customer share of net sales' })
+      vi.spyOn(productPie, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+      vi.spyOn(customerPie, 'getBoundingClientRect').mockReturnValue(new DOMRect(120, 0, 100, 100))
+
+      // The right side is 25% clockwise from the top. The upper-left sits in the final 20%.
+      fireEvent.pointerMove(productPie, { clientX: 80, clientY: 50 })
+      expect(screen.getByText('80% of net sales')).toBeTruthy()
+      fireEvent.pointerMove(productPie, { clientX: 25, clientY: 25 })
+      expect(screen.queryByText('80% of net sales')).toBeNull()
+      const productDetails = screen.getByText('20% of net sales').parentElement!
+      expect(within(productDetails).getByText('Fixture carton')).toBeTruthy()
+      expect(within(productDetails).getByText('Net sales 8.50')).toBeTruthy()
+      expect(within(productDetails).getByText('2 cases sold')).toBeTruthy()
+      fireEvent.pointerOut(productPie)
+      expect(screen.queryByText('20% of net sales')).toBeNull()
+
+      fireEvent.pointerMove(customerPie, { clientX: 200, clientY: 50 })
+      const customerDetails = screen.getByText('100% of net sales').parentElement!
+      expect(within(customerDetails).getByText('Fixture shop')).toBeTruthy()
+      expect(within(customerDetails).getByText('Net sales 42.50')).toBeTruthy()
+      fireEvent.pointerOut(customerPie)
       expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('Fixture crate')).toBeTruthy()
       expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('3')).toBeTruthy()
       expect(within(screen.getByRole('table', { name: 'Customer ranking' })).getByText('Fixture shop')).toBeTruthy()
