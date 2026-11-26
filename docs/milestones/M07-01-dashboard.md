@@ -41,13 +41,13 @@
 - **Dependencies.** Issue #68 and the [M6 demo organisation rules](M06-01-orders-and-approvals.md#4-create-separate-demo-organisations-with-synthetic-data).
 - **Validation.** Run `pnpm check` with Docker. Add integration coverage for both demo creation paths, request retries and report reconciliation. Cover search and pagination in the React tests.
 
-### 3. Build the date-filtered sales dashboard in React
+### 3. Show date-filtered sales in the organisation Overview
 
 [Issue #69](https://github.com/MingxuanHu/ai-sales-operations/issues/69)
 
 - **Goal.** Let authorised users inspect sales totals, trends and rankings from the protected app.
-- **In scope.** Add a dashboard entry for administrators and managers, date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and product and customer rankings. Handle loading, empty results and recoverable errors.
+- **In scope.** Show the dashboard in Overview for administrators and managers, with date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and separate pie charts and accessible tables for product and customer rankings. Handle loading, empty results and recoverable errors.
 - **Out of scope.** Order detail drill-down, chart exports, and administrator configuration.
-- **Acceptance.** Changing the date range updates all report sections together. The view displays the date convention and allows keyboard users to read the trend data. Switching organisations removes the previous report immediately and ignores late responses. Salespeople have no dashboard entry.
+- **Acceptance.** Changing the date range updates all report sections together. The view displays the date convention and allows keyboard users to read the trend data. Switching organisations removes the previous report immediately and ignores late responses. Salespeople can open Overview without seeing the report.
 - **Dependencies.** Issues #68 and #72 and the [protected organisation selection flow](../architecture/identity.md).
 - **Validation.** Run `pnpm check` with Docker and add React coverage for dates, loading, empty and error states, role visibility, and organisation switching. Verify the milestone acceptance flow in a local browser and repeat it with synthetic data in the demo after release.

@@ -9,18 +9,18 @@ export function SalesReportSections({ report }: { report: SalesReport }) {
       <Text size="sm">Reporting period {report.startDate} to {report.endDate}</Text>
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <Paper withBorder p="md">
-          <Title order={2} size="h4">Fulfilled orders</Title>
+          <Title order={3} size="h4">Fulfilled orders</Title>
           <Text size="xl">{report.fulfilledOrderCount}</Text>
         </Paper>
         <Paper withBorder p="md">
-          <Title order={2} size="h4">Net sales</Title>
+          <Title order={3} size="h4">Net sales</Title>
           <Text size="xl">{report.netSales}</Text>
         </Paper>
       </SimpleGrid>
       {report.fulfilledOrderCount === 0 && <Text role="status">No fulfilled orders in this date range.</Text>}
       <Paper withBorder p="md">
         <Stack gap="sm">
-          <Title order={2} size="h3">Daily net sales</Title>
+          <Title order={3} size="h3">Daily net sales</Title>
           {/* Only the visual bar heights use numbers. The table displays the API's exact decimal strings. */}
           <div aria-hidden="true" className={styles.chart}>
             {report.daily.map(({ date, netSales }) => (
@@ -57,9 +57,25 @@ function RankingTable({ title, nameColumn, rows, showCases = false }: {
   rows: (SalesReport['customers'][number] & { casesSold?: number })[]
   showCases?: boolean
 }) {
+  // The pie uses approximate visual proportions. The table keeps the exact decimal amounts.
+  const total = rows.reduce((sum, row) => sum + Number(row.netSales), 0)
+  let cumulativeSales = 0
+  const segments = rows.map((row, index) => {
+    // Spacing hues apart makes adjacent ranked entries easier to distinguish.
+    const color = `hsl(${(index * 137.508 + 168) % 360} 65% 43%)`
+    const start = total > 0 ? cumulativeSales / total * 100 : 0
+    cumulativeSales += Number(row.netSales)
+    const end = total > 0 ? cumulativeSales / total * 100 : 0
+    return { color, stop: `${color} ${start}% ${end}%` }
+  })
+  const background = `conic-gradient(${segments.map(({ stop }) => stop).join(', ')})`
   return (
     <Paper withBorder p="md">
-      <Title order={2} size="h3">{title}</Title>
+      <Title order={3} size="h3">{title}</Title>
+      {total > 0 && (
+        <div role="img" aria-label={`${nameColumn} share of net sales`} className={styles.pie} style={{ background }} />
+      )}
+      {rows.length > 0 && total === 0 && <Text size="sm" mt="sm">No net sales to chart.</Text>}
       {rows.length === 0 ? <Text size="sm" mt="sm">{`No ranked ${nameColumn.toLowerCase()}s.`}</Text> : (
         <Table aria-label={title} striped mt="sm">
           <Table.Thead>
@@ -71,9 +87,14 @@ function RankingTable({ title, nameColumn, rows, showCases = false }: {
           </Table.Thead>
           <Table.Tbody>
             {/* Stable record IDs keep rows distinct even when names match. */}
-            {rows.map(({ id, name, netSales, casesSold }) => (
+            {rows.map(({ id, name, netSales, casesSold }, index) => (
               <Table.Tr key={id}>
-                <Table.Th scope="row">{name}</Table.Th>
+                <Table.Th scope="row">
+                  {Number(netSales) > 0 && (
+                    <span aria-hidden="true" className={styles.swatch} style={{ background: segments[index].color }} />
+                  )}
+                  {name}
+                </Table.Th>
                 <Table.Td>{netSales}</Table.Td>
                 {showCases && <Table.Td>{casesSold}</Table.Td>}
               </Table.Tr>

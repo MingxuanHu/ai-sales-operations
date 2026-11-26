@@ -165,16 +165,21 @@ describe('protected React shell', () => {
         fulfilledOrderCount: 1,
         netSales: '42.50',
         daily: [{ date: '2026-11-25', netSales: '42.50' }],
-        products: [{ id: 'p', name: 'Fixture crate', netSales: '42.50', casesSold: 3 }],
+        products: [
+          { id: 'p', name: 'Fixture crate', netSales: '34.00', casesSold: 3 },
+          { id: 'q', name: 'Fixture carton', netSales: '8.50', casesSold: 2 },
+          { id: 'r', name: 'Fixture sample', netSales: '0.00', casesSold: 1 },
+        ],
         customers: [{ id: 'c', name: 'Fixture shop', netSales: '42.50' }],
       })
     })
     vi.stubGlobal('fetch', fetch)
 
     try {
-      render(<App session={mockSession('/organisations/second/dashboard')} />)
+      render(<App session={mockSession('/organisations/second')} />)
       await screen.findByText('No fulfilled orders in this date range.')
-      expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
+      expect(screen.getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
+      expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
       const start = screen.getByLabelText(/Start date/)
       const end = screen.getByLabelText(/End date/)
       expect(start).toHaveProperty('value', '2026-09-28')
@@ -190,7 +195,11 @@ describe('protected React shell', () => {
       await screen.findByText('Could not load the sales report')
       fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
       await screen.findByText('Reporting period 2026-11-25 to 2026-11-25')
-      expect(screen.getAllByText('42.50')).toHaveLength(4)
+      expect(screen.getAllByText('42.50')).toHaveLength(3)
+      const productPie = screen.getByRole('img', { name: 'Product share of net sales' })
+      expect(productPie.getAttribute('style')).toContain('80%')
+      expect(productPie.getAttribute('style')).toContain('conic-gradient')
+      expect(screen.getByRole('img', { name: 'Customer share of net sales' })).toBeTruthy()
       expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('Fixture crate')).toBeTruthy()
       expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('3')).toBeTruthy()
       expect(within(screen.getByRole('table', { name: 'Customer ranking' })).getByText('Fixture shop')).toBeTruthy()
@@ -225,7 +234,7 @@ describe('protected React shell', () => {
       throw new Error('Unexpected API request')
     })
     vi.stubGlobal('fetch', fetch)
-    render(<App session={mockSession('/organisations/first/dashboard')} />)
+    render(<App session={mockSession('/organisations/first')} />)
     await screen.findByText('123.45')
     const picker = screen.getByRole('combobox', { name: 'Organisation' })
     fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
@@ -242,15 +251,15 @@ describe('protected React shell', () => {
     expect(lateSignal).toHaveProperty('aborted', true)
     await act(async () => finishLate(Response.json({ ...salesReport('2026-11-25', '2026-11-25'), netSales: '999.99' })))
     expect(screen.queryByText('999.99')).toBeNull()
-    expect(window.location.pathname).toBe('/organisations/second/dashboard')
+    expect(window.location.pathname).toBe('/organisations/second')
 
-    // Direct navigation must enforce the same permission as the sidebar.
+    // The same Overview route omits sales reporting for salespeople.
     await act(async () => {
-      window.history.pushState(null, '', '/organisations/third/dashboard')
+      window.history.pushState(null, '', '/organisations/third')
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
-    await screen.findByText('Only organisation administrators and managers can view sales reports.')
-    expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
+    await screen.findByRole('heading', { name: salesperson.name })
+    expect(screen.queryByRole('heading', { name: 'Sales dashboard' })).toBeNull()
     expect(fetch.mock.calls.some(([url]) => url.includes('/third/reports/'))).toBe(false)
   })
 

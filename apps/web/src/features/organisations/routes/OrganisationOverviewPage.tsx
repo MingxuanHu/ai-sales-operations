@@ -1,16 +1,24 @@
 import { Badge, Group, Paper, Stack, Text, Title } from '@mantine/core'
+import type { SalesReportApi } from '../../dashboard/api/salesReport'
+import { SalesDashboard } from '../../dashboard/components/SalesDashboard'
 import type { Membership } from '../api/organisations'
 
-export function OrganisationOverviewPage({ membership }: { membership: Membership }) {
+export function OrganisationOverviewPage({ membership, salesReport }: { membership: Membership; salesReport: SalesReportApi }) {
   return (
-    <Paper withBorder p="lg">
-      <Stack align="start" gap="sm">
-        <Title order={1} size="h2" style={{ overflowWrap: 'anywhere' }}>{membership.name}</Title>
-        <Group gap="xs">
-          <Text size="sm" c="dimmed">Your role</Text>
-          <Badge variant="light" tt="capitalize">{membership.role}</Badge>
-        </Group>
-      </Stack>
-    </Paper>
+    <Stack gap="lg">
+      <Paper withBorder p="lg">
+        <Stack align="start" gap="sm">
+          <Title order={1} size="h2" style={{ overflowWrap: 'anywhere' }}>{membership.name}</Title>
+          <Group gap="xs">
+            <Text size="sm" c="dimmed">Your role</Text>
+            <Badge variant="light" tt="capitalize">{membership.role}</Badge>
+          </Group>
+        </Stack>
+      </Paper>
+      {/* Only reporting roles mount the dashboard and start a sales request. */}
+      {(membership.role === 'admin' || membership.role === 'manager') && (
+        <SalesDashboard api={salesReport} organisationId={membership.organisationId} />
+      )}
+    </Stack>
   )
 }

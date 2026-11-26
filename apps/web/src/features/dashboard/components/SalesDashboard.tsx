@@ -43,7 +43,7 @@ export function SalesDashboard({ api, organisationId }: { api: SalesReportApi; o
 
   return (
     <Stack gap="lg">
-      <Title order={1}>Sales dashboard</Title>
+      <Title order={2}>Sales dashboard</Title>
       <Paper withBorder p="md">
         <form onSubmit={(event) => {
           event.preventDefault()
