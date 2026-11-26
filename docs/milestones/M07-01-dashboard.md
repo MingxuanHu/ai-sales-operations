@@ -32,7 +32,7 @@
 
 ### 2. Seed more fulfilled orders when creating a demo organisation
 
-[Issue #72](https://github.com/MingxuanHu/ai-sales-operations/issues/72)
+[Issue #72](https://github.com/MingxuanHu/ai-sales-operations/issues/72) · [PR #74](https://github.com/MingxuanHu/ai-sales-operations/pull/74)
 
 - **Goal.** Give a fresh demo organisation enough sales activity to populate the dashboard on first visit.
 - **In scope.** Expand the shared synthetic fixtures with more fulfilled multi-line orders across several weeks, customers and products. Anchor fulfilment dates to organisation creation. Use the expanded fixtures for automatic demos on registration and for the **Create demo organisation** button. Add ten synthetic customers and ten catalogue products, each represented in fulfilled sales. Paginate the Products, Customers and Orders list views at 10 records per page. Add search by product name or SKU, customer name, and order customer name, status or ID.
