@@ -8,6 +8,10 @@ import { App } from './App'
 const first = { organisationId: 'first', name: 'Cedar Wholesale', role: 'salesperson' }
 const second = { organisationId: 'second', name: 'River Wholesale', role: 'manager' }
 
+function salesReport(startDate: string, endDate: string) {
+  return { startDate, endDate, fulfilledOrderCount: 0, netSales: '0.00', daily: [], products: [], customers: [] }
+}
+
 function mockSession(returnTo = '/'): CognitoSession {
   return {
     beginSignIn: vi.fn(async () => {}),
@@ -137,6 +141,117 @@ describe('protected React shell', () => {
     expect(within(navigation).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
     expect(within(navigation).getByRole('link', { name: 'Orders' })).toBeTruthy()
     expect(within(navigation).queryByRole('link', { name: 'Invitations' })).toBeNull()
+  })
+
+  it('validates UTC dates and updates every sales section after retrying a failed request', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-26T23:59:00Z'))
+    let reportRequests = 0
+    const fetch = vi.fn(async (url: string) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [second] })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      if (url === '/api/organisations/second') return Response.json(second)
+      const dates = new URL(url, window.location.origin).searchParams
+      reportRequests++
+      if (reportRequests === 1) {
+        expect(dates.get('startDate')).toBe('2026-09-28')
+        expect(dates.get('endDate')).toBe('2026-11-26')
+        return Response.json(salesReport('2026-09-28', '2026-11-26'))
+      }
+      expect(dates.get('startDate')).toBe('2026-11-25')
+      expect(dates.get('endDate')).toBe('2026-11-25')
+      if (reportRequests === 2) return new Response(null, { status: 503 })
+      return Response.json({
+        ...salesReport('2026-11-25', '2026-11-25'),
+        fulfilledOrderCount: 1,
+        netSales: '42.50',
+        daily: [{ date: '2026-11-25', netSales: '42.50' }],
+        products: [{ id: 'p', name: 'Fixture crate', netSales: '42.50', casesSold: 3 }],
+        customers: [{ id: 'c', name: 'Fixture shop', netSales: '42.50' }],
+      })
+    })
+    vi.stubGlobal('fetch', fetch)
+
+    try {
+      render(<App session={mockSession('/organisations/second/dashboard')} />)
+      await screen.findByText('No fulfilled orders in this date range.')
+      expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
+      const start = screen.getByLabelText(/Start date/)
+      const end = screen.getByLabelText(/End date/)
+      expect(start).toHaveProperty('value', '2026-09-28')
+      fireEvent.change(start, { target: { value: '2024-01-01' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Apply dates' }))
+      expect(screen.getByText('Enter a valid range of 1 to 366 days.')).toBeTruthy()
+      expect(reportRequests).toBe(1)
+      fireEvent.change(start, { target: { value: '2026-11-25' } })
+      fireEvent.change(end, { target: { value: '2026-11-25' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Apply dates' }))
+      expect(screen.getByText('Loading sales report…')).toBeTruthy()
+      expect(screen.queryByText('No fulfilled orders in this date range.')).toBeNull()
+      await screen.findByText('Could not load the sales report')
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      await screen.findByText('Reporting period 2026-11-25 to 2026-11-25')
+      expect(screen.getAllByText('42.50')).toHaveLength(4)
+      expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('Fixture crate')).toBeTruthy()
+      expect(within(screen.getByRole('table', { name: 'Product ranking' })).getByText('3')).toBeTruthy()
+      expect(within(screen.getByRole('table', { name: 'Customer ranking' })).getByText('Fixture shop')).toBeTruthy()
+      const dailyData = screen.getByText('View daily sales data')
+      expect(dailyData.tagName).toBe('SUMMARY')
+      expect(within(dailyData.parentElement!).getByText('2026-11-25')).toBeTruthy()
+    } finally {
+      vi.mocked(Date.now).mockRestore()
+    }
+  })
+
+  it('clears sales on organisation switch, ignores late reports and blocks salesperson access', async () => {
+    const admin = { ...first, role: 'admin' }
+    const salesperson = { ...first, organisationId: 'third', name: 'Third Wholesale' }
+    const memberships = [admin, second, salesperson]
+    let firstRequests = 0
+    let lateSignal: AbortSignal | null = null
+    let finishLate: (response: Response) => void = () => {}
+    const fetch = vi.fn(async (url: string, options: RequestInit) => {
+      if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships })
+      if (url === '/api/invitations') return Response.json({ invitations: [] })
+      const membership = memberships.find(({ organisationId }) => url === '/api/organisations/' + organisationId)
+      if (membership) return Response.json(membership)
+      const dates = new URL(url, window.location.origin).searchParams
+      const report = salesReport(dates.get('startDate')!, dates.get('endDate')!)
+      if (url.includes('/first/reports/sales')) {
+        if (++firstRequests === 1) return Response.json({ ...report, netSales: '123.45', fulfilledOrderCount: 1 })
+        lateSignal = options.signal ?? null
+        return new Promise<Response>((resolve) => { finishLate = resolve })
+      }
+      if (url.includes('/second/reports/sales')) return Response.json(report)
+      throw new Error('Unexpected API request')
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App session={mockSession('/organisations/first/dashboard')} />)
+    await screen.findByText('123.45')
+    const picker = screen.getByRole('combobox', { name: 'Organisation' })
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(second.name))
+    expect(screen.queryByText('123.45')).toBeNull()
+    await screen.findByText('No fulfilled orders in this date range.')
+
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(admin.name))
+    await waitFor(() => expect(lateSignal).not.toBeNull())
+    fireEvent.keyDown(picker, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.click(await screen.findByText(second.name))
+    await screen.findByText('No fulfilled orders in this date range.')
+    expect(lateSignal).toHaveProperty('aborted', true)
+    await act(async () => finishLate(Response.json({ ...salesReport('2026-11-25', '2026-11-25'), netSales: '999.99' })))
+    expect(screen.queryByText('999.99')).toBeNull()
+    expect(window.location.pathname).toBe('/organisations/second/dashboard')
+
+    // Direct navigation must enforce the same permission as the sidebar.
+    await act(async () => {
+      window.history.pushState(null, '', '/organisations/third/dashboard')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    await screen.findByText('Only organisation administrators and managers can view sales reports.')
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
+    expect(fetch.mock.calls.some(([url]) => url.includes('/third/reports/'))).toBe(false)
   })
 
   it('automatically opens the first organisation in the picker after sign-in', async () => {

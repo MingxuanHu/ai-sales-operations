@@ -1,5 +1,6 @@
 import { Alert, Button } from '@mantine/core'
 import { useEffect, useState } from 'react'
+import { SalesDashboard } from '../../dashboard/components/SalesDashboard'
 import { CustomersPage } from '../../customers/components/CustomersPage'
 import { OrdersPage } from '../../orders/components/OrdersPage'
 import { ProductsPage } from '../../products/components/ProductsPage'
@@ -111,6 +112,15 @@ export function OrganisationWorkspace({ api, messagesTarget }: { api: Organisati
           <Route path="/organisations/:organisationId/orders" element={
             <OrganisationAccess api={api} onDenied={reloadProfile}>
               {(membership) => <OrdersPage api={api.orders} organisationId={membership.organisationId} role={membership.role} userId={userId} isDemo={membership.isDemo === true} />}
+            </OrganisationAccess>
+          } />
+          <Route path="/organisations/:organisationId/dashboard" element={
+            <OrganisationAccess api={api} onDenied={reloadProfile}>
+              {(membership) => membership.role === 'admin' || membership.role === 'manager'
+                ? <SalesDashboard api={api.salesReport} organisationId={membership.organisationId} />
+                : <Alert role="alert" color="red" title="Access denied">
+                  Only organisation administrators and managers can view sales reports.
+                </Alert>}
             </OrganisationAccess>
           } />
           <Route path="*" element={<Navigate replace to="/" />} />

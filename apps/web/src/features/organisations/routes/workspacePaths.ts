@@ -18,3 +18,7 @@ export function ordersPath(id: string) {
 export function settingsPath(id: string) {
   return organisationPath(id) + '/settings'
 }
+
+export function dashboardPath(id: string) {
+  return organisationPath(id) + '/dashboard'
+}

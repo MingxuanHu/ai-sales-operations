@@ -1,0 +1,19 @@
+.chart {
+  display: flex;
+  align-items: end;
+  height: 10rem;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.bar {
+  flex: 1;
+  background: var(--mantine-primary-color-filled);
+  box-shadow: inset 0.5px 0 var(--mantine-color-body);
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--mantine-font-size-sm);
+}
