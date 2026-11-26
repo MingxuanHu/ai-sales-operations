@@ -467,6 +467,8 @@ describe('product catalogue', () => {
     expect(screen.getByDisplayValue('Shipping box')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Save product' }))
     await screen.findByText('Product created.')
+    expect(screen.getByText('Showing 1–1 of 1')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', true)
     fireEvent.click(screen.getByRole('button', { name: 'Edit BOX-01' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Large box' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save product' }))
@@ -482,6 +484,8 @@ describe('product catalogue', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete product' }))
     await screen.findByText('Product deleted.')
     expect(screen.getByText('No products yet.')).toBeTruthy()
+    expect(screen.getByText('Showing 0–0 of 0')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('page')
   })
 
   it('gates direct routes with the current organisation role before requesting products', async () => {
@@ -532,6 +536,8 @@ describe('customer directory', () => {
     expect(screen.getByDisplayValue('Acme Wholesale')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Save customer' }))
     await screen.findByText('Customer created.')
+    expect(screen.getByText('Showing 1–1 of 1')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', true)
     fireEvent.click(screen.getByRole('button', { name: 'Edit Acme Wholesale' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Acme Distribution' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save customer' }))
@@ -547,6 +553,8 @@ describe('customer directory', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete customer' }))
     await screen.findByText('Customer deleted.')
     expect(screen.getByText('No customers yet.')).toBeTruthy()
+    expect(screen.getByText('Showing 0–0 of 0')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('page')
   })
 
   it('gates direct routes with the current organisation role before requesting customers', async () => {
@@ -857,7 +865,10 @@ describe('list pagination', () => {
       fireEvent.click(screen.getByRole('button', { name: confirmLabel }))
       expect(await screen.findByText('Fixture 01')).toBeTruthy()
       expect(within(table).getAllByRole('row')).toHaveLength(11)
-      expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull()
+      expect(screen.getByText('Showing 1–10 of 10')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('page')
+      expect(screen.getByRole('button', { name: 'Previous page' })).toHaveProperty('disabled', true)
+      expect(screen.getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', true)
     }
   })
 })

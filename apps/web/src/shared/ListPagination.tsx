@@ -28,12 +28,13 @@ export function ListPagination({ currentPage, pageCount, recordCount, start, set
   setPage: (page: number) => void
   label: string
 }) {
-  if (pageCount <= 1) return null
+  // An empty list still has a page indicator, but its range starts at zero.
+  const firstRecord = recordCount === 0 ? 0 : start + 1
 
   return (
     <Group component="nav" aria-label={label} justify="space-between">
       <Text size="sm" c="dimmed" role="status">
-        Showing {start + 1}–{Math.min(start + pageSize, recordCount)} of {recordCount}
+        Showing {firstRecord}–{Math.min(start + pageSize, recordCount)} of {recordCount}
       </Text>
       {/* Mantine calls setPage with the chosen page, which makes React render its rows. */}
       <Pagination size="sm" siblings={0} total={pageCount} value={currentPage} onChange={setPage}
