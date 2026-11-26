@@ -17,8 +17,9 @@ export function WorkspaceNavigation({ memberships }: { memberships: Membership[]
   const overviewRoute = useMatch('/organisations/:organisationId')
   const selectedId = (productsRoute ?? customersRoute ?? ordersRoute ?? settingsRoute ?? overviewRoute)?.params.organisationId
   const selected = memberships.find(({ organisationId }) => organisationId === selectedId)
-  const options = new Map(memberships.map(({ organisationId, name, role }) => {
-    const display = organisationDisplayName({ name, organisationId })
+  const options = new Map(memberships.map((membership) => {
+    const { organisationId, name, role } = membership
+    const display = organisationDisplayName(membership)
     return [organisationId, {
       value: organisationId,
       // Select displays the compact label in its closed field.

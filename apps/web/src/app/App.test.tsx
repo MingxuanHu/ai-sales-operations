@@ -280,14 +280,14 @@ describe('protected React shell', () => {
     const demoId = '20b6acc4-c4e8-41fd-901d-4a601880ded2'
     const demos = [
       { organisationId: demoId, name: `Demo · Fern & Finch Supply · ${demoId}`, role: 'admin' },
-      { organisationId: 'demo-2', name: 'Fern & Finch Demo 2', role: 'admin' },
+      { organisationId: '80e7e828-2620-4f86-8af9-86eafaa1234d', name: 'Demo · Acorn & Alder Supply · 80e7e828-2620-4f86-8af9-86eafaa1234d', role: 'admin', isDemo: true },
     ]
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
       if (url === '/api/me') return Response.json({ userId: 'synthetic-user', memberships: [first] })
       if (url === '/api/organisations/first') return Response.json(first)
       if (url === '/api/organisations/' + demoId) return Response.json(demos[0])
-      if (url === '/api/organisations/demo-2') return Response.json(demos[1])
+      if (url === '/api/organisations/' + demos[1].organisationId) return Response.json(demos[1])
       if (url === '/api/organisations/demo') {
         requests.push(JSON.parse(String(options.body)).requestId)
         if (requests.length === 1) return new Response(null, { status: 503 })
@@ -314,11 +314,13 @@ describe('protected React shell', () => {
     expect(demoLabel.nextElementSibling?.textContent).toBe('20b6acc4')
     fireEvent.click(screen.getByRole('link', { name: 'Create organisation' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Create demo organisation' }))
-    await screen.findByRole('heading', { name: demos[1].name })
+    await screen.findByRole('heading', { name: 'Demo · Acorn & Alder Supply · 80e7e828' })
     expect(requests).toEqual([expect.any(String), requests[0], expect.any(String)])
     expect(requests[2]).not.toBe(requests[0])
-    expect(window.location.pathname).toBe('/organisations/demo-2')
-    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', demos[1].name)
+    expect(window.location.pathname).toBe('/organisations/' + demos[1].organisationId)
+    expect(screen.getByRole('combobox', { name: 'Organisation' })).toHaveProperty('value', 'Demo · 80e7e828')
+    const secondDemoLabel = within(screen.getByRole('listbox', { hidden: true })).getByText('Demo · Acorn & Alder Supply')
+    expect(secondDemoLabel.nextElementSibling?.textContent).toBe('80e7e828')
     expect(screen.queryByText(/Demo ready/)).toBeNull()
   })
 
