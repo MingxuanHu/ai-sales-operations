@@ -43,7 +43,7 @@
 
 ### 3. Show date-filtered sales in the organisation Overview
 
-[Issue #69](https://github.com/MingxuanHu/ai-sales-operations/issues/69)
+[Issue #69](https://github.com/MingxuanHu/ai-sales-operations/issues/69) · [PR #76](https://github.com/MingxuanHu/ai-sales-operations/pull/76)
 
 - **Goal.** Let authorised users inspect sales totals, trends and rankings from the protected app.
 - **In scope.** Show the dashboard in Overview for administrators, with date controls with the default range, totals, an accessible daily chart with a text or table equivalent, and separate pie charts and accessible tables for product and customer rankings. Handle loading, empty results and recoverable errors.
