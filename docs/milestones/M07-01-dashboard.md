@@ -6,7 +6,7 @@
 
 - **In scope.** Read-only, tenant-scoped reporting for fulfilled order count, net sales, a daily net sales chart, and product and customer rankings by net sales. Show cases sold in product rankings.
 - **Out of scope.** Salesperson-specific reporting, exports, forecasting, cross-organisation reporting, GraphQL order details and natural-language queries. M9 can reuse the reporting service behind its own authorised tools.
-- **Acceptance evidence.** In a freshly seeded demo organisation, verify that the default 60-day range shows fulfilled orders, net sales on multiple days and multiple ranked customers and products. Reconcile the totals and rankings against the expanded fixture expectations recorded by issue #72. Filter to a smaller range and reconcile the chart and summaries against included orders. Repeat in an empty organisation and verify that switching organisations clears the previous report.
+- **Acceptance evidence.** In a freshly seeded demo organisation, verify that the default 60-day range shows fulfilled orders, net sales on multiple days and multiple ranked customers and products. Reconcile the totals and rankings against the seeded fulfilled orders. Filter to a smaller range and reconcile the chart and summaries against included orders. Repeat in an empty organisation and verify that switching organisations clears the previous report.
 
 ### Reporting rules
 
@@ -37,58 +37,9 @@
 - **Goal.** Give a fresh demo organisation enough sales activity to populate the dashboard on first visit.
 - **In scope.** Expand the shared synthetic fixtures with more fulfilled multi-line orders across several weeks, customers and products. Anchor fulfilment dates to organisation creation. Use the expanded fixtures for automatic demos on registration and for the **Create demo organisation** button. Add ten synthetic customers and ten catalogue products, each represented in fulfilled sales. Paginate the Products, Customers and Orders list views at 10 records per page. Add search by product name or SKU, customer name, and order customer name, status or ID.
 - **Out of scope.** Backfills, dashboard UI changes and reporting rule changes.
-- **Acceptance.** Both creation paths produce data for the default 60-day report. Narrower ranges include only matching fulfilments, and the totals, chart and rankings reconcile to the included orders. Retrying the same creation request does not duplicate seeded data. Reconcile the results against the expanded fixture expectations below. Search filters the full list before pagination and combines with the order status filter. Pagination remains visible for single-page and empty lists. Users can navigate every page, changing the order filter returns to page one, and deleting the last record on the current page returns to the last available page.
+- **Acceptance.** Both creation paths produce data for the default 60-day report. Narrower ranges include only matching fulfilments, and the totals, chart and rankings reconcile to the included orders. Retrying the same creation request does not duplicate seeded data. Search filters the full list before pagination and combines with the order status filter. Pagination remains visible for single-page and empty lists. Users can navigate every page, changing the order filter returns to page one, and deleting the last record on the current page returns to the last available page.
 - **Dependencies.** Issue #68 and the [M6 demo organisation rules](M06-01-orders-and-approvals.md#4-create-separate-demo-organisations-with-synthetic-data).
 - **Validation.** Run `pnpm check` with Docker. Add integration coverage for both demo creation paths, request retries and report reconciliation. Cover search and pagination in the React tests.
-
-#### Expanded demo fixture expectations
-
-A fresh demo has 15 customers, 16 products and 42 orders, including 38 fulfilled
-orders on 37 UTC dates. The default 60-day report shows **$16,290.86** in net sales.
-Dates are relative to the organisation's UTC creation day.
-
-| Customer rank | Net sales |
-| --- | ---: |
-| Fern Lane Café | $3,012.81 |
-| Paperbark Coffee | $2,831.42 |
-| Wattle Corner Deli | $2,685.30 |
-| Juniper Bakehouse | $2,187.96 |
-| Banksia Kiosk | $2,130.32 |
-| Golden Wattle Bakery | $535.14 |
-| Ironbark Espresso | $478.94 |
-| Fig Tree Kitchen | $462.60 |
-| Jasmine Lane Deli | $430.75 |
-| Acorn Espresso | $374.60 |
-| Hazel Corner Café | $277.35 |
-| Elm & Ember Coffee | $274.63 |
-| Blue Wren Bakery | $249.09 |
-| Clover Street Café | $204.70 |
-| Dogwood Deli | $155.25 |
-
-| Product rank | Net sales | Cases sold |
-| --- | ---: | ---: |
-| 90 mm cup lids | $3,358.21 | 106 |
-| 12 oz paper cups | $2,925.01 | 60 |
-| 8 oz paper cups | $2,450.84 | 59 |
-| Kraft takeaway bags | $2,194.77 | 75 |
-| Two-ply napkins | $1,159.89 | 49 |
-| Four-cup carriers | $759.09 | 41 |
-| 16 oz paper cups | $551.25 | 9 |
-| Large takeaway boxes | $522.06 | 12 |
-| Greaseproof liners | $384.14 | 14 |
-| Kraft sandwich pouches | $379.68 | 12 |
-| Small takeaway boxes | $374.42 | 10 |
-| Wooden cutlery sets | $361.05 | 9 |
-| Kraft cup sleeves | $294.25 | 11 |
-| 80 mm cup lids | $221.94 | 7 |
-| Paper straws | $203.06 | 9 |
-| Wooden stirrers | $151.20 | 9 |
-
-From five days before creation through two days before creation, the report
-shows three fulfilled orders and **$1,915.46** in net sales. The daily values
-from earliest to latest are $1,329.56, $0.00, $585.90 and $0.00.
-Fern Lane Café leads the customer ranking with $775.16. The 8 oz paper cups
-lead the product ranking with $669.72 and 17 cases.
 
 ### 3. Build the date-filtered sales dashboard in React
 
